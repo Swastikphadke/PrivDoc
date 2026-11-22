@@ -1,28 +1,9 @@
-import React, { useEffect, useState } from 'react';
-import { getHealthStatus } from '../services/api';
+import React from 'react';
+import { useHealth } from '../hooks/useHealth';
 import { Shield, CheckCircle, AlertTriangle, FileText, Database, Server, RefreshCw } from 'lucide-react';
 
 export default function Dashboard() {
-  const [health, setHealth] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-
-  const fetchHealth = async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const data = await getHealthStatus();
-      setHealth(data);
-    } catch (err) {
-      setError(err.message || 'Unable to connect to local backend');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchHealth();
-  }, []);
+  const { health, loading, error, refetch } = useHealth(15000);
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
@@ -36,7 +17,7 @@ export default function Dashboard() {
             </p>
           </div>
           <button
-            onClick={fetchHealth}
+            onClick={refetch}
             disabled={loading}
             className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-sky-600 hover:bg-sky-500 text-white text-sm font-medium transition shadow-lg shadow-sky-600/20 disabled:opacity-50"
           >

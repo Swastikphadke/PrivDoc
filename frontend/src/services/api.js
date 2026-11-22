@@ -15,6 +15,8 @@ export const getHealthStatus = async () => {
   return response.data;
 };
 
+export const checkHealth = getHealthStatus;
+
 export const getRootStatus = async () => {
   const response = await apiClient.get('/api/');
   return response.data;
