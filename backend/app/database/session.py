@@ -82,3 +82,41 @@ def check_db_health() -> bool:
             return cursor.fetchone()[0] == 1
     except Exception:
         return False
+
+
+def save_document_metadata(
+    doc_id: str,
+    filename: str,
+    file_type: str,
+    status: str,
+    page_count: int,
+    text_length: int
+) -> None:
+    """Insert or replace document metadata in SQLite."""
+    with get_db_connection() as conn:
+        cursor = conn.cursor()
+        cursor.execute("""
+            INSERT OR REPLACE INTO documents (id, original_filename, file_type, status, page_count, text_length)
+            VALUES (?, ?, ?, ?, ?, ?)
+        """, (doc_id, filename, file_type, status, page_count, text_length))
+        conn.commit()
+
+
+def get_document_metadata(doc_id: str) -> dict | None:
+    """Retrieve document metadata by document ID."""
+    with get_db_connection() as conn:
+        cursor = conn.cursor()
+        cursor.execute("SELECT * FROM documents WHERE id = ?", (doc_id,))
+        row = cursor.fetchone()
+        if row:
+            return dict(row)
+        return None
+
+
+def delete_document_record(doc_id: str) -> bool:
+    """Remove document metadata record from SQLite."""
+    with get_db_connection() as conn:
+        cursor = conn.cursor()
+        cursor.execute("DELETE FROM documents WHERE id = ?", (doc_id,))
+        conn.commit()
+        return cursor.rowcount > 0
