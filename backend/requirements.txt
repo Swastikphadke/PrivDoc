@@ -1,0 +1,16 @@
+# Core Web Framework
+fastapi==0.162.0
+uvicorn==0.54.0
+pydantic==2.14.2
+pydantic-settings==2.16.2
+python-dotenv==1.2.4
+
+# HTTP & Testing
+httpx==0.28.1
+pytest==9.2.0
+
+# Document Processing & NLP (Phases P1-P3)
+# Note: pymupdf, rapidfuzz, spacy installed as phases progress
+pymupdf>=1.24.0
+rapidfuzz>=3.9.0
+spacy>=3.7.0

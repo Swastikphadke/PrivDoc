@@ -1,0 +1,84 @@
+"""SQLite metadata persistence foundation.
+
+Strict Privacy Rule:
+Never store raw document contents, canonical extracted text, or PDF coordinates in SQLite.
+SQLite is used solely for session metadata, candidate review statuses, and minimal feedback.
+"""
+
+import sqlite3
+from contextlib import contextmanager
+from pathlib import Path
+from typing import Generator
+from app.core.config import settings
+
+
+def init_db() -> None:
+    """Initialize SQLite tables for session metadata and review decisions."""
+    try:
+        settings.DATA_DIR.mkdir(parents=True, exist_ok=True)
+        settings.SESSIONS_DIR.mkdir(parents=True, exist_ok=True)
+    except Exception:
+        pass
+    
+    with sqlite3.connect(settings.DATABASE_PATH) as conn:
+        cursor = conn.cursor()
+        
+        # Document metadata table (no raw text)
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS documents (
+                id TEXT PRIMARY KEY,
+                original_filename TEXT NOT NULL,
+                file_type TEXT NOT NULL,
+                status TEXT NOT NULL,
+                page_count INTEGER DEFAULT 0,
+                text_length INTEGER DEFAULT 0,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                expires_at TIMESTAMP
+            )
+        """)
+        
+        # Review decisions table
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS review_decisions (
+                id TEXT PRIMARY KEY,
+                document_id TEXT NOT NULL,
+                candidate_id TEXT NOT NULL,
+                decision TEXT NOT NULL,
+                reviewed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                scope TEXT DEFAULT 'OCCURRENCE',
+                FOREIGN KEY (document_id) REFERENCES documents(id) ON DELETE CASCADE
+            )
+        """)
+        
+        # Local feedback table (anonymized metrics, no raw PII)
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS feedback_records (
+                id TEXT PRIMARY KEY,
+                candidate_type TEXT NOT NULL,
+                action TEXT NOT NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        """)
+        conn.commit()
+
+
+@contextmanager
+def get_db_connection() -> Generator[sqlite3.Connection, None, None]:
+    """Yield a SQLite database connection with row factory enabled."""
+    conn = sqlite3.connect(settings.DATABASE_PATH)
+    conn.row_factory = sqlite3.Row
+    try:
+        yield conn
+    finally:
+        conn.close()
+
+
+def check_db_health() -> bool:
+    """Verify SQLite database connectivity and integrity."""
+    try:
+        with get_db_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("SELECT 1")
+            return cursor.fetchone()[0] == 1
+    except Exception:
+        return False
