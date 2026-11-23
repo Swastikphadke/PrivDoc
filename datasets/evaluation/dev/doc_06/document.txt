@@ -1,0 +1,5 @@
+FINANCIAL ACCESS LOG - RESTRICTED
+
+Account Holder: Rahul Verma | Account ID: ACCT-904820 | Employee ID: EMP-7741
+Secondary Signer: Kavita Krishnan | Account ID: ACCT-904821 | Employee ID: EMP-8812
+Tax ID: ABCDE1234F | Routing: 021000021

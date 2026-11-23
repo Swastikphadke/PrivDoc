@@ -1,0 +1,5 @@
+INCIDENT RESPONSE TEAM ROSTER
+ID       NAME             ROLE            EMAIL                      PHONE
+EMP-101  Anand Sen        Lead Engineer   anand.sen@cyber-unit.test   +91 99001 12233
+EMP-102  Sarah Connor     SecOps Analyst  sarah.c@cyber-unit.test     +1 (555) 782-9011
+EMP-103  Rohan Mehra      Incident Spec   rohan.m@cyber-unit.test     +91 98800 44556

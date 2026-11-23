@@ -1,0 +1,51 @@
+{
+  "document_id": "doc_15",
+  "split": "val",
+  "description": "Validation 5: Lease agreement with property address",
+  "text_length": 247,
+  "total_annotations": 6,
+  "annotations": [
+    {
+      "start": 62,
+      "end": 73,
+      "text": "Bruce Wayne",
+      "type": "PERSON",
+      "entity_id": "ent_bruce"
+    },
+    {
+      "start": 85,
+      "end": 95,
+      "text": "Clark Kent",
+      "type": "PERSON",
+      "entity_id": "ent_clark"
+    },
+    {
+      "start": 107,
+      "end": 149,
+      "text": "1007 Mountain Drive, Gotham City, NJ 07101",
+      "type": "ADDRESS",
+      "entity_id": "ent_gotham"
+    },
+    {
+      "start": 191,
+      "end": 200,
+      "text": "D. Prince",
+      "type": "PERSON",
+      "entity_id": "ent_prince"
+    },
+    {
+      "start": 202,
+      "end": 219,
+      "text": "+1 (555) 777-8899",
+      "type": "PHONE",
+      "entity_id": "ent_prince_ph"
+    },
+    {
+      "start": 221,
+      "end": 244,
+      "text": "prince.d@wayne-ent.test",
+      "type": "EMAIL",
+      "entity_id": "ent_prince_mail"
+    }
+  ]
+}

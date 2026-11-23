@@ -1,0 +1,30 @@
+{
+  "document_id": "doc_07",
+  "split": "dev",
+  "description": "Class 7: Borderline numeric contexts (currency, percentages, dates vs phone/ID)",
+  "text_length": 295,
+  "total_annotations": 3,
+  "annotations": [
+    {
+      "start": 152,
+      "end": 168,
+      "text": "Natasha Romanoff",
+      "type": "PERSON",
+      "entity_id": "ent_natasha"
+    },
+    {
+      "start": 174,
+      "end": 182,
+      "text": "EMP-1092",
+      "type": "ID_LIKE",
+      "entity_id": "ent_emp_nat"
+    },
+    {
+      "start": 208,
+      "end": 225,
+      "text": "+1 (555) 901-4432",
+      "type": "PHONE",
+      "entity_id": "ent_ph_nat"
+    }
+  ]
+}

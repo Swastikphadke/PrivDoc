@@ -1,0 +1,4 @@
+DEFENSE CONTRACTOR SECURITY CLEARANCE REGISTER
+BADGE     OPERATIVE            SECURITY TIER   HOTLINE           SECURE MAIL
+EMP-901   Sunita Williams      Level 5 Top     +1 (555) 441-2299 s.williams@nasa-contractor.test
+EMP-902   Kalpana Chawla       Level 5 Top     +1 (555) 441-2288 k.chawla@nasa-contractor.test

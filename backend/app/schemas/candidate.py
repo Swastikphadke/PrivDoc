@@ -36,7 +36,7 @@ class Candidate(BaseModel):
     text: str = Field(..., description="Exact matched string from canonical text")
     type: str = Field(..., description="PII category: PERSON, EMAIL, PHONE, ADDRESS, ID_LIKE")
     confidence: float = Field(..., ge=0.0, le=1.0, description="Normalized confidence score [0.0, 1.0]")
-    confidence_band: str = Field(..., description="HIGH, MEDIUM, or LOW")
+    confidence_band: str = Field(default="HIGH", description="HIGH, MEDIUM, or LOW")
     sources: List[str] = Field(default_factory=list, description="Detector provenance, e.g. ['regex', 'ner']")
     page_number: Optional[int] = Field(default=None, description="PDF page number (1-indexed) if applicable")
     bbox: Optional[List[float]] = Field(default=None, description="[x0, y0, x1, y1] bounding box if applicable")

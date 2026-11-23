@@ -1,0 +1,162 @@
+{
+  "corpus_version": "1.0",
+  "seed": 42,
+  "splits": {
+    "dev": [
+      {
+        "document_id": "doc_01",
+        "description": "Class 1: Clean business report with standard PII",
+        "annotations_count": 6,
+        "char_length": 406
+      },
+      {
+        "document_id": "doc_02",
+        "description": "Class 2: Header and signature memo with repeated executive identity",
+        "annotations_count": 6,
+        "char_length": 293
+      },
+      {
+        "document_id": "doc_03",
+        "description": "Class 3: Name variants, titles, and initial-to-surname aliases",
+        "annotations_count": 5,
+        "char_length": 265
+      },
+      {
+        "document_id": "doc_04",
+        "description": "Class 4: International phone numbers across diverse country codes",
+        "annotations_count": 7,
+        "char_length": 250
+      },
+      {
+        "document_id": "doc_05",
+        "description": "Class 5: Complex multi-line postal and campus addresses",
+        "annotations_count": 4,
+        "char_length": 269
+      },
+      {
+        "document_id": "doc_06",
+        "description": "Class 6: Employee badges, account numbers, and tax identifiers",
+        "annotations_count": 7,
+        "char_length": 236
+      },
+      {
+        "document_id": "doc_07",
+        "description": "Class 7: Borderline numeric contexts (currency, percentages, dates vs phone/ID)",
+        "annotations_count": 3,
+        "char_length": 295
+      },
+      {
+        "document_id": "doc_08",
+        "description": "Class 8: Multi-column formatted table with aligned PII",
+        "annotations_count": 12,
+        "char_length": 365
+      },
+      {
+        "document_id": "doc_09",
+        "description": "Ambiguity Defense: Common surnames and ambiguous initial J. Smith",
+        "annotations_count": 6,
+        "char_length": 255
+      },
+      {
+        "document_id": "doc_10",
+        "description": "Surname Defense: Sunil Kumar and Anil Kumar must never be merged",
+        "annotations_count": 6,
+        "char_length": 235
+      }
+    ],
+    "val": [
+      {
+        "document_id": "doc_11",
+        "description": "Validation 1: Clean advisory memo with single-occurrence entities",
+        "annotations_count": 5,
+        "char_length": 239
+      },
+      {
+        "document_id": "doc_12",
+        "description": "Validation 2: Medical title variant linkage",
+        "annotations_count": 4,
+        "char_length": 270
+      },
+      {
+        "document_id": "doc_13",
+        "description": "Validation 3: Financial security alert with account IDs",
+        "annotations_count": 5,
+        "char_length": 253
+      },
+      {
+        "document_id": "doc_14",
+        "description": "Validation 4: Multi-recipient formal email headers",
+        "annotations_count": 8,
+        "char_length": 306
+      },
+      {
+        "document_id": "doc_15",
+        "description": "Validation 5: Lease agreement with property address",
+        "annotations_count": 6,
+        "char_length": 247
+      },
+      {
+        "document_id": "doc_16",
+        "description": "Validation 6: Bank transfer advice with Indian postal and account code",
+        "annotations_count": 5,
+        "char_length": 242
+      },
+      {
+        "document_id": "doc_17",
+        "description": "Validation 7: Academic grant with professor titles and UK telephone",
+        "annotations_count": 4,
+        "char_length": 251
+      }
+    ],
+    "test": [
+      {
+        "document_id": "doc_18",
+        "description": "Test 1 (Held-out): Full executive contract profile",
+        "annotations_count": 5,
+        "char_length": 298
+      },
+      {
+        "document_id": "doc_19",
+        "description": "Test 2 (Held-out): Triple-variant name resolution across initial and title",
+        "annotations_count": 4,
+        "char_length": 283
+      },
+      {
+        "document_id": "doc_20",
+        "description": "Test 3 (Held-out): German and Indian cross-border logistics",
+        "annotations_count": 7,
+        "char_length": 301
+      },
+      {
+        "document_id": "doc_21",
+        "description": "Test 4 (Held-out): Fraud summary with initial linkage",
+        "annotations_count": 6,
+        "char_length": 270
+      },
+      {
+        "document_id": "doc_22",
+        "description": "Test 5 (Held-out): Financial numbers mixed with CFO identity",
+        "annotations_count": 4,
+        "char_length": 308
+      },
+      {
+        "document_id": "doc_23",
+        "description": "Test 6 (Held-out): Medical record with doctor and patient address",
+        "annotations_count": 5,
+        "char_length": 244
+      },
+      {
+        "document_id": "doc_24",
+        "description": "Test 7 (Held-out): Tabular security clearance register",
+        "annotations_count": 8,
+        "char_length": 316
+      },
+      {
+        "document_id": "doc_25",
+        "description": "Test 8 (Held-out): IT ticket with repeated requester and address",
+        "annotations_count": 6,
+        "char_length": 289
+      }
+    ]
+  }
+}

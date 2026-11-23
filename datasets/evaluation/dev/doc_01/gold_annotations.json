@@ -1,0 +1,51 @@
+{
+  "document_id": "doc_01",
+  "split": "dev",
+  "description": "Class 1: Clean business report with standard PII",
+  "text_length": 406,
+  "total_annotations": 6,
+  "annotations": [
+    {
+      "start": 122,
+      "end": 133,
+      "text": "Elena Vance",
+      "type": "PERSON",
+      "entity_id": "ent_p1"
+    },
+    {
+      "start": 135,
+      "end": 167,
+      "text": "elena.vance@aegis-cyber.internal",
+      "type": "EMAIL",
+      "entity_id": "ent_e1"
+    },
+    {
+      "start": 218,
+      "end": 233,
+      "text": "Marcus Sterling",
+      "type": "PERSON",
+      "entity_id": "ent_p2"
+    },
+    {
+      "start": 237,
+      "end": 254,
+      "text": "+1 (555) 234-8901",
+      "type": "PHONE",
+      "entity_id": "ent_ph1"
+    },
+    {
+      "start": 258,
+      "end": 294,
+      "text": "marcus.sterling@aegis-cyber.internal",
+      "type": "EMAIL",
+      "entity_id": "ent_e2"
+    },
+    {
+      "start": 364,
+      "end": 404,
+      "text": "Building 4, Cyber City, Bangalore 560066",
+      "type": "ADDRESS",
+      "entity_id": "ent_a1"
+    }
+  ]
+}

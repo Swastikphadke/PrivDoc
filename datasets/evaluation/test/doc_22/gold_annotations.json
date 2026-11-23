@@ -1,0 +1,37 @@
+{
+  "document_id": "doc_22",
+  "split": "test",
+  "description": "Test 5 (Held-out): Financial numbers mixed with CFO identity",
+  "text_length": 308,
+  "total_annotations": 4,
+  "annotations": [
+    {
+      "start": 188,
+      "end": 202,
+      "text": "Neil Armstrong",
+      "type": "PERSON",
+      "entity_id": "ent_neil"
+    },
+    {
+      "start": 204,
+      "end": 212,
+      "text": "EMP-1969",
+      "type": "ID_LIKE",
+      "entity_id": "ent_neil_emp"
+    },
+    {
+      "start": 233,
+      "end": 250,
+      "text": "+1 (555) 867-5309",
+      "type": "PHONE",
+      "entity_id": "ent_neil_ph"
+    },
+    {
+      "start": 278,
+      "end": 306,
+      "text": "n.armstrong@apollo-corp.test",
+      "type": "EMAIL",
+      "entity_id": "ent_neil_mail"
+    }
+  ]
+}

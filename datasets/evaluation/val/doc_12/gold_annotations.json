@@ -1,0 +1,37 @@
+{
+  "document_id": "doc_12",
+  "split": "val",
+  "description": "Validation 2: Medical title variant linkage",
+  "text_length": 270,
+  "total_annotations": 4,
+  "annotations": [
+    {
+      "start": 52,
+      "end": 68,
+      "text": "Dr. Evelyn Cross",
+      "type": "PERSON",
+      "entity_id": "ent_cross"
+    },
+    {
+      "start": 116,
+      "end": 125,
+      "text": "Dr. Cross",
+      "type": "PERSON",
+      "entity_id": "ent_cross"
+    },
+    {
+      "start": 208,
+      "end": 220,
+      "text": "Evelyn Cross",
+      "type": "PERSON",
+      "entity_id": "ent_cross"
+    },
+    {
+      "start": 251,
+      "end": 268,
+      "text": "+1 (555) 670-3344",
+      "type": "PHONE",
+      "entity_id": "ent_cross_ph"
+    }
+  ]
+}

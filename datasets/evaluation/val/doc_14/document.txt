@@ -1,0 +1,10 @@
+From: Alice Walker <alice.w@solaris-defense.test>
+To: Bob Martin <bob.m@solaris-defense.test>, Carol Danvers <carol.d@solaris-defense.test>
+Date: Tue, 12 Nov 2024 10:14:00 +0000
+Subject: Mission Debrief
+
+Please review attached flight logs for aircraft AC-902.
+
+Regards,
+Alice Walker
+Cell: +1 (555) 129-8765

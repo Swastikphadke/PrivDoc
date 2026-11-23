@@ -1,0 +1,5 @@
+SECURITY ALERT DISPATCH
+
+Security notification for user Karthik Subramanian (EMP-4102).
+Suspicious login attempt detected on account ACCT-551029 from IP 192.168.1.10.
+Contact Security Desk immediately at +91 99112 33445 or karthik.s@fintech-vault.test.

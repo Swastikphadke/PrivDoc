@@ -1,0 +1,51 @@
+{
+  "document_id": "doc_09",
+  "split": "dev",
+  "description": "Ambiguity Defense: Common surnames and ambiguous initial J. Smith",
+  "text_length": 255,
+  "total_annotations": 6,
+  "annotations": [
+    {
+      "start": 47,
+      "end": 57,
+      "text": "John Smith",
+      "type": "PERSON",
+      "entity_id": "ent_jsmith1"
+    },
+    {
+      "start": 74,
+      "end": 85,
+      "text": "James Smith",
+      "type": "PERSON",
+      "entity_id": "ent_jsmith2"
+    },
+    {
+      "start": 115,
+      "end": 123,
+      "text": "J. Smith",
+      "type": "PERSON",
+      "entity_id": "ent_jsmith_ambig"
+    },
+    {
+      "start": 146,
+      "end": 172,
+      "text": "14 Elm Street, Springfield",
+      "type": "ADDRESS",
+      "entity_id": "ent_elm"
+    },
+    {
+      "start": 205,
+      "end": 232,
+      "text": "smith.case@legal-group.test",
+      "type": "EMAIL",
+      "entity_id": "ent_smith_mail"
+    },
+    {
+      "start": 236,
+      "end": 253,
+      "text": "+1 (555) 881-2299",
+      "type": "PHONE",
+      "entity_id": "ent_smith_ph"
+    }
+  ]
+}

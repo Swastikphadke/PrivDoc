@@ -50,13 +50,43 @@ def init_db() -> None:
             )
         """)
         
-        # Local feedback table (anonymized metrics, no raw PII)
+        # Local feedback table migration check
+        cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='feedback_records'")
+        if cursor.fetchone():
+            cursor.execute("PRAGMA table_info(feedback_records)")
+            existing_cols = {row[1] for row in cursor.fetchall()}
+            if "document_id" not in existing_cols:
+                cursor.execute("DROP TABLE feedback_records")
+
+        # Local feedback table (data-minimized event metrics; NO raw text or PII)
         cursor.execute("""
             CREATE TABLE IF NOT EXISTS feedback_records (
                 id TEXT PRIMARY KEY,
-                candidate_type TEXT NOT NULL,
+                document_id TEXT NOT NULL,
+                candidate_id TEXT,
+                entity_id TEXT,
                 action TEXT NOT NULL,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                candidate_type TEXT NOT NULL,
+                source TEXT,
+                confidence REAL,
+                details TEXT,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (document_id) REFERENCES documents(id) ON DELETE CASCADE
+            )
+        """)
+
+        # Optional opt-in encrypted aliases table (explicit consent required)
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS opt_in_encrypted_aliases (
+                id TEXT PRIMARY KEY,
+                document_id TEXT NOT NULL,
+                entity_id TEXT NOT NULL,
+                encrypted_alias BLOB NOT NULL,
+                nonce BLOB NOT NULL,
+                opt_in_consent INTEGER DEFAULT 1,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                expires_at TIMESTAMP,
+                FOREIGN KEY (document_id) REFERENCES documents(id) ON DELETE CASCADE
             )
         """)
         conn.commit()
@@ -114,9 +144,13 @@ def get_document_metadata(doc_id: str) -> dict | None:
 
 
 def delete_document_record(doc_id: str) -> bool:
-    """Remove document metadata record from SQLite."""
+    """Remove document metadata record and associated feedback/decisions from SQLite."""
     with get_db_connection() as conn:
         cursor = conn.cursor()
+        cursor.execute("PRAGMA foreign_keys = ON")
+        cursor.execute("DELETE FROM review_decisions WHERE document_id = ?", (doc_id,))
+        cursor.execute("DELETE FROM feedback_records WHERE document_id = ?", (doc_id,))
+        cursor.execute("DELETE FROM opt_in_encrypted_aliases WHERE document_id = ?", (doc_id,))
         cursor.execute("DELETE FROM documents WHERE id = ?", (doc_id,))
         conn.commit()
         return cursor.rowcount > 0
@@ -162,3 +196,130 @@ def get_document_review_decisions(doc_id: str) -> list[dict]:
             (doc_id,)
         )
         return [dict(row) for row in cursor.fetchall()]
+
+
+# =============================================================================
+# Phase P7: Local Feedback & Opt-In Alias Persistence (Data-Minimized)
+# =============================================================================
+
+def record_feedback_event(
+    doc_id: str,
+    candidate_type: str,
+    action: str,
+    candidate_id: str | None = None,
+    entity_id: str | None = None,
+    source: str | None = None,
+    confidence: float | None = None,
+    details: str | None = None,
+) -> str:
+    """Record a data-minimized feedback event in SQLite.
+    
+    Strict Privacy Invariant:
+    Never passes or stores raw document text, snippets, or raw candidate strings.
+    `details` must contain only non-PII operational metadata (e.g. JSON with counts,
+    scope, or categorical changes).
+    """
+    import uuid
+    fb_id = f"fb_{uuid.uuid4().hex[:12]}"
+    with get_db_connection() as conn:
+        cursor = conn.cursor()
+        cursor.execute("""
+            INSERT INTO feedback_records (
+                id, document_id, candidate_id, entity_id, action,
+                candidate_type, source, confidence, details
+            )
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """, (
+            fb_id, doc_id, candidate_id, entity_id, action,
+            candidate_type, source, confidence, details
+        ))
+        conn.commit()
+    return fb_id
+
+
+def get_feedback_records(
+    doc_id: str | None = None,
+    action: str | None = None,
+    candidate_type: str | None = None,
+) -> list[dict]:
+    """Query data-minimized feedback event records."""
+    query = "SELECT * FROM feedback_records WHERE 1=1"
+    params: list = []
+    if doc_id:
+        query += " AND document_id = ?"
+        params.append(doc_id)
+    if action:
+        query += " AND action = ?"
+        params.append(action)
+    if candidate_type:
+        query += " AND candidate_type = ?"
+        params.append(candidate_type)
+    query += " ORDER BY created_at ASC"
+
+    with get_db_connection() as conn:
+        cursor = conn.cursor()
+        cursor.execute(query, tuple(params))
+        return [dict(row) for row in cursor.fetchall()]
+
+
+def delete_feedback_records(doc_id: str) -> int:
+    """Remove feedback records for a specific document session."""
+    with get_db_connection() as conn:
+        cursor = conn.cursor()
+        cursor.execute("DELETE FROM feedback_records WHERE document_id = ?", (doc_id,))
+        conn.commit()
+        return cursor.rowcount
+
+
+def record_opt_in_encrypted_alias(
+    doc_id: str,
+    entity_id: str,
+    encrypted_alias: bytes,
+    nonce: bytes,
+    expires_at: str | None = None,
+) -> str:
+    """Store an encrypted alias record requiring explicit opt-in consent."""
+    import uuid
+    rec_id = f"enc_alias_{uuid.uuid4().hex[:12]}"
+    with get_db_connection() as conn:
+        cursor = conn.cursor()
+        cursor.execute("""
+            INSERT INTO opt_in_encrypted_aliases (
+                id, document_id, entity_id, encrypted_alias, nonce, opt_in_consent, expires_at
+            )
+            VALUES (?, ?, ?, ?, ?, 1, ?)
+        """, (rec_id, doc_id, entity_id, encrypted_alias, nonce, expires_at))
+        conn.commit()
+    return rec_id
+
+
+def get_opt_in_encrypted_aliases(doc_id: str) -> list[dict]:
+    """Retrieve encrypted aliases for a document session."""
+    with get_db_connection() as conn:
+        cursor = conn.cursor()
+        cursor.execute(
+            "SELECT * FROM opt_in_encrypted_aliases WHERE document_id = ?",
+            (doc_id,)
+        )
+        return [dict(row) for row in cursor.fetchall()]
+
+
+def delete_encrypted_aliases(doc_id: str) -> int:
+    """Delete all encrypted aliases associated with a document session."""
+    with get_db_connection() as conn:
+        cursor = conn.cursor()
+        cursor.execute("DELETE FROM opt_in_encrypted_aliases WHERE document_id = ?", (doc_id,))
+        conn.commit()
+        return cursor.rowcount
+
+
+def purge_expired_encrypted_aliases() -> int:
+    """Purge expired encrypted alias records based on retention policy."""
+    with get_db_connection() as conn:
+        cursor = conn.cursor()
+        cursor.execute(
+            "DELETE FROM opt_in_encrypted_aliases WHERE expires_at IS NOT NULL AND expires_at < CURRENT_TIMESTAMP"
+        )
+        conn.commit()
+        return cursor.rowcount
+

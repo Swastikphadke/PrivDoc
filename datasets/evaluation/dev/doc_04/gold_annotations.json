@@ -1,0 +1,58 @@
+{
+  "document_id": "doc_04",
+  "split": "dev",
+  "description": "Class 4: International phone numbers across diverse country codes",
+  "text_length": 250,
+  "total_annotations": 7,
+  "annotations": [
+    {
+      "start": 53,
+      "end": 63,
+      "text": "Liam Vance",
+      "type": "PERSON",
+      "entity_id": "ent_liam"
+    },
+    {
+      "start": 70,
+      "end": 87,
+      "text": "+1 (555) 349-2018",
+      "type": "PHONE",
+      "entity_id": "ent_ph_us"
+    },
+    {
+      "start": 110,
+      "end": 122,
+      "text": "Devika Patel",
+      "type": "PERSON",
+      "entity_id": "ent_devika"
+    },
+    {
+      "start": 129,
+      "end": 144,
+      "text": "+91 98450 12345",
+      "type": "PHONE",
+      "entity_id": "ent_ph_in"
+    },
+    {
+      "start": 160,
+      "end": 176,
+      "text": "Arthur Pendelton",
+      "type": "PERSON",
+      "entity_id": "ent_arthur"
+    },
+    {
+      "start": 186,
+      "end": 202,
+      "text": "+44 20 7946 0912",
+      "type": "PHONE",
+      "entity_id": "ent_ph_uk"
+    },
+    {
+      "start": 223,
+      "end": 238,
+      "text": "(080) 2345-6789",
+      "type": "PHONE",
+      "entity_id": "ent_ph_land"
+    }
+  ]
+}

@@ -224,6 +224,51 @@ PrivyDoc's summarization pipeline is built with strict architectural boundaries 
 
 ---
 
+## Local Feedback System & Evaluation Metrics Framework (Phase P7)
+
+PrivyDoc includes a local-first, privacy-minimized continuous improvement mechanism and rigorous evaluation metrics framework:
+
+- **Feedback Storage with Data Minimization (TDR-015)**:
+  - Captures human review interactions (`APPROVE`, `REJECT`, `MANUAL_ADD`, `CATEGORY_CHANGE`, `LINK_ENTITIES`, `UNLINK_ENTITIES`, `MERGE_ENTITIES`) in SQLite `feedback_records`.
+  - **Zero Raw Data Retention Guarantee**: Strictly prohibits storing raw document text, surrounding text snippets, original PDF content, or sensitive candidate strings in feedback tables or application logs. Only pseudonymous identifiers, entity IDs, PII categories, detector sources, and confidence scores are recorded.
+- **Opt-In Locally Encrypted Aliases**:
+  - When users manually link name variants or aliases, relationship events and pseudonymous entity references are stored by default.
+  - If actual alias values are required for cross-session matching, users must explicitly opt in (`POST /api/documents/{id}/aliases` with `opt_in_consent=true`).
+  - Stored in `opt_in_encrypted_aliases` protected by machine-local **AES-256-GCM** authenticated encryption (`data/.alias_encryption.key`).
+  - Supports configurable TTL retention (default 30 days), explicit deletion (`DELETE /api/documents/{id}/aliases`), and automatic cascade deletion when documents are deleted.
+- **Controlled Feedback Workflow (TDR-016)**:
+  - User feedback **never automatically mutates** active detection regex patterns, classifier weights, or SLM prompts in production.
+  - Aggregated feedback patterns produce structured `FeedbackProposal` records (`GET /api/feedback/analysis`) requiring explicit human inspection, code review, and promotion.
+- **Synthetic Evaluation Corpus & Quarantined Isolation (TDR-017)**:
+  - 100% synthetic, locally generated dataset across 8 realistic difficulty classes (standard business, high-density contact, informal correspondence, multi-page legal agreements, structured invoices, mixed medical summaries, ambiguous initials, and edge formatting).
+  - Split into three distinct subsets:
+    - `dev/`: 10 documents (development tuning)
+    - `val/`: 7 documents (validation and threshold selection)
+    - `test/`: 8 documents (quarantined held-out evaluation set, strictly isolated from regex heuristics)
+  - Both searchable TXT and PyMuPDF-generated PDFs with validated exact character offsets in `gold_annotations.json`.
+- **Reproducible Evaluation Framework**:
+  - Exact-span and partial-overlap matching for token-level precision, recall, and F1.
+  - Zero-denominator protection: Returns 0.0 with `has_zero_denominator=True` when TP+FP=0 or TP+FN=0 to avoid artificial scores or division-by-zero crashes.
+  - Pairwise coreference evaluation engine (B-cubed style Precision, Recall, F1, False Merge Rate, Missed Link Rate).
+  - Post-redaction residual leakage verification rate (100% verification target) and post-summary leakage rate.
+  - Performance profiling measuring per-phase latency and peak memory allocation using `tracemalloc`.
+- **CLI Commands**:
+  ```bash
+  # Regenerate synthetic evaluation corpus (seed=42)
+  python scripts/generate_synthetic_corpus.py
+
+  # Run evaluation harness on quarantined test split
+  python scripts/evaluate.py --split test --matching exact --output-md Docs/EVALUATION_REPORT.md --output-json Docs/EVALUATION_METRICS.json
+
+  # Run full evaluation across all splits
+  python scripts/evaluate.py --split all --matching overlap
+  ```
+- **Evaluation Integrity Disclaimer**:
+  > [!NOTE]
+  > All reported benchmark metrics reflect controlled evaluation on the synthetic test corpus and do not constitute an unconditional guarantee of 100% accuracy on arbitrary, unstructured real-world documents.
+
+---
+
 ## Development Roadmap (P0 - P9)
 
 | Phase | Description | Status |
@@ -235,7 +280,7 @@ PrivyDoc's summarization pipeline is built with strict architectural boundaries 
 | **P4** | Human-in-the-Loop Review UI: Workspace, Modals, Shortcuts, Audit Log | **Completed** |
 | **P5** | Redaction Engine & Verifiable PDF True-Redaction / Layout-Loss Fallback | **Completed** |
 | **P6** | Privacy-Aware Summarization (Sanitized Only, Local SLM / Extractive Fallback) | **Completed** |
-| **P7** | Local Feedback System & Evaluation Metrics Framework | Planned |
+| **P7** | Local Feedback System & Evaluation Metrics Framework | **Completed** |
 | **P8** | System Hardening, Local Security Audit, Privacy Boundary Verification | Planned |
 | **P9** | Final Benchmarking (Recall >= 95%), Demo & Production Release | Planned |
 

@@ -119,6 +119,27 @@ class RegexDetector:
         r'\b[A-Z][a-z]+\s+(?:[A-Z]\.\s*)+[A-Z][a-z]+\b'
     )
 
+    PATTERNS = {
+        "STANDARD_EMAIL": STANDARD_EMAIL_REGEX,
+        "OBFUSCATED_EMAIL": OBFUSCATED_EMAIL_REGEX,
+        "INDIAN_MOBILE": INDIAN_MOBILE_REGEX,
+        "INTL_PHONE": INTL_PHONE_REGEX,
+        "LANDLINE": LANDLINE_REGEX,
+        "EMP_ID": EMP_ID_REGEX,
+        "STU_ID": STU_ID_REGEX,
+        "ACC_NO": ACC_NO_REGEX,
+        "PAN_CARD": PAN_CARD_REGEX,
+        "AADHAAR": AADHAAR_REGEX,
+        "SSN": SSN_REGEX,
+        "STREET_ADDRESS": STREET_ADDRESS_REGEX,
+        "POSTAL_PIN": POSTAL_PIN_REGEX,
+        "LOCALITY_CITY": LOCALITY_CITY_REGEX,
+        "HEADER_PERSON": HEADER_PERSON_REGEX,
+        "TITLE_PERSON": TITLE_PERSON_REGEX,
+        "INITIAL_PERSON": INITIAL_PERSON_REGEX,
+        "MIDDLE_INITIAL": MIDDLE_INITIAL_REGEX,
+    }
+
     @classmethod
     def detect(cls, text: str, document_id: str = "doc_temp") -> List[Candidate]:
         """Run all deterministic regex detectors over canonical text.

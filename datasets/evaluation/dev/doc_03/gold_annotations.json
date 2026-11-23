@@ -1,0 +1,44 @@
+{
+  "document_id": "doc_03",
+  "split": "dev",
+  "description": "Class 3: Name variants, titles, and initial-to-surname aliases",
+  "text_length": 265,
+  "total_annotations": 5,
+  "annotations": [
+    {
+      "start": 60,
+      "end": 72,
+      "text": "Richa Sharma",
+      "type": "PERSON",
+      "entity_id": "ent_sharma"
+    },
+    {
+      "start": 134,
+      "end": 143,
+      "text": "R. Sharma",
+      "type": "PERSON",
+      "entity_id": "ent_sharma"
+    },
+    {
+      "start": 171,
+      "end": 180,
+      "text": "J. Miller",
+      "type": "PERSON",
+      "entity_id": "ent_miller"
+    },
+    {
+      "start": 234,
+      "end": 244,
+      "text": "Ms. Sharma",
+      "type": "PERSON",
+      "entity_id": "ent_sharma"
+    },
+    {
+      "start": 248,
+      "end": 263,
+      "text": "Dr. John Miller",
+      "type": "PERSON",
+      "entity_id": "ent_miller"
+    }
+  ]
+}

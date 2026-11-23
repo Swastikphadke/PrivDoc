@@ -1,0 +1,93 @@
+{
+  "document_id": "doc_08",
+  "split": "dev",
+  "description": "Class 8: Multi-column formatted table with aligned PII",
+  "text_length": 365,
+  "total_annotations": 12,
+  "annotations": [
+    {
+      "start": 105,
+      "end": 112,
+      "text": "EMP-101",
+      "type": "ID_LIKE",
+      "entity_id": "ent_e101"
+    },
+    {
+      "start": 114,
+      "end": 123,
+      "text": "Anand Sen",
+      "type": "PERSON",
+      "entity_id": "ent_anand"
+    },
+    {
+      "start": 147,
+      "end": 172,
+      "text": "anand.sen@cyber-unit.test",
+      "type": "EMAIL",
+      "entity_id": "ent_anand_m"
+    },
+    {
+      "start": 175,
+      "end": 190,
+      "text": "+91 99001 12233",
+      "type": "PHONE",
+      "entity_id": "ent_anand_p"
+    },
+    {
+      "start": 191,
+      "end": 198,
+      "text": "EMP-102",
+      "type": "ID_LIKE",
+      "entity_id": "ent_e102"
+    },
+    {
+      "start": 200,
+      "end": 212,
+      "text": "Sarah Connor",
+      "type": "PERSON",
+      "entity_id": "ent_sarah"
+    },
+    {
+      "start": 233,
+      "end": 256,
+      "text": "sarah.c@cyber-unit.test",
+      "type": "EMAIL",
+      "entity_id": "ent_sarah_m"
+    },
+    {
+      "start": 261,
+      "end": 278,
+      "text": "+1 (555) 782-9011",
+      "type": "PHONE",
+      "entity_id": "ent_sarah_p"
+    },
+    {
+      "start": 279,
+      "end": 286,
+      "text": "EMP-103",
+      "type": "ID_LIKE",
+      "entity_id": "ent_e103"
+    },
+    {
+      "start": 288,
+      "end": 299,
+      "text": "Rohan Mehra",
+      "type": "PERSON",
+      "entity_id": "ent_rohan"
+    },
+    {
+      "start": 321,
+      "end": 344,
+      "text": "rohan.m@cyber-unit.test",
+      "type": "EMAIL",
+      "entity_id": "ent_rohan_m"
+    },
+    {
+      "start": 349,
+      "end": 364,
+      "text": "+91 98800 44556",
+      "type": "PHONE",
+      "entity_id": "ent_rohan_p"
+    }
+  ]
+}

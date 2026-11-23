@@ -1,0 +1,37 @@
+{
+  "document_id": "doc_19",
+  "split": "test",
+  "description": "Test 2 (Held-out): Triple-variant name resolution across initial and title",
+  "text_length": 283,
+  "total_annotations": 4,
+  "annotations": [
+    {
+      "start": 39,
+      "end": 56,
+      "text": "Meera Swaminathan",
+      "type": "PERSON",
+      "entity_id": "ent_meera"
+    },
+    {
+      "start": 124,
+      "end": 138,
+      "text": "M. Swaminathan",
+      "type": "PERSON",
+      "entity_id": "ent_meera"
+    },
+    {
+      "start": 229,
+      "end": 244,
+      "text": "Ms. Swaminathan",
+      "type": "PERSON",
+      "entity_id": "ent_meera"
+    },
+    {
+      "start": 248,
+      "end": 281,
+      "text": "meera.s@ai-ethics-foundation.test",
+      "type": "EMAIL",
+      "entity_id": "ent_meera_mail"
+    }
+  ]
+}

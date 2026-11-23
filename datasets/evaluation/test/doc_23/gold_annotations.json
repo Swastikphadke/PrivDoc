@@ -1,0 +1,44 @@
+{
+  "document_id": "doc_23",
+  "split": "test",
+  "description": "Test 6 (Held-out): Medical record with doctor and patient address",
+  "text_length": 244,
+  "total_annotations": 5,
+  "annotations": [
+    {
+      "start": 50,
+      "end": 65,
+      "text": "Samantha Carter",
+      "type": "PERSON",
+      "entity_id": "ent_sam"
+    },
+    {
+      "start": 90,
+      "end": 98,
+      "text": "STU-8820",
+      "type": "ID_LIKE",
+      "entity_id": "ent_sam_id"
+    },
+    {
+      "start": 120,
+      "end": 138,
+      "text": "Dr. Daniel Jackson",
+      "type": "PERSON",
+      "entity_id": "ent_daniel"
+    },
+    {
+      "start": 160,
+      "end": 177,
+      "text": "+1 (555) 321-4321",
+      "type": "PHONE",
+      "entity_id": "ent_daniel_ph"
+    },
+    {
+      "start": 199,
+      "end": 243,
+      "text": "742 Evergreen Terrace, Springfield, OR 97477",
+      "type": "ADDRESS",
+      "entity_id": "ent_simpson_addr"
+    }
+  ]
+}

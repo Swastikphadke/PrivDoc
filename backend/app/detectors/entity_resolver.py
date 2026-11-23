@@ -21,6 +21,8 @@ from rapidfuzz import fuzz
 from app.core.security import get_safe_session_dir
 from app.schemas.candidate import Candidate
 from app.schemas.entity import Entity, EntityGroupResponse, EntityLinkAction, SLMAnalysisResponse
+from app.schemas.feedback import FeedbackAction
+from app.services.feedback_service import FeedbackService
 from app.services.model_service import ModelService
 
 logger = logging.getLogger(__name__)
@@ -412,6 +414,20 @@ class EntityResolver:
         entities = [e for e in entities if len(e.candidate_ids) > 0]
 
         cls._persist_resolution(document_id, entities, candidates)
+
+        # Record data-minimized entity action feedback
+        try:
+            FeedbackService.record_entity_action_feedback(
+                document_id=document_id,
+                action=FeedbackAction.LINK_ENTITIES if target_entity_id else FeedbackAction.MERGE_ENTITIES,
+                entity_id=target_entity.entity_id if target_entity else None,
+                entity_type=target_entity.entity_type if target_entity else "UNKNOWN",
+                affected_count=len(candidate_ids),
+                details_meta={"target_entity_id": target_entity_id, "is_new_cluster": target_entity_id is None},
+            )
+        except Exception as e:
+            logger.warning("Failed to record entity feedback: %s", e)
+
         return EntityGroupResponse(
             document_id=document_id,
             total_entities=len(entities),
@@ -459,6 +475,19 @@ class EntityResolver:
         entities = [e for e in entities if len(e.candidate_ids) > 0]
         cls._persist_resolution(document_id, entities, candidates)
 
+        # Record data-minimized entity action feedback
+        try:
+            FeedbackService.record_entity_action_feedback(
+                document_id=document_id,
+                action=FeedbackAction.UNLINK_ENTITIES,
+                entity_id=None,
+                entity_type="PERSON",
+                affected_count=len(candidate_ids),
+                details_meta={"unlinked_candidate_ids_count": len(candidate_ids)},
+            )
+        except Exception as e:
+            logger.warning("Failed to record entity unlink feedback: %s", e)
+
         return EntityGroupResponse(
             document_id=document_id,
             total_entities=len(entities),
@@ -481,6 +510,7 @@ class EntityResolver:
     ) -> None:
         """Store resolved entities and update candidate entity_id references in session dir."""
         session_dir = get_safe_session_dir(document_id)
+        session_dir.mkdir(parents=True, exist_ok=True)
 
         # Map candidate_id -> entity_id
         cand_to_ent: Dict[str, str] = {}

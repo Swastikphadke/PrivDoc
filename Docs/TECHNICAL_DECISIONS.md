@@ -180,3 +180,42 @@ This document logs critical architectural and technical decisions made for Privy
   - Fully preserve the 10 distinct development phases (P0 through P9) as defined in `07_Development_Phases.md`.
   - Maintain Phase P6 as a dedicated phase for Sanitized-Only Summarization and the multi-tier summary privacy guard.
 - **Rationale:** Prevents scope mingling, enforces the "redact before summarize" principle, and ensures unambiguous exit criteria for each phase.
+
+---
+
+## TDR-015: Local Feedback Privacy and Data Minimization
+
+- **Status:** Accepted
+- **Context:** Collecting user review decisions (approvals, rejections, category corrections, manual spans) helps optimize system accuracy, but storing raw candidates or surrounding document text poses unacceptable privacy risks.
+- **Decision:**
+  - `feedback_records` table in SQLite adheres strictly to data minimization:
+    - Stores event ID, pseudonymous document ID, candidate/entity reference ID, action type, PII category, detection source, confidence, and non-PII operational details.
+    - Prohibits storage of raw document text, surrounding text snippets, original PDF content, or sensitive candidate strings.
+  - Name variant aliases are NEVER silently retained. Storing alias values requires explicit user opt-in consent (`opt_in_consent=True`) and uses local AES-256-GCM authenticated encryption with automatic expiration and manual purge controls.
+- **Rationale:** Guarantees that local audit logs never become secondary repositories of unencrypted personal data (satisfying FR-022, NFR-001, and NFR-010).
+
+---
+
+## TDR-016: Controlled Feedback Proposal Workflow (No Live Auto-Mutation)
+
+- **Status:** Accepted
+- **Context:** Automated model fine-tuning or live runtime regex mutation from user feedback creates severe risks of prompt poisoning, data drift, regex catastrophic backtracking (ReDoS), and erratic detection behavior.
+- **Decision:**
+  - Feedback collection NEVER mutates runtime regex patterns, model prompts, or weights automatically.
+  - All feedback is analyzed by an offline aggregation service that synthesizes structured `FeedbackProposal` records with status `PROPOSED`.
+  - Pattern and rule adjustments require explicit human engineering review, static testing, and evaluation against held-out validation suites before adoption.
+- **Rationale:** Protects system stability, reproducibility, and security against uncontrolled runtime behavioral drift.
+
+---
+
+## TDR-017: Evaluation Dataset Isolation and Quarantined Held-Out Split
+
+- **Status:** Accepted
+- **Context:** Evaluating detection accuracy, entity resolution, and redaction verification requires benchmark datasets that reflect real-world document difficulties without risking private data exposure or dataset contamination.
+- **Decision:**
+  - Evaluation corpus consists exclusively of synthetic documents generated with fixed random seed (`seed=42`) and zero real personal data.
+  - The corpus is partitioned into distinct development (`dev`), validation (`val`), and quarantined held-out test (`test`) splits.
+  - The held-out test split is strictly quarantined: it must NEVER be inspected or used to tune detection regex patterns, heuristics, or confidence thresholds.
+  - An automated reproducibility test verifies that no test split gold strings are hardcoded into production regex patterns.
+- **Rationale:** Preserves scientific evaluation integrity and prevents data leakage into heuristic detectors.
+

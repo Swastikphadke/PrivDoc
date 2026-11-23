@@ -1,0 +1,37 @@
+{
+  "document_id": "doc_17",
+  "split": "val",
+  "description": "Validation 7: Academic grant with professor titles and UK telephone",
+  "text_length": 251,
+  "total_annotations": 4,
+  "annotations": [
+    {
+      "start": 57,
+      "end": 79,
+      "text": "Prof. Albus Dumbledore",
+      "type": "PERSON",
+      "entity_id": "ent_albus"
+    },
+    {
+      "start": 120,
+      "end": 138,
+      "text": "Minerva McGonagall",
+      "type": "PERSON",
+      "entity_id": "ent_minerva"
+    },
+    {
+      "start": 198,
+      "end": 224,
+      "text": "m.mcgonagall@hogwarts.test",
+      "type": "EMAIL",
+      "entity_id": "ent_minerva_mail"
+    },
+    {
+      "start": 233,
+      "end": 249,
+      "text": "+44 131 496 0123",
+      "type": "PHONE",
+      "entity_id": "ent_minerva_ph"
+    }
+  ]
+}

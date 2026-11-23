@@ -1,0 +1,37 @@
+{
+  "document_id": "doc_05",
+  "split": "dev",
+  "description": "Class 5: Complex multi-line postal and campus addresses",
+  "text_length": 269,
+  "total_annotations": 4,
+  "annotations": [
+    {
+      "start": 46,
+      "end": 108,
+      "text": "Plot 42, Electronic City Phase 1, Hosur Road, Bangalore 560100",
+      "type": "ADDRESS",
+      "entity_id": "ent_addr_hq"
+    },
+    {
+      "start": 140,
+      "end": 188,
+      "text": "Suite 800, 1200 Innovation Way, Austin, TX 78701",
+      "type": "ADDRESS",
+      "entity_id": "ent_addr_us"
+    },
+    {
+      "start": 224,
+      "end": 239,
+      "text": "S. K. Narayanan",
+      "type": "PERSON",
+      "entity_id": "ent_skn"
+    },
+    {
+      "start": 241,
+      "end": 266,
+      "text": "sk.narayanan@corp-re.test",
+      "type": "EMAIL",
+      "entity_id": "ent_skn_mail"
+    }
+  ]
+}

@@ -1,0 +1,51 @@
+{
+  "document_id": "doc_10",
+  "split": "dev",
+  "description": "Surname Defense: Sunil Kumar and Anil Kumar must never be merged",
+  "text_length": 235,
+  "total_annotations": 6,
+  "annotations": [
+    {
+      "start": 65,
+      "end": 76,
+      "text": "Sunil Kumar",
+      "type": "PERSON",
+      "entity_id": "ent_sunil"
+    },
+    {
+      "start": 81,
+      "end": 91,
+      "text": "Anil Kumar",
+      "type": "PERSON",
+      "entity_id": "ent_anil"
+    },
+    {
+      "start": 118,
+      "end": 129,
+      "text": "Sunil Kumar",
+      "type": "PERSON",
+      "entity_id": "ent_sunil"
+    },
+    {
+      "start": 133,
+      "end": 162,
+      "text": "102 MG Road, Bangalore 560001",
+      "type": "ADDRESS",
+      "entity_id": "ent_mg_road"
+    },
+    {
+      "start": 189,
+      "end": 214,
+      "text": "sunil.k@venture-tech.test",
+      "type": "EMAIL",
+      "entity_id": "ent_sunil_mail"
+    },
+    {
+      "start": 218,
+      "end": 233,
+      "text": "+91 97410 99881",
+      "type": "PHONE",
+      "entity_id": "ent_sunil_ph"
+    }
+  ]
+}

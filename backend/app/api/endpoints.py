@@ -960,5 +960,124 @@ def get_document_summary(document_id: str) -> SummaryResponse:
     return summary
 
 
+# =========================================================================
+# Phase P7: Local Privacy-Preserving Feedback & Opt-In Alias Endpoints
+# =========================================================================
+
+from app.schemas.feedback import (
+    FeedbackAnalysisReport,
+    FeedbackRecordSchema,
+    OptInAliasRequest,
+)
+from app.services.feedback_service import FeedbackService
+from app.database.session import get_feedback_records
+
+
+@router.get(
+    "/feedback/analysis",
+    response_model=FeedbackAnalysisReport,
+    tags=["Feedback & Evaluation"],
+)
+def get_feedback_analysis(document_id: Optional[str] = None) -> FeedbackAnalysisReport:
+    """Analyze aggregated user feedback and generate structured rule modification proposals.
+    
+    Security Guarantee:
+    Does NOT mutate detection patterns or fine-tune models automatically.
+    Produces proposals requiring explicit human developer review.
+    """
+    return FeedbackService.analyze_feedback(document_id=document_id)
+
+
+@router.get(
+    "/documents/{document_id}/feedback",
+    response_model=List[Dict[str, Any]],
+    tags=["Feedback & Evaluation"],
+)
+def get_document_feedback(document_id: str) -> List[Dict[str, Any]]:
+    """Retrieve data-minimized feedback event records for a document session.
+    
+    Data Minimization Guarantee:
+    Returns only structural event records (category, action, source, confidence).
+    Contains zero raw document text, snippets, or candidate PII.
+    """
+    if not re.match(r"^[a-zA-Z0-9_\-]+$", document_id):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid document ID format.",
+        )
+    return get_feedback_records(doc_id=document_id)
+
+
+@router.post(
+    "/documents/{document_id}/aliases",
+    tags=["Feedback & Evaluation"],
+)
+def store_opt_in_encrypted_alias(
+    document_id: str,
+    request: OptInAliasRequest,
+) -> Dict[str, Any]:
+    """Store an encrypted name variant alias with explicit opt-in consent.
+    
+    Privacy Guarantee:
+    Fails with 400 if opt_in_consent is not explicitly True.
+    Uses AES-256-GCM encryption with expiration retention.
+    """
+    if not re.match(r"^[a-zA-Z0-9_\-]+$", document_id):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid document ID format.",
+        )
+    if request.document_id != document_id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Path document_id does not match request body document_id.",
+        )
+
+    try:
+        rec_id = FeedbackService.store_opt_in_alias(request)
+        return {
+            "status": "STORED",
+            "alias_record_id": rec_id,
+            "document_id": document_id,
+            "entity_id": request.entity_id,
+            "retention_days": request.retention_days,
+        }
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e),
+        )
+
+
+@router.get(
+    "/documents/{document_id}/aliases",
+    tags=["Feedback & Evaluation"],
+)
+def get_opt_in_aliases(document_id: str) -> List[Dict[str, Any]]:
+    """Retrieve decrypted aliases for the active document session."""
+    if not re.match(r"^[a-zA-Z0-9_\-]+$", document_id):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid document ID format.",
+        )
+    return FeedbackService.get_opt_in_aliases(document_id)
+
+
+@router.delete(
+    "/documents/{document_id}/aliases",
+    tags=["Feedback & Evaluation"],
+)
+def delete_document_aliases(document_id: str) -> Dict[str, Any]:
+    """Purge all encrypted aliases associated with a document session."""
+    if not re.match(r"^[a-zA-Z0-9_\-]+$", document_id):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid document ID format.",
+        )
+    FeedbackService.clear_document_data(document_id)
+    return {"status": "DELETED", "document_id": document_id}
+
+
+
 
 

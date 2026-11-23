@@ -23,6 +23,7 @@ from app.schemas.review import (
     ReviewDecisionAction,
     ReviewSummaryResponse,
 )
+from app.services.feedback_service import FeedbackService
 
 
 class ReviewService:
@@ -73,6 +74,14 @@ class ReviewService:
                 doc_id=document_id,
                 cand_id=cand.candidate_id,
                 decision=new_status,
+                scope=scope,
+            )
+            # Record data-minimized feedback event
+            FeedbackService.record_review_feedback(
+                document_id=document_id,
+                candidate=cand,
+                action=new_status,
+                new_type=action.new_type if action.new_type else None,
                 scope=scope,
             )
 
@@ -144,6 +153,12 @@ class ReviewService:
             cand_id=cand_id,
             decision=ReviewStatus.APPROVED.value,
             scope="MANUAL",
+        )
+
+        # Record data-minimized feedback event
+        FeedbackService.record_manual_add_feedback(
+            document_id=document_id,
+            candidate=manual_cand,
         )
 
         return manual_cand

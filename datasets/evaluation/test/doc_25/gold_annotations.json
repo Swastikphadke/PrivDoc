@@ -1,0 +1,51 @@
+{
+  "document_id": "doc_25",
+  "split": "test",
+  "description": "Test 8 (Held-out): IT ticket with repeated requester and address",
+  "text_length": 289,
+  "total_annotations": 6,
+  "annotations": [
+    {
+      "start": 62,
+      "end": 78,
+      "text": "Sanjay Singhania",
+      "type": "PERSON",
+      "entity_id": "ent_sanjay"
+    },
+    {
+      "start": 80,
+      "end": 107,
+      "text": "sanjay.s@reliance-tech.test",
+      "type": "EMAIL",
+      "entity_id": "ent_sanjay_mail"
+    },
+    {
+      "start": 121,
+      "end": 132,
+      "text": "ASSET-44109",
+      "type": "ID_LIKE",
+      "entity_id": "ent_asset_id"
+    },
+    {
+      "start": 145,
+      "end": 197,
+      "text": "Floor 7, Cyber Tower A, Hitec City, Hyderabad 500081",
+      "type": "ADDRESS",
+      "entity_id": "ent_hyd_addr"
+    },
+    {
+      "start": 223,
+      "end": 239,
+      "text": "Sanjay Singhania",
+      "type": "PERSON",
+      "entity_id": "ent_sanjay"
+    },
+    {
+      "start": 272,
+      "end": 287,
+      "text": "+91 98220 33441",
+      "type": "PHONE",
+      "entity_id": "ent_sanjay_ph"
+    }
+  ]
+}

@@ -1,0 +1,44 @@
+{
+  "document_id": "doc_13",
+  "split": "val",
+  "description": "Validation 3: Financial security alert with account IDs",
+  "text_length": 253,
+  "total_annotations": 5,
+  "annotations": [
+    {
+      "start": 56,
+      "end": 75,
+      "text": "Karthik Subramanian",
+      "type": "PERSON",
+      "entity_id": "ent_karthik"
+    },
+    {
+      "start": 77,
+      "end": 85,
+      "text": "EMP-4102",
+      "type": "ID_LIKE",
+      "entity_id": "ent_emp_k"
+    },
+    {
+      "start": 133,
+      "end": 144,
+      "text": "ACCT-551029",
+      "type": "ID_LIKE",
+      "entity_id": "ent_acc_k"
+    },
+    {
+      "start": 204,
+      "end": 219,
+      "text": "+91 99112 33445",
+      "type": "PHONE",
+      "entity_id": "ent_karthik_ph"
+    },
+    {
+      "start": 223,
+      "end": 251,
+      "text": "karthik.s@fintech-vault.test",
+      "type": "EMAIL",
+      "entity_id": "ent_karthik_mail"
+    }
+  ]
+}

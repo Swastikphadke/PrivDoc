@@ -81,6 +81,31 @@ class DetectionService:
         )
 
     @classmethod
+    def detect_from_text(
+        cls,
+        text: str,
+        document_id: str = "eval_doc",
+        resolve_entities: bool = True,
+    ) -> List[Candidate]:
+        """Directly run detection pipeline on canonical text string (for evaluation and tests)."""
+        raw_candidates: List[Candidate] = []
+        raw_candidates.extend(RegexDetector.detect(text, document_id))
+        raw_candidates.extend(NERDetector.detect(text, document_id))
+
+        merged = cls.merge_candidates(raw_candidates, text, document_id)
+
+        if resolve_entities:
+            from app.detectors.entity_resolver import EntityResolver
+            EntityResolver.resolve_entities(
+                document_id=document_id,
+                candidates=merged,
+                canonical_text=text,
+                use_slm=False,
+            )
+
+        return merged
+
+    @classmethod
     def merge_candidates(
         cls,
         raw_candidates: List[Candidate],

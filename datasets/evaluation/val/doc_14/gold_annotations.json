@@ -1,0 +1,65 @@
+{
+  "document_id": "doc_14",
+  "split": "val",
+  "description": "Validation 4: Multi-recipient formal email headers",
+  "text_length": 306,
+  "total_annotations": 8,
+  "annotations": [
+    {
+      "start": 6,
+      "end": 18,
+      "text": "Alice Walker",
+      "type": "PERSON",
+      "entity_id": "ent_alice"
+    },
+    {
+      "start": 20,
+      "end": 48,
+      "text": "alice.w@solaris-defense.test",
+      "type": "EMAIL",
+      "entity_id": "ent_alice_mail"
+    },
+    {
+      "start": 54,
+      "end": 64,
+      "text": "Bob Martin",
+      "type": "PERSON",
+      "entity_id": "ent_bob"
+    },
+    {
+      "start": 66,
+      "end": 92,
+      "text": "bob.m@solaris-defense.test",
+      "type": "EMAIL",
+      "entity_id": "ent_bob_mail"
+    },
+    {
+      "start": 95,
+      "end": 108,
+      "text": "Carol Danvers",
+      "type": "PERSON",
+      "entity_id": "ent_carol"
+    },
+    {
+      "start": 110,
+      "end": 138,
+      "text": "carol.d@solaris-defense.test",
+      "type": "EMAIL",
+      "entity_id": "ent_carol_mail"
+    },
+    {
+      "start": 270,
+      "end": 282,
+      "text": "Alice Walker",
+      "type": "PERSON",
+      "entity_id": "ent_alice"
+    },
+    {
+      "start": 289,
+      "end": 306,
+      "text": "+1 (555) 129-8765",
+      "type": "PHONE",
+      "entity_id": "ent_alice_ph"
+    }
+  ]
+}

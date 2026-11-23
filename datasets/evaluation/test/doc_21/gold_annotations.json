@@ -1,0 +1,51 @@
+{
+  "document_id": "doc_21",
+  "split": "test",
+  "description": "Test 4 (Held-out): Fraud summary with initial linkage",
+  "text_length": 270,
+  "total_annotations": 6,
+  "annotations": [
+    {
+      "start": 95,
+      "end": 106,
+      "text": "ACCT-882194",
+      "type": "ID_LIKE",
+      "entity_id": "ent_acc_jlaw"
+    },
+    {
+      "start": 124,
+      "end": 141,
+      "text": "Jennifer Lawrence",
+      "type": "PERSON",
+      "entity_id": "ent_jlaw"
+    },
+    {
+      "start": 171,
+      "end": 182,
+      "text": "J. Lawrence",
+      "type": "PERSON",
+      "entity_id": "ent_jlaw"
+    },
+    {
+      "start": 212,
+      "end": 222,
+      "text": "Fox Mulder",
+      "type": "PERSON",
+      "entity_id": "ent_mulder"
+    },
+    {
+      "start": 224,
+      "end": 248,
+      "text": "f.mulder@fbi-bureau.test",
+      "type": "EMAIL",
+      "entity_id": "ent_mulder_mail"
+    },
+    {
+      "start": 250,
+      "end": 267,
+      "text": "+1 (555) 992-0044",
+      "type": "PHONE",
+      "entity_id": "ent_mulder_ph"
+    }
+  ]
+}

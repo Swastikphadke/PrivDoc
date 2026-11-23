@@ -1,0 +1,51 @@
+{
+  "document_id": "doc_02",
+  "split": "dev",
+  "description": "Class 2: Header and signature memo with repeated executive identity",
+  "text_length": 293,
+  "total_annotations": 6,
+  "annotations": [
+    {
+      "start": 15,
+      "end": 30,
+      "text": "Dr. Aris Thorne",
+      "type": "PERSON",
+      "entity_id": "ent_thorne"
+    },
+    {
+      "start": 32,
+      "end": 59,
+      "text": "aris.thorne@quantum-lab.org",
+      "type": "EMAIL",
+      "entity_id": "ent_thorne_email"
+    },
+    {
+      "start": 67,
+      "end": 77,
+      "text": "Priya Nair",
+      "type": "PERSON",
+      "entity_id": "ent_priya"
+    },
+    {
+      "start": 207,
+      "end": 218,
+      "text": "Vikram Seth",
+      "type": "PERSON",
+      "entity_id": "ent_vikram"
+    },
+    {
+      "start": 234,
+      "end": 249,
+      "text": "Dr. Aris Thorne",
+      "type": "PERSON",
+      "entity_id": "ent_thorne"
+    },
+    {
+      "start": 278,
+      "end": 293,
+      "text": "+91 98765 43210",
+      "type": "PHONE",
+      "entity_id": "ent_thorne_ph"
+    }
+  ]
+}

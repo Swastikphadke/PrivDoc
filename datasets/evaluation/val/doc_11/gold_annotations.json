@@ -1,0 +1,44 @@
+{
+  "document_id": "doc_11",
+  "split": "val",
+  "description": "Validation 1: Clean advisory memo with single-occurrence entities",
+  "text_length": 239,
+  "total_annotations": 5,
+  "annotations": [
+    {
+      "start": 55,
+      "end": 67,
+      "text": "Maya Angelou",
+      "type": "PERSON",
+      "entity_id": "ent_maya"
+    },
+    {
+      "start": 112,
+      "end": 126,
+      "text": "Gordon Freeman",
+      "type": "PERSON",
+      "entity_id": "ent_gordon"
+    },
+    {
+      "start": 128,
+      "end": 157,
+      "text": "gordon.freeman@blackmesa.test",
+      "type": "EMAIL",
+      "entity_id": "ent_gordon_mail"
+    },
+    {
+      "start": 159,
+      "end": 176,
+      "text": "+1 (555) 434-1122",
+      "type": "PHONE",
+      "entity_id": "ent_gordon_ph"
+    },
+    {
+      "start": 197,
+      "end": 237,
+      "text": "88 Silicon Boulevard, San Jose, CA 95112",
+      "type": "ADDRESS",
+      "entity_id": "ent_sanjose"
+    }
+  ]
+}

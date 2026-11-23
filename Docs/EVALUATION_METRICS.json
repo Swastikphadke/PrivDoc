@@ -1,0 +1,320 @@
+[
+  {
+    "split_name": "dev",
+    "matching_mode": "exact",
+    "document_count": 10,
+    "micro_detection": {
+      "tp": 46,
+      "fp": 38,
+      "fn": 16,
+      "precision": 0.5476,
+      "recall": 0.7419,
+      "f1": 0.6301,
+      "has_zero_denominator": false
+    },
+    "macro_detection": {
+      "tp": 0,
+      "fp": 0,
+      "fn": 0,
+      "precision": 0.591,
+      "recall": 0.7093,
+      "f1": 0.6447,
+      "has_zero_denominator": false
+    },
+    "category_metrics": {
+      "ADDRESS": {
+        "tp": 0,
+        "fp": 6,
+        "fn": 5,
+        "precision": 0.0,
+        "recall": 0.0,
+        "f1": 0.0,
+        "has_zero_denominator": false
+      },
+      "EMAIL": {
+        "tp": 9,
+        "fp": 0,
+        "fn": 0,
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0,
+        "has_zero_denominator": false
+      },
+      "ID_LIKE": {
+        "tp": 9,
+        "fp": 5,
+        "fn": 0,
+        "precision": 0.6429,
+        "recall": 1.0,
+        "f1": 0.7826,
+        "has_zero_denominator": false
+      },
+      "PERSON": {
+        "tp": 17,
+        "fp": 26,
+        "fn": 10,
+        "precision": 0.3953,
+        "recall": 0.6296,
+        "f1": 0.4857,
+        "has_zero_denominator": false
+      },
+      "PHONE": {
+        "tp": 11,
+        "fp": 1,
+        "fn": 1,
+        "precision": 0.9167,
+        "recall": 0.9167,
+        "f1": 0.9167,
+        "has_zero_denominator": false
+      }
+    },
+    "entity_metrics": {
+      "pairwise_tp": 2,
+      "pairwise_fp": 84,
+      "pairwise_fn": 0,
+      "pairwise_tn": 949,
+      "precision": 0.0233,
+      "recall": 1.0,
+      "f1": 0.0455,
+      "false_merge_rate": 0.0813,
+      "missed_link_rate": 0.0
+    },
+    "redaction_metrics": {
+      "total_approved_spans": 0,
+      "approved_removed_count": 0,
+      "approved_removal_rate": 1.0,
+      "total_rejected_spans": 0,
+      "rejected_preserved_count": 0,
+      "preserved_rejected_rate": 1.0,
+      "verification_failure_detection_rate": 1.0
+    },
+    "summary_metrics": {
+      "total_summaries_evaluated": 0,
+      "direct_leakages_detected": 0,
+      "direct_leakage_rate": 0.0,
+      "pii_redetected_count": 0,
+      "quasi_identifier_flags": 0,
+      "suppression_correctness_rate": 1.0
+    },
+    "performance": {
+      "total_latency_seconds": 0.7507,
+      "avg_latency_per_doc_seconds": 0.0751,
+      "peak_memory_mb": 0.18,
+      "total_chars_processed": 2869,
+      "total_pages_processed": 10
+    },
+    "generated_at": "2026-11-23T10:55:39.810454+00:00"
+  },
+  {
+    "split_name": "val",
+    "matching_mode": "exact",
+    "document_count": 7,
+    "micro_detection": {
+      "tp": 27,
+      "fp": 30,
+      "fn": 10,
+      "precision": 0.4737,
+      "recall": 0.7297,
+      "f1": 0.5745,
+      "has_zero_denominator": false
+    },
+    "macro_detection": {
+      "tp": 0,
+      "fp": 0,
+      "fn": 0,
+      "precision": 0.5916,
+      "recall": 0.7667,
+      "f1": 0.6679,
+      "has_zero_denominator": false
+    },
+    "category_metrics": {
+      "ADDRESS": {
+        "tp": 1,
+        "fp": 4,
+        "fn": 2,
+        "precision": 0.2,
+        "recall": 0.3333,
+        "f1": 0.25,
+        "has_zero_denominator": false
+      },
+      "EMAIL": {
+        "tp": 8,
+        "fp": 0,
+        "fn": 0,
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0,
+        "has_zero_denominator": false
+      },
+      "ID_LIKE": {
+        "tp": 3,
+        "fp": 3,
+        "fn": 0,
+        "precision": 0.5,
+        "recall": 1.0,
+        "f1": 0.6667,
+        "has_zero_denominator": false
+      },
+      "PERSON": {
+        "tp": 8,
+        "fp": 23,
+        "fn": 8,
+        "precision": 0.2581,
+        "recall": 0.5,
+        "f1": 0.3405,
+        "has_zero_denominator": false
+      },
+      "PHONE": {
+        "tp": 7,
+        "fp": 0,
+        "fn": 0,
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0,
+        "has_zero_denominator": false
+      }
+    },
+    "entity_metrics": {
+      "pairwise_tp": 0,
+      "pairwise_fp": 27,
+      "pairwise_fn": 0,
+      "pairwise_tn": 324,
+      "precision": 0.0,
+      "recall": 0.0,
+      "f1": 0.0,
+      "false_merge_rate": 0.0769,
+      "missed_link_rate": 0.0
+    },
+    "redaction_metrics": {
+      "total_approved_spans": 0,
+      "approved_removed_count": 0,
+      "approved_removal_rate": 1.0,
+      "total_rejected_spans": 0,
+      "rejected_preserved_count": 0,
+      "preserved_rejected_rate": 1.0,
+      "verification_failure_detection_rate": 1.0
+    },
+    "summary_metrics": {
+      "total_summaries_evaluated": 0,
+      "direct_leakages_detected": 0,
+      "direct_leakage_rate": 0.0,
+      "pii_redetected_count": 0,
+      "quasi_identifier_flags": 0,
+      "suppression_correctness_rate": 1.0
+    },
+    "performance": {
+      "total_latency_seconds": 0.4323,
+      "avg_latency_per_doc_seconds": 0.0618,
+      "peak_memory_mb": 0.15,
+      "total_chars_processed": 1808,
+      "total_pages_processed": 7
+    },
+    "generated_at": "2026-11-23T10:55:40.569780+00:00"
+  },
+  {
+    "split_name": "test",
+    "matching_mode": "exact",
+    "document_count": 8,
+    "micro_detection": {
+      "tp": 33,
+      "fp": 32,
+      "fn": 12,
+      "precision": 0.5077,
+      "recall": 0.7333,
+      "f1": 0.6,
+      "has_zero_denominator": false
+    },
+    "macro_detection": {
+      "tp": 0,
+      "fp": 0,
+      "fn": 0,
+      "precision": 0.5923,
+      "recall": 0.7125,
+      "f1": 0.6469,
+      "has_zero_denominator": false
+    },
+    "category_metrics": {
+      "ADDRESS": {
+        "tp": 1,
+        "fp": 4,
+        "fn": 3,
+        "precision": 0.2,
+        "recall": 0.25,
+        "f1": 0.2222,
+        "has_zero_denominator": false
+      },
+      "EMAIL": {
+        "tp": 8,
+        "fp": 0,
+        "fn": 0,
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0,
+        "has_zero_denominator": false
+      },
+      "ID_LIKE": {
+        "tp": 6,
+        "fp": 7,
+        "fn": 2,
+        "precision": 0.4615,
+        "recall": 0.75,
+        "f1": 0.5714,
+        "has_zero_denominator": false
+      },
+      "PERSON": {
+        "tp": 9,
+        "fp": 21,
+        "fn": 7,
+        "precision": 0.3,
+        "recall": 0.5625,
+        "f1": 0.3913,
+        "has_zero_denominator": false
+      },
+      "PHONE": {
+        "tp": 9,
+        "fp": 0,
+        "fn": 0,
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0,
+        "has_zero_denominator": false
+      }
+    },
+    "entity_metrics": {
+      "pairwise_tp": 2,
+      "pairwise_fp": 44,
+      "pairwise_fn": 0,
+      "pairwise_tn": 482,
+      "precision": 0.0435,
+      "recall": 1.0,
+      "f1": 0.0834,
+      "false_merge_rate": 0.0837,
+      "missed_link_rate": 0.0
+    },
+    "redaction_metrics": {
+      "total_approved_spans": 0,
+      "approved_removed_count": 0,
+      "approved_removal_rate": 1.0,
+      "total_rejected_spans": 0,
+      "rejected_preserved_count": 0,
+      "preserved_rejected_rate": 1.0,
+      "verification_failure_detection_rate": 1.0
+    },
+    "summary_metrics": {
+      "total_summaries_evaluated": 0,
+      "direct_leakages_detected": 0,
+      "direct_leakage_rate": 0.0,
+      "pii_redetected_count": 0,
+      "quasi_identifier_flags": 0,
+      "suppression_correctness_rate": 1.0
+    },
+    "performance": {
+      "total_latency_seconds": 0.2157,
+      "avg_latency_per_doc_seconds": 0.027,
+      "peak_memory_mb": 0.15,
+      "total_chars_processed": 2309,
+      "total_pages_processed": 8
+    },
+    "generated_at": "2026-11-23T10:55:41.005799+00:00"
+  }
+]

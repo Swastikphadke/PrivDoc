@@ -1,0 +1,65 @@
+{
+  "document_id": "doc_24",
+  "split": "test",
+  "description": "Test 7 (Held-out): Tabular security clearance register",
+  "text_length": 316,
+  "total_annotations": 8,
+  "annotations": [
+    {
+      "start": 124,
+      "end": 131,
+      "text": "EMP-901",
+      "type": "ID_LIKE",
+      "entity_id": "ent_b901"
+    },
+    {
+      "start": 134,
+      "end": 149,
+      "text": "Sunita Williams",
+      "type": "PERSON",
+      "entity_id": "ent_sunita"
+    },
+    {
+      "start": 171,
+      "end": 188,
+      "text": "+1 (555) 441-2299",
+      "type": "PHONE",
+      "entity_id": "ent_sunita_ph"
+    },
+    {
+      "start": 189,
+      "end": 220,
+      "text": "s.williams@nasa-contractor.test",
+      "type": "EMAIL",
+      "entity_id": "ent_sunita_mail"
+    },
+    {
+      "start": 221,
+      "end": 228,
+      "text": "EMP-902",
+      "type": "ID_LIKE",
+      "entity_id": "ent_b902"
+    },
+    {
+      "start": 231,
+      "end": 245,
+      "text": "Kalpana Chawla",
+      "type": "PERSON",
+      "entity_id": "ent_kalpana"
+    },
+    {
+      "start": 268,
+      "end": 285,
+      "text": "+1 (555) 441-2288",
+      "type": "PHONE",
+      "entity_id": "ent_kalpana_ph"
+    },
+    {
+      "start": 286,
+      "end": 315,
+      "text": "k.chawla@nasa-contractor.test",
+      "type": "EMAIL",
+      "entity_id": "ent_kalpana_mail"
+    }
+  ]
+}

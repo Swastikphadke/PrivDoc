@@ -1,0 +1,5 @@
+IT INCIDENT RESOLUTION TICKET
+
+Ticket HD-9981 opened by User: Sanjay Singhania (sanjay.s@reliance-tech.test).
+Asset Tag: ASSET-44109 | Location: Floor 7, Cyber Tower A, Hitec City, Hyderabad 500081.
+Resolved by IT Support: Sanjay Singhania confirmed resolution via phone: +91 98220 33441.

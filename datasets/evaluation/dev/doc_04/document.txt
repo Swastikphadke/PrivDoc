@@ -1,0 +1,6 @@
+GLOBAL INCIDENT RESPONSE DIRECTORY
+
+US Desk: Officer Liam Vance, Tel: +1 (555) 349-2018
+India Desk: Inspector Devika Patel, Tel: +91 98450 12345
+UK Operations: Arthur Pendelton, Direct: +44 20 7946 0912
+Emergency Landline: (080) 2345-6789 (Ext: 401)

@@ -18,7 +18,7 @@
 | **P4** | Human Review Interface (React) | **COMPLETED** | P2, P3 | None | ☑ User can approve/reject/add candidates & link entities, shortcuts, 20 frontend tests passing |
 | **P5** | Redaction & Export Verification | **COMPLETED** | P1, P4 | None | ☑ PyMuPDF stream purging, clean-text fallback, zero-leak verification, 10 tests passing |
 | **P6** | Sanitized-Only Safe Summary | **COMPLETED** | P5 | None | ☑ Strict SanitizedDocument contract, 5-tier guard, extractive fallback, 17 backend + 5 frontend tests passing |
-| **P7** | Feedback Store & Metrics Evaluation | **NOT STARTED** | P2, P5, P6 | Annotation corpus preparation | ⬜ Quantitative evaluation report generated |
+| **P7** | Feedback Store & Metrics Evaluation | **COMPLETED** | P2, P5, P6 | None | ☑ Data-minimized feedback store, AES-256-GCM opt-in aliases, 25 synthetic corpus docs (dev/val/test), reproducible evaluation harness, 14 new tests passing (113 backend + 33 frontend tests total) |
 | **P8** | System Hardening & Integration | **NOT STARTED** | P0–P7 | Offline testing, memory profiling | ⬜ Regression tests pass offline on local hardware |
 | **P9** | Deliverables & Final Documentation | **NOT STARTED** | P8 | None | ⬜ Demonstration package & user manual complete |
 
@@ -179,15 +179,44 @@
 ---
 
 ### Phase 7: Local Feedback & Evaluation Framework
-- [ ] Implement SQLite metadata persistence (`database/` with SQLModel / SQLAlchemy):
-  - [ ] Tables for Document metadata, Candidates, Entity links, Review decisions, and Feedback.
-  - [ ] Strict exclusion of raw PII from feedback records.
-- [ ] Build evaluation harness (`scripts/evaluate.py`):
-  - [ ] Synthetic evaluation corpus (20–30 TXT, 20–30 PDF across difficulty classes).
-  - [ ] Gold standard annotation schema.
-  - [ ] Automated calculation of Precision, Recall, and F1 per category.
-  - [ ] Measurement of processing latency, peak RAM, and verification success rate.
-- **Exit Condition:** Quantitative evaluation report generated matching criteria in `08_Evaluation_and_Test_Plan.md`.
+- [x] Extend SQLite persistence (`backend/app/database/session.py`):
+  - [x] Data-minimized `feedback_records` table (`id`, `document_id`, `candidate_id`, `entity_id`, `action`, `candidate_type`, `source`, `confidence`, `details`, `created_at`).
+  - [x] Strict exclusion of raw document text, context snippets, and candidate PII strings from SQLite feedback tables.
+  - [x] Automated schema migration checking on `init_db()` to support backward-compatible upgrades.
+  - [x] Cascade deletion: removing a document session cleans up associated feedback events and encrypted aliases.
+- [x] Opt-In Encrypted Alias Management (`services/feedback_service.py`):
+  - [x] Name variant aliases are never silently retained.
+  - [x] Explicit consent requirement (`opt_in_consent=True`) enforced before saving any alias record.
+  - [x] Authenticated encryption via AES-256-GCM using local machine-derived 256-bit key.
+  - [x] Expiration tags with automatic retention purging (`purge_expired_encrypted_aliases()`).
+- [x] Controlled Feedback Proposal Workflow (TDR-016):
+  - [x] Feedback collection NEVER mutates runtime regex patterns, model weights, or prompts automatically.
+  - [x] Feedback analyzer synthesizes structured `FeedbackProposal` records with status `PROPOSED`.
+  - [x] Proposals require explicit human engineering review, static testing, and evaluation against held-out validation suites before adoption.
+- [x] Synthetic Evaluation Dataset Corpus (`datasets/evaluation/`):
+  - [x] Deterministic generator with fixed random seed (`seed=42`) via `scripts/generate_synthetic_corpus.py`.
+  - [x] 100% synthetic data: zero real personal data used.
+  - [x] 25 distinct documents across 8 difficulty classes: clean business reports, headers/signatures, initials & variants, international phones, addresses, employee IDs/accounts, borderline numeric, dense tabular data.
+  - [x] Partitioned into `dev` (10 docs), `val` (7 docs), and quarantined held-out `test` (8 docs).
+  - [x] Generated in dual formats: `document.txt` and searchable `document.pdf` (compiled via PyMuPDF).
+  - [x] Exact-offset gold standard annotations stored separately in `gold_annotations.json`.
+- [x] Evaluation Metrics Framework (`services/evaluation_service.py` & `scripts/evaluate.py`):
+  - [x] Exact-span and partial-overlap PII detection metrics (Precision, Recall, F1, TP, FP, FN).
+  - [x] Safe zero-denominator defense: returns 0.0 with `has_zero_denominator=True` when denominators are zero; never divides by zero or returns false 1.0.
+  - [x] Pairwise coreference clustering metrics for entity resolution (Pairwise Precision, Recall, F1, False Merge Rate, Missed Link Rate).
+  - [x] Redaction verification removal metrics and summary privacy guard suppression rates.
+  - [x] Latency and peak memory usage profiling via Python's `tracemalloc`.
+  - [x] Reproducibility CLI harness `scripts/evaluate.py` producing Markdown (`Docs/EVALUATION_REPORT.md`) and JSON (`Docs/EVALUATION_METRICS.json`).
+- [x] API Endpoints for Feedback & Aliases (`app/api/endpoints.py`):
+  - [x] `GET /api/feedback/analysis` (produces aggregated feedback report and proposals).
+  - [x] `GET /api/documents/{id}/feedback` (retrieves minimized feedback events for session).
+  - [x] `POST /api/documents/{id}/aliases` (stores opt-in encrypted alias).
+  - [x] `GET /api/documents/{id}/aliases` (retrieves and decrypts session aliases).
+  - [x] `DELETE /api/documents/{id}/aliases` (purges session encrypted aliases).
+- [x] Mandatory Test Suite:
+  - [x] `backend/tests/test_feedback.py`: 8 unit and privacy tests (data minimization invariant, category corrections, manual additions, consent requirement, AES-256-GCM round-trip, cascade deletion, no auto-mutation, and API endpoints).
+  - [x] `backend/tests/test_evaluation.py`: 6 tests (zero-denominator defense, exact vs overlap matching, pairwise entity resolution metrics, quarantined test set isolation, redaction/summary metrics, and report formatting).
+- **Exit Condition:** Quantitative evaluation report generated matching criteria in `08_Evaluation_and_Test_Plan.md`; all 14 tests passing. (ACHIEVED — 113 backend tests + 33 frontend tests passing across project)
 
 ---
 

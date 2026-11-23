@@ -1,0 +1,58 @@
+{
+  "document_id": "doc_20",
+  "split": "test",
+  "description": "Test 3 (Held-out): German and Indian cross-border logistics",
+  "text_length": 301,
+  "total_annotations": 7,
+  "annotations": [
+    {
+      "start": 61,
+      "end": 74,
+      "text": "Deepak Chopra",
+      "type": "PERSON",
+      "entity_id": "ent_deepak"
+    },
+    {
+      "start": 100,
+      "end": 126,
+      "text": "Sector 18, Gurugram 122015",
+      "type": "ADDRESS",
+      "entity_id": "ent_gurgaon_addr"
+    },
+    {
+      "start": 153,
+      "end": 164,
+      "text": "Hans Gruber",
+      "type": "PERSON",
+      "entity_id": "ent_hans"
+    },
+    {
+      "start": 166,
+      "end": 196,
+      "text": "gruber.h@nakatomi-freight.test",
+      "type": "EMAIL",
+      "entity_id": "ent_hans_mail"
+    },
+    {
+      "start": 205,
+      "end": 218,
+      "text": "+49 30 123456",
+      "type": "PHONE",
+      "entity_id": "ent_hans_ph"
+    },
+    {
+      "start": 245,
+      "end": 255,
+      "text": "TRK-981023",
+      "type": "ID_LIKE",
+      "entity_id": "ent_trk_id"
+    },
+    {
+      "start": 284,
+      "end": 299,
+      "text": "+91 98111 22233",
+      "type": "PHONE",
+      "entity_id": "ent_cs_ph"
+    }
+  ]
+}

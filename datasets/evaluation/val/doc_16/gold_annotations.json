@@ -1,0 +1,44 @@
+{
+  "document_id": "doc_16",
+  "split": "val",
+  "description": "Validation 6: Bank transfer advice with Indian postal and account code",
+  "text_length": 242,
+  "total_annotations": 5,
+  "annotations": [
+    {
+      "start": 75,
+      "end": 88,
+      "text": "Rajesh Sharma",
+      "type": "PERSON",
+      "entity_id": "ent_rajesh"
+    },
+    {
+      "start": 99,
+      "end": 111,
+      "text": "ACCT-1100229",
+      "type": "ID_LIKE",
+      "entity_id": "ent_acc_r"
+    },
+    {
+      "start": 122,
+      "end": 155,
+      "text": "Connaught Place, New Delhi 110001",
+      "type": "ADDRESS",
+      "entity_id": "ent_delhi_addr"
+    },
+    {
+      "start": 192,
+      "end": 207,
+      "text": "+91 98100 22334",
+      "type": "PHONE",
+      "entity_id": "ent_bank_ph"
+    },
+    {
+      "start": 217,
+      "end": 240,
+      "text": "helpdesk@bank-corp.test",
+      "type": "EMAIL",
+      "entity_id": "ent_bank_mail"
+    }
+  ]
+}

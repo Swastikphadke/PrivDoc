@@ -1,0 +1,44 @@
+{
+  "document_id": "doc_18",
+  "split": "test",
+  "description": "Test 1 (Held-out): Full executive contract profile",
+  "text_length": 298,
+  "total_annotations": 5,
+  "annotations": [
+    {
+      "start": 110,
+      "end": 124,
+      "text": "Zachary Taylor",
+      "type": "PERSON",
+      "entity_id": "ent_ztaylor"
+    },
+    {
+      "start": 148,
+      "end": 156,
+      "text": "EMP-3049",
+      "type": "ID_LIKE",
+      "entity_id": "ent_emp_zt"
+    },
+    {
+      "start": 171,
+      "end": 204,
+      "text": "zachary.taylor@novatech-corp.test",
+      "type": "EMAIL",
+      "entity_id": "ent_zt_mail"
+    },
+    {
+      "start": 230,
+      "end": 247,
+      "text": "+1 (555) 602-9911",
+      "type": "PHONE",
+      "entity_id": "ent_zt_ph"
+    },
+    {
+      "start": 261,
+      "end": 296,
+      "text": "450 Beacon Street, Boston, MA 02115",
+      "type": "ADDRESS",
+      "entity_id": "ent_boston_addr"
+    }
+  ]
+}

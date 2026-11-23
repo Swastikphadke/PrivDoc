@@ -1,0 +1,58 @@
+{
+  "document_id": "doc_06",
+  "split": "dev",
+  "description": "Class 6: Employee badges, account numbers, and tax identifiers",
+  "text_length": 236,
+  "total_annotations": 7,
+  "annotations": [
+    {
+      "start": 51,
+      "end": 62,
+      "text": "Rahul Verma",
+      "type": "PERSON",
+      "entity_id": "ent_rahul"
+    },
+    {
+      "start": 77,
+      "end": 88,
+      "text": "ACCT-904820",
+      "type": "ID_LIKE",
+      "entity_id": "ent_acc1"
+    },
+    {
+      "start": 104,
+      "end": 112,
+      "text": "EMP-7741",
+      "type": "ID_LIKE",
+      "entity_id": "ent_emp1"
+    },
+    {
+      "start": 131,
+      "end": 146,
+      "text": "Kavita Krishnan",
+      "type": "PERSON",
+      "entity_id": "ent_kavita"
+    },
+    {
+      "start": 161,
+      "end": 172,
+      "text": "ACCT-904821",
+      "type": "ID_LIKE",
+      "entity_id": "ent_acc2"
+    },
+    {
+      "start": 188,
+      "end": 196,
+      "text": "EMP-8812",
+      "type": "ID_LIKE",
+      "entity_id": "ent_emp2"
+    },
+    {
+      "start": 205,
+      "end": 215,
+      "text": "ABCDE1234F",
+      "type": "ID_LIKE",
+      "entity_id": "ent_tax1"
+    }
+  ]
+}
