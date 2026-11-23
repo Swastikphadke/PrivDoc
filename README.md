@@ -1,356 +1,317 @@
-# PrivyDoc (Privacy-Aware Document Redaction & Summary Tool)
+# PrivyDoc
 
-PrivyDoc is an enterprise-grade, local-first document redaction and privacy-aware summarization platform designed to sanitize sensitive data (PII/PHI) and generate safe summaries entirely on local hardware.
+### Privacy-Aware Document Redaction & Summarization
+
+**"Review. Redact. Verify. Summarize — without exposing the original."**
+
+![Python 3.11+](https://img.shields.io/badge/Python-3.11%2B-3776AB?logo=python&logoColor=white)
+![FastAPI 0.162](https://img.shields.io/badge/FastAPI-0.162-009688?logo=fastapi&logoColor=white)
+![React 18.3](https://img.shields.io/badge/React-18.3-61DAFB?logo=react&logoColor=black)
+![Tests 201 Passing](https://img.shields.io/badge/Tests-159%20Backend%20%7C%2042%20Frontend-2EA043)
+![Runtime Local-First](https://img.shields.io/badge/Runtime-127.0.0.1%20Local--First-F59E0B)
+
+**PrivyDoc** is a local-first document privacy workstation that detects sensitive personal information in **UTF-8 `.txt`** and **text-based `.pdf`** documents, resolves multi-mention entity variants, enforces human-in-the-loop review before physical redaction, independently verifies exported files, and generates structured summaries exclusively from verified sanitized text.
+
+It targets five core Personally Identifiable Information (PII) categories—**`PERSON`**, **`EMAIL`**, **`PHONE`**, **`ADDRESS`**, and **`ID_LIKE`**—while keeping document parsing, entity linking, stream sanitization, and optional Small Language Model (SLM) inference strictly on the local machine (`127.0.0.1`).
 
 ---
 
-## Key Guarantees & Privacy Architecture
+## Product Preview
 
-- **100% Local-First Execution**: The backend binds exclusively to `127.0.0.1`. No external APIs, cloud inference services, or third-party trackers are utilized.
-- **Strict Storage Separation**:
-  - Ephemeral session files (original PDFs/DOCX, canonical extracted text, coordinate mappings) reside temporarily in `backend/data/sessions/{document_id}/` and are deleted upon session termination or TTL expiration.
-  - SQLite (`backend/data/privydoc.db`) stores strictly metadata, review decisions, and privacy feedback—never raw document content.
-- **Defense-in-Depth Verification**:
-  - Extractive fallback summarization runs exclusively on verified sanitized text if local SLMs are unavailable.
-  - Native PyMuPDF true redaction with output verification. Clean-text PDF reconstruction offered with explicit layout-loss warnings if native redaction cannot be verified.
-  - Configurable quasi-identifier combination risk analysis.
+![PrivyDoc 3-Panel Document Review Workspace](Docs/screenshots/02_review_workspace_3panel.png)
+
+| Operational Telemetry & Session Launchpad | Entity Coreference & Link Evidence |
+| :---: | :---: |
+| ![Dashboard](Docs/screenshots/01_dashboard.png) | ![Entity Inspector](Docs/screenshots/03_entity_inspector_clusters.png) |
+| **Irreversible Redaction & 8-Point Export Audit** | **Verified Sanitized Summary & SummaryGuard** |
+| ![Export Verification](Docs/screenshots/04_export_verification.png) | ![Summary Verified](Docs/screenshots/05_summary_verified.png) |
 
 ---
 
-## Repository Structure
+## Why PrivyDoc?
 
+Organizations routinely share audit reports, legal filings, HR records, and incident summaries with external reviewers, vendors, and regulators. Sanitizing these documents reliably is difficult for five reasons:
+
+1. **Manual redaction misses variants:** A reviewer may remove `"Dr. Marcus Vance"` on page 1 while overlooking `"M. Vance"` or `"Mr. Vance"` in a later paragraph.
+2. **Cosmetic PDF masking is reversible:** Drawing black rectangles over PDF text leaves underlying character glyphs, annotations, and metadata intact and recoverable via copy-paste or stream extraction.
+3. **Purely automated scanners over- or under-redact:** Aggressive regex rules corrupt legitimate business terms (such as `"Project Apollo"` or `"ISO-9001:2015"`), while rigid rules miss contextual names or lightly obfuscated contact details.
+4. **Cloud document AI introduces external exposure:** Uploading unredacted files to third-party APIs creates a new data-custody boundary before sanitization even begins.
+5. **Unsanitized summarization leaks identity:** Generating summaries from raw source text allows language models to reproduce names, aliases, or identifying context in the summary output.
+
+**Core Engineering Principle:** Finding sensitive information is only part of the problem. PrivyDoc preserves human authority over every redaction decision, physically removes approved spans from the underlying file stream, independently verifies the exported artifact, and guarantees that the summarizer never sees the original document.
+
+---
+
+## Core Capabilities
+
+### 1. Hybrid PII Detection & Explainable Entity Resolution
+- **Three-Stage Detection Pipeline:** Combines deterministic regular expressions (`RegexDetector`), two-pass contextual Named Entity Recognition (`NERDetector`), and optional locally executed SLM assistance (`SLMDetector` via Ollama) across five categories: `PERSON`, `EMAIL`, `PHONE`, `ADDRESS`, and `ID_LIKE`.
+- **Variant & Coreference Linking:** Groups surface variations of the same identity within a document—such as full names (`"Dr. Richa K. Sharma"`), initials (`"R. K. Sharma"`), honorifics (`"Ms. Sharma"`), obfuscated emails (`user [at] domain [dot] org`), and phonetic transliterations—using cycle-safe Union-Find clustering with structured `link_reasons`.
+- **Ambiguity Safeguards:** Refuses to auto-merge ambiguous initials (e.g., `"J. Smith"` when both `"John Smith"` and `"James Smith"` appear) or distinct individuals sharing a surname, flagging them as `AMBIGUOUS_CONFLICT` for human review.
+- **Constrained SLM Role:** The local SLM never authorizes redaction independently. Novel SLM detections are held at `PENDING` status (`confidence = 0.65`) for human approval, while corroborating spans contribute to `MULTI_DETECTOR_CONSENSUS`.
+
+### 2. Human-in-the-Loop Review Workstation
+- **Three-Panel Review Interface:** Pair an interactive canonical text viewer or synchronized PyMuPDF page renderer with a filterable candidate sidebar and a contextual evidence inspector.
+- **Granular & Bulk Controls:** Approve (`A`), Reject (`R`), undo to `PENDING`, reassign PII categories, approve entire linked entity clusters, or trigger **Redact All Similar** across matching strings.
+- **Manual Span Selection:** Highlight any unflagged text range in the viewer and press `M` to register a manual redaction candidate with exact Unicode code-point offsets `[start, end)` and PDF bounding boxes.
+
+### 3. Irreversible Physical Redaction & Independent Verification
+- **Occurrence-Safe TXT & PDF Sanitization:** Plain-text files are sanitized via descending-offset string replacement (`[CATEGORY]`, `[PERSON_1]`, `[REDACTED]`, or `████`). PDF files undergo native PyMuPDF redaction (`add_redact_annot` + `apply_redactions`) to purge character glyphs from the content stream while preserving rejected identical strings on the same page.
+- **Metadata & Hidden-Structure Scrubbing:** Cleanses PDF metadata dictionaries, XMP XML packets, table-of-contents bookmarks, form widgets, links, embedded attachments, and sensitive annotations, saving with `garbage=4, deflate=True, clean=True`.
+- **Explicit Clean-Text PDF Reconstruction:** If a complex PDF structure cannot pass native stream verification, export fails closed (`FAILED`) and offers an explicit, user-triggered clean-text PDF rebuild (`POST /api/documents/{id}/reconstruct-pdf`) with layout-change disclosures.
+- **Independent 8-Point Audit:** `VerificationService` re-opens every exported `.txt` or `.pdf` from disk to verify file readability, zero residual approved substrings, zero known aliases, annotation/metadata hygiene, and SHA-256 byte integrity before unlocking download.
+
+### 4. Privacy-Safe Summarization (`SanitizedDocument` + `SummaryGuard`)
+- **Hard Input Isolation:** `SummaryService` accepts only a validated `SanitizedDocument` containing verified sanitized text and placeholders (`P5-VERIFIED`). It has no access to raw source files, unredacted text, candidate values, or coordinate maps.
+- **Local SLM & Extractive Fallback:** Generates structured JSON summaries (narrative, key points, findings, grounded `[§1]` source citations) via local Ollama, or falls back automatically to a deterministic extractive summarizer when Ollama is offline.
+- **Six-Tier `SummaryGuard`:** Inspects every generated summary for (A) direct & Base64/hex/URL-encoded leaks, (B) entity alias variants, (C) regex + NER residual PII re-detection, (D) rule-based quasi-identifier co-occurrence risks, (E) source date/figure grounding, and (F) reflected prompt-injection artifacts. Unsafe outputs fail closed to `SUPPRESSED`.
+
+### 5. Privacy-Preserving Feedback & Active Learning
+- **Zero-PII Feedback Records:** Reviewer actions are logged in SQLite using pseudonymous IDs, categories, detector provenance, and confidence scores—never raw document text or sensitive substrings.
+- **Quorum-Gated Structural Prefix Learning:** When reviewers manually add an organization-specific `ID_LIKE` pattern (e.g., `BDG-99201`) at least twice (`quorum >= 2`), `FeedbackService` learns only the non-PII uppercase prefix (`BDG-*`, filtered against a standard-code blocklist) to flag future occurrences as `PENDING`.
+- **Bounded Confidence Calibration & Opt-In Encrypted Aliases:** Adjusts category/source confidence within `[-0.15, +0.10]` after $\ge 3$ review decisions, and supports optional cross-session alias retention encrypted locally with **AES-256-GCM** (`opt_in_consent=true`). Feedback never auto-mutates model weights or production code.
+
+---
+
+## How It Works
+
+```mermaid
+flowchart LR
+    A["1. Upload\n(.txt / .pdf)"] --> B["2. Canonical Extract\nOffsets & BBoxes"]
+    B --> C["3. Hybrid Detect\nRegex + NER + SLM"]
+    C --> D["4. Entity Resolution\nVariant Clustering"]
+    D --> E["5. Human Review\nApprove / Reject / Add"]
+    E --> F["6. Physical Redaction\nStream & Metadata Scrub"]
+    F --> G{"7. Verification\n8-Point Audit"}
+    G -- "Pass (VERIFIED)" --> H["8. SanitizedDocument\nHard Privacy Boundary"]
+    G -- "Fail" --> X["Block Download\n(Fail-Closed)"]
+    H --> I["9. Summary + SummaryGuard\nVerified Output Only"]
 ```
-PrivDoc/
-├── Docs/                               # Approved architectural and specification docs
-│   ├── 01_Project_Overview.md
-│   ├── 02_System_Requirements_Document.md
-│   ├── 03_Technology_Stack.md
-│   ├── 04_System_Architecture.md
-│   ├── 05_Processing_Pipeline.md
-│   ├── 06_Implementation_Specification.md
-│   ├── 07_Development_Phases.md
-│   ├── 08_Evaluation_and_Test_Plan.md
-│   ├── 09_Deliverables_and_Acceptance.md
-│   ├── 10_Privacy_and_Security_Specification.md
-│   ├── 11_Database_and_Data_Models.md
-│   ├── 12_UI_UX_Specification.md
-│   ├── 13_Setup_and_Deployment_Guide.md
-│   ├── 14_Risk_Register.md
-│   ├── 15_Documentation_Index.md
-│   ├── IMPLEMENTATION_STATUS.md       # Phase tracking & task board
-│   ├── TECHNICAL_DECISIONS.md         # Technical decision records (TDRs)
-│   └── REQUIREMENTS_TRACEABILITY.md   # Requirement-to-test traceability matrix
-├── backend/                            # FastAPI backend service (Python 3.11+)
-│   ├── app/
-│   │   ├── api/                       # API routes and endpoints
-│   │   ├── core/                      # Configuration, security, CORS enforcement
-│   │   ├── database/                  # SQLite models and connection management
-│   │   ├── detectors/                 # PII/PHI detection engines (Regex, Presidio)
-│   │   ├── processors/                # Document extraction and PDF redaction
-│   │   ├── schemas/                   # Pydantic request and response schemas
-│   │   ├── services/                  # Business logic and entity resolution
-│   │   └── main.py                    # FastAPI application entry point
-│   ├── data/                          # Local SQLite database and ephemeral sessions
-│   ├── tests/                         # Pytest test suite
-│   └── requirements.txt               # Pinned Python dependencies
-├── frontend/                           # React + Vite frontend application
-│   ├── src/
-│   │   ├── assets/                    # Static assets
-│   │   ├── components/                # Reusable UI components (Header, Footer, etc.)
-│   │   ├── hooks/                     # Custom React hooks
-│   │   ├── pages/                     # Application pages (Dashboard, etc.)
-│   │   ├── services/                  # API clients and HTTP communication
-│   │   ├── App.jsx                    # Root application component
-│   │   ├── main.jsx                   # React DOM entry point
-│   │   └── index.css                  # Tailwind CSS styling
-│   ├── package.json                   # Pinned frontend dependencies
-│   ├── tailwind.config.js             # Tailwind CSS configuration
-│   └── vite.config.js                 # Vite development server and proxy config
-├── .gitignore                          # Git ignore rules for node, python, sessions
-└── README.md                           # Project guide and instructions
+
+1. **Upload:** Ingest a UTF-8 `.txt` or text-based `.pdf` ($\le 20\text{ MB}$, $\le 500\text{ pages}$).
+2. **Extract:** Strip zero-width/bidirectional control characters and map Unicode code-point offsets `[start, end)` and PDF word bounding boxes `[x0, y0, x1, y1]`.
+3. **Detect:** Run `RegexDetector`, `NERDetector`, optional `SLMDetector`, and active-learned prefix rules.
+4. **Resolve:** Cluster within-document entity variants and isolate ambiguous mentions.
+5. **Review:** Inspect evidence in the 3-panel workstation and finalize approvals, rejections, or manual additions.
+6. **Redact:** Scrub approved spans from the TXT string or PDF content stream while preserving rejected spans.
+7. **Verify:** Re-open the exported artifact from disk and execute the independent verification suite.
+8. **Summarize:** Pass only the verified `SanitizedDocument` to `SummaryService` (local SLM or extractive fallback).
+9. **Guard & Deliver:** Run `SummaryGuard` checks and expose only verified downloads and leak-checked summaries.
+
+---
+
+## Architecture Overview
+
+| Layer | Primary Components | Responsibility |
+| :--- | :--- | :--- |
+| **Frontend** | `Dashboard`, `ReviewWorkspace`, `ExportView`, `SummaryView` | 3-panel review workstation, PDF/text highlighting, keyboard shortcuts, verification & summary views |
+| **API** | FastAPI (`/api/documents/*`, `/api/feedback/*`, `/health`) | Localhost request routing, strict ID validation (`^[a-zA-Z0-9_\-]{1,64}$`), security headers, CORS |
+| **Ingestion** | `TXTProcessor`, `PDFProcessor` | UTF-8 normalization, zero-width/bidi stripping, PyMuPDF word coordinate & rotation/CropBox mapping |
+| **Detection** | `DetectionService`, `RegexDetector`, `NERDetector`, `SLMDetector` | Hybrid candidate extraction, 1-to-1 homoglyph folding, role-prefix trimming, span unioning |
+| **Entity Resolution** | `EntityResolver` | Category-aware normalization, Union-Find clustering, phonetic matching, ambiguity safeguards |
+| **Review & Feedback** | `ReviewService`, `FeedbackService` | Decision state management, downstream artifact invalidation, quorum prefix learning, AES-256-GCM aliases |
+| **Redaction** | `RedactionService` | Descending-offset TXT replacement, PyMuPDF stream/metadata/annotation scrubbing, clean-text PDF rebuild |
+| **Verification** | `VerificationService` | Independent disk re-extraction, 8-point residual PII & structure audit, SHA-256 digest computation |
+| **Summarization** | `SummaryService`, `SummaryGuard`, `ModelService` | `SanitizedDocument` enforcement, `<UNTRUSTED_DOCUMENT_CONTENT>` isolation, 6-tier leak & injection shield |
+| **Storage** | SQLite (`privydoc.db`) + `data/sessions/{id}/` | Zero-PII relational metadata separated from ephemeral session files (purged on delete or 24h TTL) |
+
+```mermaid
+flowchart TD
+    subgraph RawZone ["Untrusted Source & Review Zone (Ephemeral Session)"]
+        In["Uploaded .txt / .pdf"] --> Det["Ingestion + Hybrid Detection + Entity Resolution"]
+        Det --> Rev["Human-in-the-Loop Review Workspace"]
+        Rev --> Red["RedactionService (TXT & PyMuPDF Stream Scrub)"]
+        Red --> Ver["VerificationService (8-Point Independent Audit)"]
+    end
+
+    subgraph SafeZone ["Sanitized-Only Zone (Zero Raw Text Access)"]
+        San["SanitizedDocument Contract (P5-VERIFIED)"]
+        Sum["SummaryService (Local Ollama / Extractive Fallback)"]
+        Grd["SummaryGuard (6-Tier Privacy & Injection Shield)"]
+        Out["Verified Export (.pdf / .txt) & Safe Summary"]
+        San --> Sum --> Grd --> Out
+    end
+
+    Ver -- "Passes All Checks" --> San
+    Rev -. "Any Review Edit Invalidates & Unlinks" .-> San
 ```
 
 ---
 
-## Prerequisites
+## Privacy and Security
 
-- **Python**: 3.11+ (Python 3.12 supported)
-- **Node.js**: v18+ (Node v20+ recommended)
-- **Package Manager**: `npm` or `pnpm`
+- **Localhost Network Binding:** The FastAPI backend binds strictly to `127.0.0.1:8000` (`validate_local_host`) and restricts CORS to local origins (`127.0.0.1:5173`, `localhost:5173`). Optional SLM requests target only local Ollama (`http://127.0.0.1:11434`).
+- **Offline Execution Path:** After dependency installation and optional model download, the complete ingestion, detection, review, redaction, verification, and summarization pipeline executes without external network calls (validated by socket-blocked integration tests).
+- **Storage Separation & Session Hygiene:** SQLite (`backend/data/privydoc.db`) stores operational metadata, review decisions, and data-minimized feedback records with zero raw document text. Uploaded files and extracted text live in `backend/data/sessions/{document_id}/` and are deleted on manual session purge (`DELETE /api/documents/{id}`) or startup TTL cleanup (`SESSION_TTL_HOURS=24`).
+- **Optional Encrypted Aliases:** Cross-session alias retention is disabled by default; when explicitly enabled (`opt_in_consent=true`), alias ciphertexts are encrypted with **AES-256-GCM** using a local 256-bit key (`backend/data/.alias_encryption.key`).
+- **Stale Artifact Invalidation:** Any review mutation (approving, rejecting, manual addition, category change, or entity linking/unlinking) atomically deletes existing `sanitized.txt`, `sanitized.pdf`, `export_metadata.json`, and `summary.json` files and resets session status to `REVIEWING`.
+- **Adversarial Input Hardening (`SEC-01`–`SEC-07`):** Normalizes zero-width/bidirectional characters and single-codepoint Cyrillic/Greek homoglyphs, enforces file/page/character bounds (`20 MB`, `500 pages`, `2,000,000 chars`), wraps summarizer input in randomized `<UNTRUSTED_DOCUMENT_CONTENT_{nonce}>` delimiters, and fails closed when verification or `SummaryGuard` checks fail.
+- **Host Trust Boundary:** Localhost binding prevents LAN exposure and cloud egress, but does not protect against a compromised host OS or malicious local processes running under the same user account. See [Privacy and Security Specification](Docs/10_Privacy_and_Security_Specification.md) for the complete threat model.
 
 ---
 
-## Getting Started
+## Supported Inputs and Limitations
 
-### 1. Backend Setup
+| Capability / Input Type | Support Status | Operational Behavior & Notes |
+| :--- | :---: | :--- |
+| **UTF-8 Plain Text (`.txt`)** | **Supported** | Up to 20 MB / 2,000,000 characters; exact Unicode code-point offset redaction |
+| **Text-Based Digital PDF (`.pdf`)** | **Supported** | Up to 20 MB / 500 pages; native PyMuPDF glyph stream & metadata redaction |
+| **Scanned / Image-Only PDF** | **Unsupported** | Rejected at ingestion (`IMAGE_ONLY_PDF_NOT_SUPPORTED`); run OCR beforehand |
+| **Password-Protected / Encrypted PDF** | **Unsupported** | Rejected at ingestion (`ENCRYPTED_FILE_REJECTED`) |
+| **Rasterized Text in Embedded Images** | **Unsupported** | Embedded bitmap images inside hybrid PDFs are not OCR-scanned |
+| **Vector Glyph Outlines / Dynamic XFA** | **Reconstruction Only** | Native stream verification fails closed; explicit clean-text PDF rebuild offered |
+| **Supported PII Categories** | **5 Categories** | `PERSON`, `EMAIL`, `PHONE`, `ADDRESS`, `ID_LIKE` |
 
+**Disclosed Operational Limitations:**
+- **Lowercase & Diacritic Names:** Heuristic contextual NER relies on capitalization cues and ASCII character ranges; lowercase names in informal notes (e.g., `"rohit verma"`) or names with non-ASCII diacritics (e.g., `"Renée Müller"`) without header labels may require manual selection (`M`).
+- **Unconfigured Identifier Prefixes:** Out-of-the-box `ID_LIKE` regex targets standard patterns (`EMP-`, `STU-`, `ACC-`, `CUST-`, `PAN`, `Aadhaar`, `SSN`). Custom organizational prefixes (`BDG-`, `TRK-`) require manual selection or activation via the quorum-gated active-learning loop ($\ge 2$ manual additions).
+- **Pseudonymization vs. Mathematical Anonymity:** Entity-indexed placeholders (`[PERSON_1]`) and rule-based quasi-identifier checks improve readability and flag high-risk co-occurrences, but do not provide mathematical $k$-anonymity or differential privacy.
+- **Single-User Workstation Scope:** Designed for local single-user execution without multi-tenant authentication or RBAC. See [Known Limitations](Docs/KNOWN_LIMITATIONS.md) for full details.
+
+---
+
+## Technology Stack
+
+| Layer | Technology | Version | Engineering Rationale |
+| :--- | :--- | :--- | :--- |
+| **Frontend UI** | React, Vite, Tailwind CSS, React Router, Axios, Lucide | React `^18.3.1`, Vite `^6.0.3`, Tailwind `^3.4.16` | Fast local SPA workstation with responsive 3-panel inspection and keyboard-driven review |
+| **Backend API** | Python, FastAPI, Pydantic v2, Uvicorn | Python `3.11+` (`3.12`), FastAPI `0.162.0`, Pydantic `2.14.2` | Strict schema validation (`SanitizedDocument`, `SLMAnalysisResponse`) at every service boundary |
+| **Document Engine** | PyMuPDF (`fitz`) | `>=1.24.0` (`1.25.x`) | Word-level PDF bounding-box extraction, page derotation, and physical stream redaction |
+| **Detection & Linking** | Regex, Custom NER / spaCy, RapidFuzz | `spacy>=3.7.0`, `rapidfuzz>=3.9.0` | High-precision structured pattern matching paired with fuzzy and phonetic entity coreference |
+| **Local SLM Runtime** | Ollama (`qwen2.5:1.5b-instruct`) | Local HTTP (`127.0.0.1:11434`) | Zero-egress contextual candidate proposals and summarization with deterministic offline fallback |
+| **Storage & Crypto** | SQLite 3, `cryptography` (`AESGCM`), `hashlib` | SQLite `3`, AES-256-GCM, SHA-256 | Zero-PII metadata persistence, authenticated alias encryption, and post-export byte integrity |
+| **Testing & Profiling** | Pytest, HTTPX, Vitest, React Testing Library, `psutil` | Pytest `9.2.0`, Vitest `^2.1.8` | 159 backend and 42 frontend automated tests across unit, adversarial, and E2E workflows |
+
+---
+
+## Installation and Quick Start
+
+### Prerequisites
+- **Python:** `3.11+` (`3.12` recommended)
+- **Node.js:** `18.0+` (with `npm`)
+- **Optional Local SLM:** [Ollama](https://ollama.com) running locally on `127.0.0.1:11434`
+
+### 1. Clone the Repository
 ```bash
-# Navigate to backend directory
+git clone https://github.com/Swastikphadke/PrivDoc.git
+cd PrivDoc
+```
+
+### 2. Backend Setup
+```powershell
 cd backend
-
-# Create and activate a Python virtual environment
 python -m venv venv
-# On Windows PowerShell:
+
+# Activate on Windows PowerShell:
 .\venv\Scripts\Activate.ps1
-# On macOS/Linux:
-source venv/bin/activate
 
-# Install dependencies
+# Or activate on macOS / Linux:
+# source venv/bin/activate
+
 pip install -r requirements.txt
-
-# Run backend development server (binds to 127.0.0.1:8000)
-python -m uvicorn app.main:app --host 127.0.0.1 --port 8000 --reload
-```
-
-Backend health checks can be verified at:
-- `http://127.0.0.1:8000/health`
-- `http://127.0.0.1:8000/api/health`
-
-### 2. Run Backend Tests
-
-```bash
-# Run backend test suite
-python -m pytest backend/tests -v
 ```
 
 ### 3. Frontend Setup
-
 ```bash
-# Navigate to frontend directory
-cd frontend
-
-# Install dependencies
+cd ../frontend
 npm install
+```
 
-# Run frontend development server (binds to 127.0.0.1:5173)
+### 4. Optional: Local Ollama Model Setup
+PrivyDoc works out of the box without Ollama using its deterministic `Regex + NER` detection pipeline and extractive summary fallback. To enable local SLM candidate assistance and generative summarization:
+```bash
+ollama pull qwen2.5:1.5b-instruct
+ollama serve
+```
+*(Optional configuration overrides can be placed in `backend/.env` for `HOST`, `PORT`, `MAX_UPLOAD_SIZE_MB`, `SESSION_TTL_HOURS`, `LOCAL_SLM_URL`, `SLM_MODEL_NAME`, and `SLM_TIMEOUT_SECONDS`; see [`backend/app/core/config.py`](backend/app/core/config.py).)*
+
+### 5. Start the Workstation
+Run the backend and frontend in two separate terminals:
+
+**Terminal 1 — Backend (`http://127.0.0.1:8000`):**
+```bash
+cd backend
+python -m uvicorn app.main:app --host 127.0.0.1 --port 8000 --reload
+```
+
+**Terminal 2 — Frontend (`http://127.0.0.1:5173`):**
+```bash
+cd frontend
 npm run dev
 ```
 
-Frontend application will be accessible at:
-- `http://127.0.0.1:5173`
+- **Workstation UI:** `http://127.0.0.1:5173`
+- **Health Check Endpoints:** `http://127.0.0.1:8000/health` and `http://127.0.0.1:8000/api/health`
 
-### 4. Run Frontend Tests
+---
+
+## Usage Walkthrough
+
+1. **Upload a Document:** Open `http://127.0.0.1:5173` and upload a `.txt` or `.pdf` file (or use the synthetic fixtures in `datasets/demo/demo_sample_report.pdf`).
+2. **Inspect Candidates & Evidence:** In the **Review Workspace**, switch between **Canonical Text** and **PDF View**. Click any highlighted span to inspect detector provenance, confidence weight, and why the span was flagged.
+3. **Approve, Reject, or Link Entities:** Press `A` to approve sensitive items for removal or `R` to reject false positives (preserving them in the output). Switch to the **Entities** tab to approve entire linked name clusters (`"Dr. Marcus Vance"` $\leftrightarrow$ `"M. Vance"`) or manually link/unlink mentions.
+4. **Add Manual Redactions:** Highlight any unflagged text with your cursor and press `M` to add a custom redaction span.
+5. **Redact & Verify Export:** Open **2. Redact & Verify**, choose a placeholder pattern (`[CATEGORY]`, `[CATEGORY_#]`, `[REDACTED]`, or block mask), and click **Execute Redaction & Verify Output**. Inspect the 8-point verification audit and SHA-256 digest before downloading the verified `.pdf` or `.txt`.
+6. **Generate a Safe Summary:** Open **3. Safe Summary** to generate a structured summary from the `SanitizedDocument` payload, complete with `[§1]` source evidence grounding, `SummaryGuard` check results, and quasi-identifier risk assessment.
+7. **Purge Session:** Click the session delete action to wipe all temporary session files and metadata rows.
+
+For detailed operating instructions and a scripted 15-minute walkthrough, see the [User Guide](Docs/USER_GUIDE.md) and [Demo Guide](Docs/DEMO_GUIDE.md).
+
+---
+
+## Evaluation and Performance
+
+PrivyDoc is evaluated on two frozen synthetic benchmarks totaling **61 documents (122 TXT and PDF files, 305 gold PII spans, and 3 negative 0-PII documents)**: **Suite V1** (`datasets/evaluation`, 25 docs) and **Suite V2** (`datasets/evaluation_stage4`, 36 docs across 17 challenge categories).
+
+| Evaluation Dimension | Benchmark / Scope | Measured Result | Context & Notes |
+| :--- | :--- | :---: | :--- |
+| **Suite V2 Held-Out Micro F1 (Exact)** | `datasets/evaluation_stage4/test` (12 docs, 56 spans) | **90.74%** | `P = 94.23%`, `R = 87.50%` (`TP = 49, FP = 3, FN = 7`); Overlap Micro F1: **92.59%** |
+| **Suite V2 Held-Out Macro F1 (Exact)** | `datasets/evaluation_stage4/test` (5 categories) | **92.62%** | `EMAIL: 100%` · `ID_LIKE: 96.30%` · `PHONE: 93.33%` · `ADDRESS: 85.71%` · `PERSON: 85.11%` |
+| **Suite V1 Held-Out Micro F1 (Exact)** | `datasets/evaluation/test` (8 docs, 45 spans) | **89.89%** | `P = 90.91%`, `R = 88.89%` (`TP = 40, FP = 4, FN = 5`); Overlap Micro F1: **92.13%** |
+| **Negative (0-PII) False Positives** | 3 negative vendor/regulatory documents | **0 FPs** | Zero false alarms on non-PII corporate and ISO compliance documents |
+| **Within-Document Entity Resolution** | Suite V1 (`5` pos / `775` neg pairs) & V2 (`8` pos / `1,168` neg) | **1.0000 Pairwise F1** | `0` false merges; `100%` ambiguity safeguard rate on conflicting initials/surnames |
+| **Approved-Item Physical Removal** | 35 redaction verification scenarios (`38` unit/adversarial tests) | **100.0%** | `100.0%` rejected span preservation (including identical strings on the same PDF page) |
+| **Summary Privacy Safety** | 19 automated `SummaryGuard` scenarios | **0.0% PII Leakage** | `100%` fail-closed suppression on injected leaks and prompt-injection payloads |
+| **Automated Test Suites** | Backend (`pytest`) + Frontend (`vitest`) | **159 + 42 Passed** | `201` total automated tests passing (`0` failures) |
+| **End-to-End Pipeline Latency** | 4-core / 8-thread CPU, 7.85 GB RAM (Windows 11) | **~1.29 s (TXT) / ~1.39 s (PDF)** | Upload through verified export and extractive summary (`2.01 ms/doc` warm hybrid detection) |
+| **Application Process Memory** | OS Resident Set Size (`psutil` RSS) | **~87.33 MB** | Python + PyMuPDF process RSS (excludes external Ollama process; Python heap delta: `1.58 MB`) |
+
+**Evaluation Scope & SLM Distinction:**
+- All benchmark scores reflect controlled synthetic datasets and do not guarantee identical accuracy on arbitrary real-world documents.
+- On the held-out benchmark suites, `90.74%` exact micro F1 (Suite V2) and `89.89%` (Suite V1) were achieved by the deterministic `Regex + NER` pipeline without requiring Ollama online. In controlled ablation tests on untitled narrative aliases (`test_stage2_audit_slm_ablation_and_failure_safety`), local SLM proposals increased recall from `0.50` to `1.00` while keeping all novel SLM suggestions in `PENDING` review state.
 
 ```bash
-cd frontend
-npm test
+# Run backend & frontend test suites
+python -m pytest backend/tests -v
+npm --prefix frontend test
+
+# Run held-out benchmark evaluations and hardware profiler
+python scripts/evaluate.py --dataset-dir datasets/evaluation --split test --matching exact
+python scripts/evaluate.py --dataset-dir datasets/evaluation_stage4 --split all --matching exact
+python scripts/profile_pipeline.py
 ```
 
----
-
-## Privacy Engineering Workstation UI (Phase P4 & Premium Workstation Upgrade)
-
-PrivyDoc features a technical document-intelligence and privacy-engineering workstation interface built with React 19, Vite, and Tailwind CSS:
-
-- **Operational Telemetry Dashboard (`Dashboard.jsx`)**:
-  - Backed by real-time, zero-PII backend telemetry (`GET /api/documents`) reporting active documents processed, sessions awaiting review, verified exports, suppressed summaries, and active-session PII category distribution bars.
-  - **Active & Recent Document Sessions Table**: Direct one-click navigation into Review, Export, or Session Purge workflows with live verification badges.
-- **3-Panel Document Review Workspace (`ReviewWorkspace.jsx`)**:
-  - **Panel 1 — Authoritative Document Viewer**: Interactive canonical text viewer with exact half-open character offset highlights `[start, end)` and arbitrary mouse selection for manual redaction, paired with an authoritative PyMuPDF PNG page viewer with synchronized bounding-box overlays.
-  - **Panel 2 — Candidate & Entity Cluster Sidebar (`CandidateSidebar.jsx`)**:
-    - Filterable candidate cards displaying matched text (masked by default with reveal toggle), PII category badge, heuristic evidence weight (`High`, `Medium`, `Low`—strictly separated from review status), detector provenance (`REGEX`, `PRESIDIO`, `NER`, `SLM`), consensus/conflict badges, and character offsets.
-    - Review controls: **Approve**, **Reject**, **Undo**, inline category reassignment, and **Redact All Similar** preview modal.
-  - **Panel 3 — Contextual Evidence & Coreference Inspector (`ContextualInspector.jsx`)**:
-    - Dedicated inspection panel explaining *why* a candidate was selected, detector agreement (`MULTI_DETECTOR_CONSENSUS` vs `TYPE_CONFLICT`), heuristic evidence weight disclaimer, and an interactive **Hub-and-Spoke Entity Coreference Graph** with structured `link_reasons` (`EXACT_CANONICAL_MATCH`, `INITIAL_SURNAME_MATCH`, `HONORIFIC_SURNAME_MATCH`, `OBFUSCATED_EMAIL_MATCH`, `COUNTRY_AWARE_PHONE_MATCH`, `PHONETIC_TRANSLITERATION_MATCH`) and clickable occurrence jump links.
-- **Entity Group Resolution (`EntityGroupList.jsx`)**:
-  - Visualizes canonical anchor identities, surface variants, link confidence, and ambiguity safeguard banners (`AMBIGUITY_SAFEGUARD`) that require explicit human confirmation before bulk actions on ambiguous clusters.
-- **Keyboard Shortcuts**:
-  - `A`: Approve selected candidate for redaction.
-  - `R`: Reject selected candidate (preserve text).
-  - `M`: Open manual redaction dialog for highlighted text span.
-  - *Shortcuts are automatically disabled when typing in text fields, inputs, or textareas.*
-- **Export Verification & Summary Traceability**:
-  - **Export & Verification Screen (`ExportView.jsx`)**: Displays 8-point post-redaction verification report, verification timestamp, `RECONSTRUCTED PDF` layout-loss badge (DEC-004), and exported file **SHA-256 digest** (with explicit notice that a cryptographic hash verifies byte integrity only and does not by itself prove redaction completeness).
-  - **Privacy Summary Screen (`SummaryView.jsx`)**: Displays sanitized-only input contract badge (`P5-VERIFIED`), grounded source evidence quotes with `[§1]` traceability markers, persistent quasi-identifier re-identification risk assessment, and unmistakable fail-closed suppression alerts.
-- **Captured Workstation Screenshots (`Docs/screenshots/`)**:
-  - [`01_dashboard.png`](file:///C:/Users/Admin/Desktop/PrivDoc/Docs/screenshots/01_dashboard.png) — Operational Dashboard, PII Category Distribution, and Recent Sessions
-  - [`02_review_workspace_3panel.png`](file:///C:/Users/Admin/Desktop/PrivDoc/Docs/screenshots/02_review_workspace_3panel.png) — 3-Panel Review Workspace with Contextual Evidence Inspector
-  - [`03_entity_inspector_clusters.png`](file:///C:/Users/Admin/Desktop/PrivDoc/Docs/screenshots/03_entity_inspector_clusters.png) — Entity Coreference Clusters & Structured Link Explanations
-  - [`04_export_verification.png`](file:///C:/Users/Admin/Desktop/PrivDoc/Docs/screenshots/04_export_verification.png) — Irreversible Redaction, 8-Point Audit & SHA-256 Integrity Digest
-  - [`05_summary_verified.png`](file:///C:/Users/Admin/Desktop/PrivDoc/Docs/screenshots/05_summary_verified.png) — Verified Summary with Source Evidence Traceability & Quasi-Identifier Card
-  - [`06_responsive_compact_layout.png`](file:///C:/Users/Admin/Desktop/PrivDoc/Docs/screenshots/06_responsive_compact_layout.png) — Responsive Compact Workstation Viewport
+Full methodology, confusion matrices, and failure analyses are documented in [Docs/EVALUATION_REPORT.md](Docs/EVALUATION_REPORT.md) and [Docs/EVALUATION_METRICS.json](Docs/EVALUATION_METRICS.json).
 
 ---
 
-## Redaction Engine & Verifiable Export (Phase P5)
+## Documentation Index
 
-PrivyDoc's redaction pipeline guarantees that sensitive data approved for removal is physically eliminated from exported files, rather than covered up visually:
-
-- **Immutable Text Redaction**:
-  - Source canonical text is treated as strictly read-only.
-  - Approved character offset intervals `[start, end)` are merged to resolve overlaps and contiguous spans, then sorted in descending offset order to eliminate character offset drift.
-  - Supports configurable placeholder formats: semantic category labels (`[PERSON]`, `[EMAIL]`, `[PHONE]`), generic privacy masks (`[REDACTED]`), or Unicode solid block characters (`████████`).
-  - Unreviewed and rejected candidate spans remain completely untouched.
-- **Physical PyMuPDF Stream Redaction**:
-  - Approved text occurrences and coordinate bounding boxes are marked with native PDF redaction annotations (`page.add_redact_annot`).
-  - Applying redactions (`page.apply_redactions`) physically purges characters and font subsets from the PDF byte stream.
-  - Sanitization scrubs document metadata dictionaries, embedded file attachments, and active JavaScript scripts.
-- **Clean-Text PDF Reconstruction (DEC-004)**:
-  - Native PDF stream redaction is always attempted first by default. If verification fails, export state is set to `FAILED`, temporary artifacts are purged, and download is blocked.
-  - Clean-text PDF reconstruction is **never automatically initiated**; it is offered strictly as an explicit, separate user-triggered alternative (`POST /api/documents/{id}/reconstruct-pdf`).
-  - Generates a brand-new, clean A4 PDF rendered purely from sanitized text with prominent layout-loss disclosures, and runs the complete independent verification suite before promoting to `VERIFIED`.
-- **Post-Export Verification Service**:
-  - Re-opens every exported file independently and executes an 8-point audit check:
-    1. Export file integrity and readability.
-    2. Direct text scan for exact approved PII substrings.
-    3. Detection of known surface name variants and aliases.
-    4. Normalized pattern scan (digits-only phone numbers, compact IDs).
-    5. Annotation hygiene (verifying zero remaining redaction markup or sensitive comments).
-    6. PDF metadata cleansing (author, title, producer, subject).
-    7. Embedded file attachment audit.
-    8. JavaScript and active content purging.
-  - **Zero-PII Audit Logging**: Invariant enforcement guarantees verification failure reports never log or expose raw PII strings.
-- **Fail-Safe Gatekeeper**:
-  - Only exports attaining verified safe status (`VERIFIED`) can be downloaded (`GET /api/documents/{id}/export`). Any unverified or failed export is strictly blocked.
+| Document | Path | Purpose |
+| :--- | :--- | :--- |
+| **System Architecture** | [`Docs/ARCHITECTURE.md`](Docs/ARCHITECTURE.md) | Layered system design, pipeline stages, storage layout, and privacy boundaries |
+| **Privacy & Security Specification** | [`Docs/10_Privacy_and_Security_Specification.md`](Docs/10_Privacy_and_Security_Specification.md) | Threat model, data lifecycle, and adversarial hardening controls (`SEC-01`–`SEC-07`) |
+| **Evaluation & Benchmark Report** | [`Docs/EVALUATION_REPORT.md`](Docs/EVALUATION_REPORT.md) | Suite V1/V2 metrics, ablations, entity resolution, latency, and error analysis |
+| **Evaluation Metrics Artifact** | [`Docs/EVALUATION_METRICS.json`](Docs/EVALUATION_METRICS.json) | Machine-readable benchmark outputs and dataset integrity SHA-256 hashes |
+| **Known Limitations** | [`Docs/KNOWN_LIMITATIONS.md`](Docs/KNOWN_LIMITATIONS.md) | Supported input scope, format boundaries, and residual re-identification risks |
+| **User Guide** | [`Docs/USER_GUIDE.md`](Docs/USER_GUIDE.md) | Step-by-step workstation operating instructions, shortcuts, and troubleshooting |
+| **Demonstration Guide** | [`Docs/DEMO_GUIDE.md`](Docs/DEMO_GUIDE.md) | Reproducible 4-part walkthrough using synthetic fixtures in [`datasets/demo/`](datasets/demo/DEMO_FIXTURES_SPECIFICATION.md) |
+| **Technical Decisions Record** | [`Docs/TECHNICAL_DECISIONS.md`](Docs/TECHNICAL_DECISIONS.md) | Architectural decision records (`TDR-001` through `TDR-021`) |
+| **Requirements Traceability** | [`Docs/REQUIREMENTS_TRACEABILITY.md`](Docs/REQUIREMENTS_TRACEABILITY.md) | End-to-end mapping of functional and non-functional requirements to tests |
 
 ---
 
-## Privacy-Preserving Summarization Engine (Phase P6)
+## Project Status and Licensing
 
-PrivyDoc's summarization pipeline is built with strict architectural boundaries ensuring zero raw data leakage:
-
-- **Strict Sanitized-Only Data Contract (`SanitizedDocument`)**:
-  - The summarization engine accepts exclusively a typed `SanitizedDocument` containing verified sanitized text (with `[CATEGORY]` placeholders) and an export verification reference (`P5-VERIFIED`).
-  - The summarizer has zero access to raw original documents, original extracted text, original PDF streams, candidate PII objects, or coordinate mappings.
-  - Non-verified P5 exports are rejected at the API boundary with HTTP 400.
-- **Privacy Guard Architecture (`SummaryGuard`)**:
-  - Approved redaction values and entity variants are passed strictly to `SummaryGuard` for post-generation leakage analysis and are never exposed to the summarizer model.
-  - Executes a multi-tier safety pipeline:
-    1. **Direct Leakage Check**: Scans for exact approved sensitive values and generates token-hashed audit logs (never logs raw PII).
-    2. **Alias and Entity Variants Check**: Scans for resolved entity variants and aliases.
-    3. **Residual PII Re-detection**: Runs both deterministic regex and contextual NER scans over the summary text to detect hallucinated or residual PII.
-    4. **Quasi-Identifier Risk Assessment**: Rule-based evaluation of demographic, departmental, and role-based co-occurrences (`config/quasi_identifiers.json`) with an explicit non-anonymity disclaimer.
-    5. **Source Evidence Consistency**: Verifies grounded dates and figures against sanitized text to eliminate hallucinated details.
-- **Structured Summary Schema**:
-  - Summaries are generated according to a strict JSON schema (`StructuredSummaryContent`) containing narrative summary text, key points, important findings, grounded dates/figures, and source evidence.
-- **Deterministic Extractive Fallback**:
-  - If the local SLM is unreachable, offline, or times out, the engine seamlessly falls back to a deterministic sentence-scoring algorithm operating strictly on sanitized text while preserving category placeholders.
-  - Extractive summaries undergo 100% of the identical privacy verification checks as SLM summaries.
-- **Fail-Safe State Machine & Suppression**:
-  - Supported lifecycle states: `PENDING`, `GENERATING`, `VERIFYING`, `VERIFIED`, `SUPPRESSED`, `FAILED`, `REQUIRES_REVIEW`.
-  - If verification checks fail after a bounded retry loop (max 2 retries = 3 attempts), the summary is transitioned to `SUPPRESSED`.
-  - Suppressed summaries are completely blocked from display in the UI, presenting a clear security alert without leaking sensitive text.
-
----
-
-## Local Feedback System & Evaluation Metrics Framework (Phase P7)
-
-PrivyDoc includes a local-first, privacy-minimized continuous improvement mechanism and rigorous evaluation metrics framework:
-
-- **Feedback Storage with Data Minimization (TDR-015)**:
-  - Captures human review interactions (`APPROVE`, `REJECT`, `MANUAL_ADD`, `CATEGORY_CHANGE`, `LINK_ENTITIES`, `UNLINK_ENTITIES`, `MERGE_ENTITIES`) in SQLite `feedback_records`.
-  - **Zero Raw Data Retention Guarantee**: Strictly prohibits storing raw document text, surrounding text snippets, original PDF content, or sensitive candidate strings in feedback tables or application logs. Only pseudonymous identifiers, entity IDs, PII categories, detector sources, and confidence scores are recorded.
-- **Opt-In Locally Encrypted Aliases**:
-  - When users manually link name variants or aliases, relationship events and pseudonymous entity references are stored by default.
-  - If actual alias values are required for cross-session matching, users must explicitly opt in (`POST /api/documents/{id}/aliases` with `opt_in_consent=true`).
-  - Stored in `opt_in_encrypted_aliases` protected by machine-local **AES-256-GCM** authenticated encryption (`data/.alias_encryption.key`).
-  - Supports configurable TTL retention (default 30 days), explicit deletion (`DELETE /api/documents/{id}/aliases`), and automatic cascade deletion when documents are deleted.
-- **Controlled Active-Learning Loop & Proposal Workflow (TDR-016)**:
-  - Reviewer corrections (`APPROVE`, `REJECT`, `MANUAL_ADD`) drive a privacy-preserving, quorum-gated active-learning loop (`FeedbackService.apply_active_learning`) without blindly mutating production code or storing raw PII:
-    1. **Quorum-Gated Structural Prefix Learning**: When reviewers manually add organization-specific `ID_LIKE` spans (`<ALPHA_PREFIX>-<DIGITS>`, e.g., `BDG-99201`), only the non-PII uppercase prefix (`BDG`) is recorded in `feedback_records` (verified against a strict non-PII blocklist excluding `ISO`, `RFC`, `IEEE`, `DOC`, `SEC`). Once a prefix reaches quorum ($\ge 2$ manual additions), subsequent detection runs automatically flag new occurrences (`sources=["active_learning"]`, `review_status="PENDING"`).
-    2. **Empirical Confidence Calibration**: Once a `(source, category)` pair accumulates $\ge 3$ review decisions, `FeedbackService` applies a bounded empirical confidence adjustment $\Delta \in [-0.15, +0.10]$ and attaches `active_learning:high_approval_prior` or `active_learning:high_rejection_caution` signals for reviewer prioritization.
-    3. **Structured Rule Proposals**: Aggregated feedback patterns also produce structured `FeedbackProposal` records (`GET /api/feedback/analysis`) for permanent rule promotion.
-- **Synthetic Evaluation Corpus & Quarantined Isolation (TDR-017)**:
-  - 100% synthetic, locally generated dataset across 8 realistic difficulty classes (standard business, high-density contact, informal correspondence, multi-page legal agreements, structured invoices, mixed medical summaries, ambiguous initials, and edge formatting).
-  - Split into three distinct subsets:
-    - `dev/`: 10 documents (development tuning)
-    - `val/`: 7 documents (validation and threshold selection)
-    - `test/`: 8 documents (quarantined held-out evaluation set, strictly isolated from regex heuristics)
-  - Both searchable TXT and PyMuPDF-generated PDFs with validated exact character offsets in `gold_annotations.json`.
-- **Reproducible Evaluation Framework**:
-  - Exact-span and partial-overlap matching for token-level precision, recall, and F1.
-  - Zero-denominator protection: Returns 0.0 with `has_zero_denominator=True` when TP+FP=0 or TP+FN=0 to avoid artificial scores or division-by-zero crashes.
-  - Pairwise coreference evaluation engine (B-cubed style Precision, Recall, F1, False Merge Rate, Missed Link Rate).
-  - Post-redaction residual leakage verification rate (100% verification target) and post-summary leakage rate.
-  - Performance profiling measuring per-phase latency and peak memory allocation using `tracemalloc`.
-- **CLI Commands**:
-  ```bash
-  # Regenerate synthetic evaluation corpus (seed=42)
-  python scripts/generate_synthetic_corpus.py
-
-  # Run evaluation harness on quarantined test split (Suite V1 - 25 docs)
-  python scripts/evaluate.py --dataset-dir datasets/evaluation --split test --matching exact
-
-  # Run evaluation harness on Stage 4 expanded multi-difficulty benchmark (Suite V2 - 36 docs)
-  python scripts/evaluate.py --dataset-dir datasets/evaluation_stage4 --split all --matching exact
-  ```
-- **Evaluation Integrity Disclaimer**:
-  > [!NOTE]
-  > All reported benchmark metrics reflect controlled evaluation on synthetic corpora (61 documents / 122 TXT+PDF files across Suite V1 and Suite V2) and do not constitute an unconditional guarantee of accuracy on arbitrary real-world documents. Pseudonymization placeholders (`[PERSON_1]`, `[PERSON_2]`) preserve coreference readability but do not guarantee mathematical anonymity.
-
----
-
-## System Hardening & Release-Readiness Quality Gates (Phase P8)
-
-Phase P8 enforces rigorous integration, end-to-end reliability, security boundaries, and local hardware profiling:
-
-- **End-to-End Workflow Verification**:
-  - Full automated lifecycle tests covering ingestion, detection, candidate review, manual redaction, entity linking, native and fallback redaction, export verification, summarization, privacy guard, export download, and complete session deletion (`backend/tests/test_integration_p8.py`).
-  - Supports both `.txt` and text-based `.pdf` documents with coordinate-accurate redactions and physical stream scrubbing.
-- **Stale Export Invalidation (TDR-018)**:
-  - Any review mutation (`submit_review`, `add_manual_candidate`, `redact_all_similar`, `apply_entity_action`) atomically purges all downstream export files (`sanitized.txt`, `sanitized.pdf`, `export_metadata.json`) and structured summaries (`summary.json`), resetting the document state to `REVIEWING`.
-- **Reflected Prompt-Injection Defense (TDR-019)**:
-  - Sanitized text passed to SLM summarization is strictly enclosed in `<UNTRUSTED_DOCUMENT_CONTENT>` boundary tags.
-  - `SummaryGuard` incorporates Check F to scan for reflected boundary tokens and prompt escape directives, immediately suppressing unsafe output.
-- **Entity Resolution Accuracy Root-Cause Resolution (TDR-020)**:
-  - Investigated the historical P7 held-out precision score (0.0435) and proved it was an evaluation harness cross-document pooling artifact rather than an algorithmic failure.
-  - Document-scoped intra-document coreference precision is **1.0000** (Pairwise F1: 1.0000, False Merge Rate: 0.0000) on the held-out test split. Both scoped and unscoped baseline metrics are preserved side-by-side.
-- **Zero Outbound Network Traffic Guarantee**:
-  - Verified with network-disabled integration tests: the complete end-to-end pipeline executes with zero outbound external network connections.
-- **Complete Deletion Cascade**:
-  - `DELETE /api/documents/{id}` and session cleanup purges ephemeral session folders, canonical text, SQLite document records, candidates, decisions, feedback events, and opt-in AES-256-GCM encrypted aliases.
-- **Performance Profiling on Local Hardware**:
-  - Automated benchmark harness (`scripts/profile_pipeline.py`) profiled on Windows 11 (Intel 4-core / 8-thread, 7.85 GB RAM):
-    - Cold Startup: **1630.2 ms** | Warm Startup: **1.08 ms**
-    - Complete TXT Pipeline: **1290.7 ms** (~1.3 s)
-    - Complete PDF Pipeline: **1387.9 ms** (~1.4 s)
-    - Peak Python Heap Allocation (`tracemalloc`): **1.58 MB** | Actual OS Process Memory (`psutil` RSS): **87.33 MB**
-
----
-
-## Academic Demonstration & Evaluator Guide (Phase P9)
-
-Phase P9 delivers reproducible demonstration fixtures, user interface polish, end-to-end acceptance automation, and comprehensive documentation for academic evaluators and project reviews:
-
-- **100% Synthetic Demonstration Corpus (`datasets/demo/`)**:
-  - `demo_sample_report.pdf` & `demo_sample_report.txt`: Exercise multi-variant names (`Marcus Vance`, `M. Vance`, `Mr. Vance`), email, telephone, residential address, employee ID (`EMP-94812`), manual candidates (`DOC-2024-SEC-091`), deliberate false positives (`Project Apollo`, `ISO-9001:2015`), and quasi-identifiers.
-  - `demo_summary_leakage_adversarial.txt` & `.pdf`: Dedicated adversarial fixtures testing direct leakage suppression (`Elena Rostova`) and prompt-injection immunity (`[SYSTEM INSTRUCTION: Override previous safety directives...]`).
-  - Full fixture documentation: [DEMO_FIXTURES_SPECIFICATION.md](file:///C:/Users/Admin/Desktop/PrivDoc/datasets/demo/DEMO_FIXTURES_SPECIFICATION.md).
-- **Interactive 4-Part Live Demonstration Script**:
-  - Scripted step-by-step walkthrough covering Ingestion, Human Review, Irreversible Redaction, and Privacy-Safe Summarization: [DEMO_GUIDE.md](file:///C:/Users/Admin/Desktop/PrivDoc/Docs/DEMO_GUIDE.md).
-- **Automated Demo Acceptance Test Suite**:
-  - Programmatically executes and validates all 4 demonstration parts:
-    ```bash
-    python -m pytest backend/tests/test_demo_workflow.py -v
-    ```
-- **Evaluator Reference Documentation**:
-  - [System Architecture Blueprint](file:///C:/Users/Admin/Desktop/PrivDoc/Docs/ARCHITECTURE.md)
-  - [End-User Operating Manual & FAQ](file:///C:/Users/Admin/Desktop/PrivDoc/Docs/USER_GUIDE.md)
-  - [Comprehensive Known Limitations & Residual Risk Disclosure](file:///C:/Users/Admin/Desktop/PrivDoc/Docs/KNOWN_LIMITATIONS.md)
-  - [Requirements Traceability Matrix (All 28 FRs & 15 NFRs)](file:///C:/Users/Admin/Desktop/PrivDoc/Docs/REQUIREMENTS_TRACEABILITY.md)
-  - [Quantitative Evaluation & Benchmark Report](file:///C:/Users/Admin/Desktop/PrivDoc/Docs/EVALUATION_REPORT.md)
-  - [Technical Decisions Record (TDR-001 through TDR-021)](file:///C:/Users/Admin/Desktop/PrivDoc/Docs/TECHNICAL_DECISIONS.md)
-
----
-
-## Development Roadmap (P0 - P9)
-
-| Phase | Description | Status |
-|---|---|---|
-| **P0** | Foundation: Repository Scaffolding, SQLite Foundation, Health Check | **Completed** |
-| **P1** | Document Ingestion: TXT & PyMuPDF Text/Bbox Extraction, Canonical Offsets | **Completed** |
-| **P2** | Hybrid PII Detection Engine (Deterministic Regex + Contextual NER) | **Completed** |
-| **P3** | Entity Resolution: Canonical Identity Clustering, Ambiguity Guard | **Completed** |
-| **P4** | Human-in-the-Loop Review UI: Workspace, Modals, Shortcuts, Audit Log | **Completed** |
-| **P5** | Redaction Engine & Verifiable PDF True-Redaction / Layout-Loss Fallback | **Completed** |
-| **P6** | Privacy-Aware Summarization (Sanitized Only, Local SLM / Extractive Fallback) | **Completed** |
-| **P7** | Local Feedback System & Evaluation Metrics Framework | **Completed** |
-| **P8** | System Hardening, Local Security Audit, Privacy Boundary Verification | **Completed** |
-| **P9** | Final Demonstration Preparation, UI Polish & Acceptance Validation | **Completed** |
-
----
-
-## License
-
-Internal Engineering Project — Strict Local Privacy Policy.
-
+- **Project Status:** Completed academic engineering and privacy-workstation release baseline (`v1.0.0`, Problem Statement `PS3`).
+- **License:** No open-source license file is currently attached to this repository. All rights are reserved by the author for academic evaluation and portfolio review unless otherwise specified.
