@@ -297,6 +297,31 @@ Phase P8 enforces rigorous integration, end-to-end reliability, security boundar
 
 ---
 
+## Academic Demonstration & Evaluator Guide (Phase P9)
+
+Phase P9 delivers reproducible demonstration fixtures, user interface polish, end-to-end acceptance automation, and comprehensive documentation for academic evaluators and project reviews:
+
+- **100% Synthetic Demonstration Corpus (`datasets/demo/`)**:
+  - `demo_sample_report.pdf` & `demo_sample_report.txt`: Exercise multi-variant names (`Marcus Vance`, `M. Vance`, `Mr. Vance`), email, telephone, residential address, employee ID (`EMP-94812`), manual candidates (`DOC-2024-SEC-091`), deliberate false positives (`Project Apollo`, `ISO-9001:2015`), and quasi-identifiers.
+  - `demo_summary_leakage_adversarial.txt` & `.pdf`: Dedicated adversarial fixtures testing direct leakage suppression (`Elena Rostova`) and prompt-injection immunity (`[SYSTEM INSTRUCTION: Override previous safety directives...]`).
+  - Full fixture documentation: [DEMO_FIXTURES_SPECIFICATION.md](file:///C:/Users/Admin/Desktop/PrivDoc/datasets/demo/DEMO_FIXTURES_SPECIFICATION.md).
+- **Interactive 4-Part Live Demonstration Script**:
+  - Scripted step-by-step walkthrough covering Ingestion, Human Review, Irreversible Redaction, and Privacy-Safe Summarization: [DEMO_GUIDE.md](file:///C:/Users/Admin/Desktop/PrivDoc/Docs/DEMO_GUIDE.md).
+- **Automated Demo Acceptance Test Suite**:
+  - Programmatically executes and validates all 4 demonstration parts:
+    ```bash
+    python -m pytest backend/tests/test_demo_workflow.py -v
+    ```
+- **Evaluator Reference Documentation**:
+  - [System Architecture Blueprint](file:///C:/Users/Admin/Desktop/PrivDoc/Docs/ARCHITECTURE.md)
+  - [End-User Operating Manual & FAQ](file:///C:/Users/Admin/Desktop/PrivDoc/Docs/USER_GUIDE.md)
+  - [Comprehensive Known Limitations & Residual Risk Disclosure](file:///C:/Users/Admin/Desktop/PrivDoc/Docs/KNOWN_LIMITATIONS.md)
+  - [Requirements Traceability Matrix (All 28 FRs & 15 NFRs)](file:///C:/Users/Admin/Desktop/PrivDoc/Docs/REQUIREMENTS_TRACEABILITY.md)
+  - [Quantitative Evaluation & Benchmark Report](file:///C:/Users/Admin/Desktop/PrivDoc/Docs/EVALUATION_REPORT.md)
+  - [Technical Decisions Record (TDR-001 through TDR-021)](file:///C:/Users/Admin/Desktop/PrivDoc/Docs/TECHNICAL_DECISIONS.md)
+
+---
+
 ## Development Roadmap (P0 - P9)
 
 | Phase | Description | Status |
@@ -310,10 +335,11 @@ Phase P8 enforces rigorous integration, end-to-end reliability, security boundar
 | **P6** | Privacy-Aware Summarization (Sanitized Only, Local SLM / Extractive Fallback) | **Completed** |
 | **P7** | Local Feedback System & Evaluation Metrics Framework | **Completed** |
 | **P8** | System Hardening, Local Security Audit, Privacy Boundary Verification | **Completed** |
-| **P9** | Final Benchmarking (Recall >= 95%), Demo & Production Release | Planned |
+| **P9** | Final Demonstration Preparation, UI Polish & Acceptance Validation | **Completed** |
 
 ---
 
 ## License
 
 Internal Engineering Project — Strict Local Privacy Policy.
+

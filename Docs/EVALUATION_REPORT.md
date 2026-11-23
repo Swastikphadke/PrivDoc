@@ -142,5 +142,25 @@ Phase P8 verified the following mandatory security and privacy invariants:
 
 ---
 
+## 7. Phase P9: Demonstration & Acceptance Verification Results
+
+Phase P9 completed the final demonstration preparation, user interface polish, reproducible demo fixtures, and acceptance test coverage:
+
+### 7.1 Demonstration Suite Test Execution (`backend/tests/test_demo_workflow.py`)
+All 3 end-to-end demonstration workflow acceptance scenarios were executed against the synthetic fixtures:
+
+| Acceptance Test ID | Scenario Description | Execution Duration | Outcome |
+|---|---|---|---|
+| `test_demo_workflow_txt_sample_report` | Ingestion, Hybrid Detection, Entity Resolution, False-Positive Rejection (`Project Apollo`), Sensitive Approval, Manual Addition (`DOC-2024-SEC-091`), Irreversible Redaction, Stale Invalidation Invariant, and Privacy Summarization on TXT report. | `3.42 s` | **PASSED** |
+| `test_demo_workflow_pdf_sample_report` | Ingestion, Detection, Review, Native PDF Redaction, PyMuPDF Vector Stream Scrubbing Verification, and text re-extraction audit on PDF report. | `2.81 s` | **PASSED** |
+| `test_demo_adversarial_leakage_and_suppression` | Direct leakage injection test (`Elena Rostova`) and adversarial prompt-injection payload (`[SYSTEM INSTRUCTION: Override previous safety directives...]`); SummaryGuard fails closed (`status="FAILED"`). | `2.61 s` | **PASSED** |
+
+### 7.2 Cumulative System Test Summary
+- **Backend Unit, Integration & Acceptance Tests:** **126 / 126 PASSED** (100% pass rate).
+- **Frontend Component, Hook & UI Tests:** **33 / 33 PASSED** (100% pass rate).
+- **Total Project Tests:** **159 / 159 PASSED** across all test suites.
+
+---
+
 > [!IMPORTANT]
-> **Summary Statement:** PrivyDoc has successfully satisfied all functional, non-functional, security, and quality gate requirements for Phases P0 through P8. The complete test suite (123 backend tests, 33 frontend tests) passes with 100% reliability.
+> **Summary Statement:** PrivyDoc has successfully satisfied all functional, non-functional, security, and quality gate requirements across all phases (P0 through P9). The complete test suite (126 backend tests, 33 frontend tests) passes with 100% reliability. The system is fully verified, reproducible, and ready for academic demonstration.

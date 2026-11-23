@@ -102,7 +102,7 @@ export default function Dashboard() {
           <div>
             <div className="flex items-center gap-2 mb-1">
               <span className="px-2 py-0.5 rounded text-[11px] font-semibold bg-sky-950 border border-sky-800 text-sky-400">
-                Phase P4 Review Interface Active
+                Release-Ready Platform Active (P0–P9)
               </span>
               <span className="flex items-center gap-1 text-[11px] text-emerald-400 font-medium">
                 <Lock className="w-3 h-3" /> 100% Local Processing Guarantee
@@ -121,6 +121,51 @@ export default function Dashboard() {
             <RefreshCw className={`w-3.5 h-3.5 ${healthLoading ? 'animate-spin' : ''}`} />
             <span>Health Check</span>
           </button>
+        </div>
+
+        {/* 5-Stage Workflow Pipeline Guide */}
+        <div className="mt-6 pt-5 border-t border-slate-800/80">
+          <div className="text-[11px] font-semibold uppercase tracking-wider text-slate-400 mb-3 flex items-center gap-2">
+            <span className="w-2 h-2 rounded-full bg-sky-400" />
+            <span>Document Privacy Lifecycle</span>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-5 gap-2.5 text-xs">
+            <div className="p-2.5 rounded-lg bg-slate-950/60 border border-slate-800/80 flex items-center gap-2">
+              <span className="w-5 h-5 rounded-full bg-sky-950 border border-sky-800 text-sky-400 flex items-center justify-center text-[10px] font-bold shrink-0">1</span>
+              <div>
+                <div className="font-semibold text-slate-200">Ingestion</div>
+                <div className="text-[10px] text-slate-400">TXT / PDF Offsets</div>
+              </div>
+            </div>
+            <div className="p-2.5 rounded-lg bg-slate-950/60 border border-slate-800/80 flex items-center gap-2">
+              <span className="w-5 h-5 rounded-full bg-sky-950 border border-sky-800 text-sky-400 flex items-center justify-center text-[10px] font-bold shrink-0">2</span>
+              <div>
+                <div className="font-semibold text-slate-200">Hybrid Detection</div>
+                <div className="text-[10px] text-slate-400">Regex + Context NER</div>
+              </div>
+            </div>
+            <div className="p-2.5 rounded-lg bg-slate-950/60 border border-slate-800/80 flex items-center gap-2">
+              <span className="w-5 h-5 rounded-full bg-sky-950 border border-sky-800 text-sky-400 flex items-center justify-center text-[10px] font-bold shrink-0">3</span>
+              <div>
+                <div className="font-semibold text-slate-200">Entity Linking</div>
+                <div className="text-[10px] text-slate-400">Name Variant Clusters</div>
+              </div>
+            </div>
+            <div className="p-2.5 rounded-lg bg-slate-950/60 border border-slate-800/80 flex items-center gap-2">
+              <span className="w-5 h-5 rounded-full bg-sky-950 border border-sky-800 text-sky-400 flex items-center justify-center text-[10px] font-bold shrink-0">4</span>
+              <div>
+                <div className="font-semibold text-slate-200">Human Review</div>
+                <div className="text-[10px] text-slate-400">Authoritative Decisions</div>
+              </div>
+            </div>
+            <div className="p-2.5 rounded-lg bg-slate-950/60 border border-slate-800/80 flex items-center gap-2">
+              <span className="w-5 h-5 rounded-full bg-emerald-950 border border-emerald-800 text-emerald-400 flex items-center justify-center text-[10px] font-bold shrink-0">5</span>
+              <div>
+                <div className="font-semibold text-emerald-300">Sanitization</div>
+                <div className="text-[10px] text-emerald-400/80">Redaction & Summary</div>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
 

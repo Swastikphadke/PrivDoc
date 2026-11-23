@@ -61,3 +61,16 @@
 | **NFR-013** | Consistency | Invalidate downstream exports/summaries when review decisions mutate. | `services/review_service.py` atomic artifact unlinking (`sanitized.*`, `summary.json`). | Regression test verifying review edit clears stale exports and resets document status (`test_stale_export_invalidation_on_review_edit`). | **Verified (P8)** |
 | **NFR-014** | Prompt Defense | Defend summarizer against prompt injection embedded in document content. | Content boundary isolation (`<UNTRUSTED_DOCUMENT_CONTENT>`) and Check F in `SummaryGuard`. | Injection attack test verifying prompt escape attempts are blocked (`test_prompt_injection_in_document_content_defended`). | **Verified (P8)** |
 | **NFR-015** | Data Lifecycle | Complete cascade purge of sessions, files, DB records, and expired aliases. | `core/security.cleanup_session`, `purge_expired_encrypted_aliases`. | Lifecycle regression tests (`test_complete_cascade_deletion_including_db_and_aliases`, `test_expired_alias_retention_purge`). | **Verified (P8)** |
+
+---
+
+## 3. Phase P9 Demonstration & Acceptance Traceability
+
+| Demo Stage / Scenario | Tested Functional & Privacy Invariants | Demonstration Fixture | Verification Test Suite | Status |
+| :--- | :--- | :--- | :--- | :--- |
+| **Part A: Ingestion & Detection** | Multi-class PII detection (names, emails, phones, addresses, employee IDs); deterministic entity resolution linking `Marcus Vance`, `M. Vance`, `Mr. Vance`. | `datasets/demo/demo_sample_report.txt`<br>`datasets/demo/demo_sample_report.pdf` | `backend/tests/test_demo_workflow.py::test_demo_workflow_txt_sample_report`<br>`backend/tests/test_demo_workflow.py::test_demo_workflow_pdf_sample_report` | **Verified (P9)** |
+| **Part B: Human Review & False Positives** | Reviewer rejects deliberate false positives (`Project Apollo`, `ISO-9001:2015`); approves sensitive candidates; adds manual redaction (`DOC-2024-SEC-091`). | `datasets/demo/demo_sample_report.txt` | `backend/tests/test_demo_workflow.py::test_demo_workflow_txt_sample_report` | **Verified (P9)** |
+| **Part C: Irreversible Redaction & Verification** | True descending-offset replacement (TXT); vector stream scrubbing via PyMuPDF (PDF); 4-point verification audit (`VERIFIED` badge); stale export invalidation on review edit. | `datasets/demo/demo_sample_report.txt`<br>`datasets/demo/demo_sample_report.pdf` | `backend/tests/test_demo_workflow.py::test_demo_workflow_txt_sample_report`<br>`backend/tests/test_demo_workflow.py::test_demo_workflow_pdf_sample_report` | **Verified (P9)** |
+| **Part D: Privacy Summarization & Defense** | `SanitizedDocument` contract isolation; prompt injection payload immunity; SummaryGuard fail-closed direct leakage block (`Elena Rostova`); session purge cascade. | `datasets/demo/demo_summary_leakage_adversarial.txt`<br>`datasets/demo/demo_summary_leakage_adversarial.pdf` | `backend/tests/test_demo_workflow.py::test_demo_adversarial_leakage_and_suppression` | **Verified (P9)** |
+| **UI Polish & Accessibility** | 5-stage interactive lifecycle workflow stepper; distinct themes for `MANUAL`/`CUSTOM`; high-contrast badges; keyboard shortcuts (`A`, `R`, `M`). | Frontend Web UI (`Dashboard.jsx`, `ReviewWorkspace.jsx`) | `frontend/src/` (33 unit and component tests passing) | **Verified (P9)** |
+

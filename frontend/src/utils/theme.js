@@ -38,6 +38,20 @@ export const CATEGORY_THEMES = {
     borderClass: 'border-teal-500',
     dotColor: 'bg-teal-400',
   },
+  MANUAL: {
+    label: 'Manual',
+    badgeClass: 'bg-cyan-950/70 text-cyan-300 border-cyan-800',
+    highlightClass: 'bg-cyan-500/25 border-b-2 border-cyan-500 text-cyan-100 hover:bg-cyan-500/40',
+    borderClass: 'border-cyan-500',
+    dotColor: 'bg-cyan-400',
+  },
+  CUSTOM: {
+    label: 'Custom',
+    badgeClass: 'bg-indigo-950/70 text-indigo-300 border-indigo-800',
+    highlightClass: 'bg-indigo-500/25 border-b-2 border-indigo-500 text-indigo-100 hover:bg-indigo-500/40',
+    borderClass: 'border-indigo-500',
+    dotColor: 'bg-indigo-400',
+  },
   DEFAULT: {
     label: 'PII',
     badgeClass: 'bg-slate-800 text-slate-300 border-slate-700',
