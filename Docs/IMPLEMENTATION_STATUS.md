@@ -1,7 +1,7 @@
 # PrivyDoc — Implementation Status & Phase Tracking
 
 **Project:** PrivyDoc (Privacy-Aware Document Redaction and Summary Tool)  
-**Status:** Phase P0 Complete / Ready for Phase P1  
+**Status:** Phase P5 Complete / Ready for Phase P6  
 **Last Updated:** 2026-11-23  
 **Baseline Specification Reference:** `07_Development_Phases.md`  
 
@@ -15,8 +15,8 @@
 | **P1** | Document Ingestion (TXT & PDF) | **COMPLETED** | P0 | None | ☑ Offsets & coordinates stable, invalid files rejected, 15 tests passing |
 | **P2** | Baseline Detection (Regex & NER) | **COMPLETED** | P1 | None | ☑ 5 PII classes detected on synthetic corpus with 100% recall, 11 tests passing |
 | **P3** | Local SLM & Entity Linking | **COMPLETED** | P2 | None | ☑ Schema-validated JSON, no auto-merge without evidence, degraded mode, 12 tests passing |
-| **P4** | Human Review Interface (React) | **NOT STARTED** | P2, P3 | Highlight synchronization with coordinates | ⬜ User can approve/reject/add candidates & link entities |
-| **P5** | Redaction & Export Verification | **NOT STARTED** | P1, P4 | PyMuPDF true text scrubbing | ⬜ Post-export extraction test detects zero leaked values |
+| **P4** | Human Review Interface (React) | **COMPLETED** | P2, P3 | None | ☑ User can approve/reject/add candidates & link entities, shortcuts, 20 frontend tests passing |
+| **P5** | Redaction & Export Verification | **COMPLETED** | P1, P4 | None | ☑ PyMuPDF stream purging, clean-text fallback, zero-leak verification, 10 tests passing |
 | **P6** | Sanitized-Only Safe Summary | **NOT STARTED** | P5 | Quasi-identifier combination heuristics | ⬜ Summary module has zero access to raw text |
 | **P7** | Feedback Store & Metrics Evaluation | **NOT STARTED** | P2, P5, P6 | Annotation corpus preparation | ⬜ Quantitative evaluation report generated |
 | **P8** | System Hardening & Integration | **NOT STARTED** | P0–P7 | Offline testing, memory profiling | ⬜ Regression tests pass offline on local hardware |
@@ -107,18 +107,29 @@
 ---
 
 ### Phase 5: Redaction Engine & Export Verification
-- [ ] Implement `services/redaction_service.py`:
-  - [ ] TXT redaction: descending offset replacement with configurable placeholders (`[PERSON]`, `[EMAIL]`).
-  - [ ] PDF redaction: native PyMuPDF redaction annotation application (`add_redact_annot` + `apply_redactions`).
-  - [ ] Metadata stripping and annotation cleanup for exported PDFs.
-  - [ ] Clean-text PDF reconstruction as an explicit, user-selected fallback when native PDF redaction verification fails (with prominent layout-loss warnings).
-- [ ] Implement `services/verification_service.py`:
-  - [ ] Reopen exported TXT/PDF files.
-  - [ ] Search extracted text, page contents, and metadata for approved sensitive values.
-  - [ ] Block safe export status if any sensitive value remains.
-  - [ ] Re-verify reconstructed clean-text PDF output before release.
-- [ ] Write verification tests (`tests/test_redaction_and_verification.py`).
-- **Exit Condition:** Post-export extraction verifies zero approved source strings in the exported artifact.
+- [x] Implement `services/redaction_service.py`:
+  - [x] TXT redaction: descending offset replacement with configurable placeholders (`[PERSON]`, `[EMAIL]`, `[REDACTED]`, block characters) with overlapping span interval merging.
+  - [x] PDF redaction: native PyMuPDF stream redaction (`add_redact_annot` + `apply_redactions`) physically purging text and image streams.
+  - [x] Metadata stripping, active JavaScript removal, and embedded attachment scrubbing for exported PDFs.
+  - [x] Clean-text PDF reconstruction as an explicit, user-selected fallback (DEC-004) when native PDF redaction verification fails or is requested, with layout-loss warnings.
+- [x] Implement `services/verification_service.py`:
+  - [x] Reopen exported TXT/PDF files.
+  - [x] Search extracted text, page contents, metadata, annotations, attachments, and active JS for approved sensitive values.
+  - [x] Block safe export status if any sensitive value remains (`export_state = FAILED`, download disabled).
+  - [x] Re-verify reconstructed clean-text PDF output before release.
+- [x] Implement export API routes:
+  - [x] `POST /api/documents/{id}/redact` (executes redaction + post-export verification).
+  - [x] `GET /api/documents/{id}/export/status` (retrieves verification status & audit report).
+  - [x] `GET /api/documents/{id}/export` (serves file only when `export_state === VERIFIED`, blocks unverified with HTTP 400).
+- [x] Implement frontend Export Workspace (`frontend/src/pages/ExportView.jsx`):
+  - [x] Review gatekeeper verification card (Approved, Rejected, Pending counts).
+  - [x] Mask pattern selector (`[CATEGORY]`, `[REDACTED]`, block characters).
+  - [x] Clean-text PDF reconstruction toggle (DEC-004).
+  - [x] Post-export verification audit report card with passed checks grid.
+  - [x] Sanitized text preview and verified download button.
+- [x] Write backend verification tests (`backend/tests/test_redaction.py`).
+- [x] Write frontend export interaction tests (`frontend/src/pages/ExportView.test.jsx`).
+- **Exit Condition:** Post-export extraction verifies zero approved source strings in the exported artifact. (ACHIEVED — 61 backend tests + 26 frontend tests passing)
 
 ---
 

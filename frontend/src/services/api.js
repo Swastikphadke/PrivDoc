@@ -104,3 +104,26 @@ export const linkEntities = async (documentId, { candidateIds, targetEntityId = 
   });
   return response.data;
 };
+
+// Redaction & Export
+export const redactDocument = async (documentId, options = {}) => {
+  const response = await apiClient.post(`/api/documents/${documentId}/redact`, {
+    placeholder_style: options.placeholderStyle || 'CATEGORY',
+    custom_placeholder: options.customPlaceholder || null,
+    force_text_reconstruction: !!options.forceTextReconstruction,
+  });
+  return response.data;
+};
+
+export const getExportStatus = async (documentId) => {
+  const response = await apiClient.get(`/api/documents/${documentId}/export/status`);
+  return response.data;
+};
+
+export const downloadExport = async (documentId) => {
+  const response = await apiClient.get(`/api/documents/${documentId}/export`, {
+    responseType: 'blob',
+  });
+  return response;
+};
+

@@ -163,6 +163,38 @@ PrivyDoc features a minimalist, dark charcoal cybersecurity SaaS review interfac
 
 ---
 
+## Redaction Engine & Verifiable Export (Phase P5)
+
+PrivyDoc's redaction pipeline guarantees that sensitive data approved for removal is physically eliminated from exported files, rather than covered up visually:
+
+- **Immutable Text Redaction**:
+  - Source canonical text is treated as strictly read-only.
+  - Approved character offset intervals `[start, end)` are merged to resolve overlaps and contiguous spans, then sorted in descending offset order to eliminate character offset drift.
+  - Supports configurable placeholder formats: semantic category labels (`[PERSON]`, `[EMAIL]`, `[PHONE]`), generic privacy masks (`[REDACTED]`), or Unicode solid block characters (`████████`).
+  - Unreviewed and rejected candidate spans remain completely untouched.
+- **Physical PyMuPDF Stream Redaction**:
+  - Approved text occurrences and coordinate bounding boxes are marked with native PDF redaction annotations (`page.add_redact_annot`).
+  - Applying redactions (`page.apply_redactions`) physically purges characters and font subsets from the PDF byte stream.
+  - Sanitization scrubs document metadata dictionaries, embedded file attachments, and active JavaScript scripts.
+- **Clean-Text PDF Reconstruction (DEC-004)**:
+  - If a source PDF contains complex non-standard vector elements, corrupted font encodings, or fails stream verification, PrivyDoc provides a clean-text PDF reconstruction option.
+  - Generates a brand-new, clean A4 PDF rendered purely from sanitized text with prominent layout-loss disclosures.
+- **Post-Export Verification Service**:
+  - Re-opens every exported file independently and executes an 8-point audit check:
+    1. Export file integrity and readability.
+    2. Direct text scan for exact approved PII substrings.
+    3. Detection of known surface name variants and aliases.
+    4. Normalized pattern scan (digits-only phone numbers, compact IDs).
+    5. Annotation hygiene (verifying zero remaining redaction markup or sensitive comments).
+    6. PDF metadata cleansing (author, title, producer, subject).
+    7. Embedded file attachment audit.
+    8. JavaScript and active content purging.
+  - **Zero-PII Audit Logging**: Invariant enforcement guarantees verification failure reports never log or expose raw PII strings.
+- **Fail-Safe Gatekeeper**:
+  - Only exports attaining verified safe status (`VERIFIED`) can be downloaded (`GET /api/documents/{id}/export`). Any unverified or failed export is strictly blocked.
+
+---
+
 ## Development Roadmap (P0 - P9)
 
 | Phase | Description | Status |
@@ -172,7 +204,7 @@ PrivyDoc features a minimalist, dark charcoal cybersecurity SaaS review interfac
 | **P2** | Hybrid PII Detection Engine (Deterministic Regex + Contextual NER) | **Completed** |
 | **P3** | Entity Resolution: Canonical Identity Clustering, Ambiguity Guard | **Completed** |
 | **P4** | Human-in-the-Loop Review UI: Workspace, Modals, Shortcuts, Audit Log | **Completed** |
-| **P5** | Redaction Engine & Verifiable PDF True-Redaction / Layout-Loss Fallback | In Progress |
+| **P5** | Redaction Engine & Verifiable PDF True-Redaction / Layout-Loss Fallback | **Completed** |
 | **P6** | Privacy-Aware Summarization (Sanitized Only, Local SLM / Extractive Fallback) | Planned |
 | **P7** | Local Feedback System & Evaluation Metrics Framework | Planned |
 | **P8** | System Hardening, Local Security Audit, Privacy Boundary Verification | Planned |

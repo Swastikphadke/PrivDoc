@@ -122,6 +122,15 @@ def delete_document_record(doc_id: str) -> bool:
         return cursor.rowcount > 0
 
 
+def update_document_status(doc_id: str, new_status: str) -> bool:
+    """Update processing or export status for a document session."""
+    with get_db_connection() as conn:
+        cursor = conn.cursor()
+        cursor.execute("UPDATE documents SET status = ? WHERE id = ?", (new_status, doc_id))
+        conn.commit()
+        return cursor.rowcount > 0
+
+
 def record_review_decision(
     doc_id: str,
     cand_id: str,

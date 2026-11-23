@@ -8,19 +8,26 @@ import {
   AlertTriangle,
   ArrowLeft,
   CheckCircle2,
+  XCircle,
   Settings,
   Eye,
   Lock,
   RefreshCw,
-  Sliders,
+  Info,
 } from 'lucide-react';
-import { getDocumentMetadata, getCandidates, getReviewSummary } from '../services/api';
+import {
+  getDocumentMetadata,
+  getCandidates,
+  getReviewSummary,
+  redactDocument,
+  getExportStatus,
+  downloadExport,
+} from '../services/api';
 
 const PLACEHOLDER_OPTIONS = [
-  { id: 'REDACTED', label: '[REDACTED]', desc: 'Standard uniform privacy mask' },
   { id: 'CATEGORY', label: '[CATEGORY]', desc: 'Preserves semantic type: [PERSON], [EMAIL]' },
-  { id: 'ENTITY_TAG', label: '[ENTITY_N]', desc: 'Consistent pseudonym: [PERSON_1], [PERSON_2]' },
-  { id: 'BLACK_BOX', label: '████████', desc: 'Visual black bar / Unicode block characters' },
+  { id: 'GENERIC', label: '[REDACTED]', desc: 'Standard uniform privacy mask' },
+  { id: 'BLOCK', label: '████████', desc: 'Visual Unicode block characters' },
 ];
 
 export default function ExportView() {
@@ -33,11 +40,16 @@ export default function ExportView() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  // Export settings
+  // Redaction configuration
   const [exportFormat, setExportFormat] = useState('txt');
   const [placeholderType, setPlaceholderType] = useState('CATEGORY');
   const [useReconstructionFallback, setUseReconstructionFallback] = useState(false);
-  const [isVerifying, setIsVerifying] = useState(false);
+
+  // Redaction execution & verification state
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [redactionResult, setRedactionResult] = useState(null);
+  const [redactionError, setRedactionError] = useState(null);
+  const [isDownloading, setIsDownloading] = useState(false);
 
   useEffect(() => {
     async function load() {
@@ -52,6 +64,16 @@ export default function ExportView() {
         setCandidates(cands || []);
         setSummary(sum);
         setExportFormat(docMeta.file_type === 'pdf' ? 'pdf' : 'txt');
+
+        // Check if an export was already generated
+        try {
+          const existingExport = await getExportStatus(documentId);
+          if (existingExport) {
+            setRedactionResult(existingExport);
+          }
+        } catch {
+          // No export yet
+        }
       } catch (err) {
         console.error('Failed to load export data:', err);
         setError(err.response?.data?.detail || err.message || 'Session not found');
@@ -61,6 +83,47 @@ export default function ExportView() {
     }
     load();
   }, [documentId]);
+
+  const handleExecuteRedaction = async () => {
+    setIsProcessing(true);
+    setRedactionError(null);
+    try {
+      const res = await redactDocument(documentId, {
+        placeholderStyle: placeholderType,
+        forceTextReconstruction: useReconstructionFallback,
+      });
+      setRedactionResult(res);
+    } catch (err) {
+      console.error('Redaction failed:', err);
+      setRedactionError(err.response?.data?.detail || err.message || 'Redaction execution failed.');
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  const handleDownload = async () => {
+    if (!redactionResult || redactionResult.export_state !== 'VERIFIED') return;
+    setIsDownloading(true);
+    try {
+      const res = await downloadExport(documentId);
+      const blob = new Blob([res.data], {
+        type: document.file_type === 'pdf' ? 'application/pdf' : 'text/plain;charset=utf-8',
+      });
+      const url = window.URL.createObjectURL(blob);
+      const link = window.document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', redactionResult.export_filename || `sanitized_${document.filename}`);
+      window.document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error('Download failed:', err);
+      alert(err.response?.data?.detail || err.message || 'Download failed.');
+    } finally {
+      setIsDownloading(false);
+    }
+  };
 
   if (loading) {
     return (
@@ -174,7 +237,7 @@ export default function ExportView() {
       <div className="p-6 rounded-xl bg-slate-900 border border-slate-800 space-y-6">
         <h2 className="text-sm font-bold text-white flex items-center gap-2">
           <Settings className="w-4 h-4 text-sky-400" />
-          Export Configuration
+          Redaction Configuration
         </h2>
 
         {/* Format Selector */}
@@ -216,7 +279,7 @@ export default function ExportView() {
                 <div>
                   <span className="block text-xs font-semibold">Native PDF (.pdf)</span>
                   <span className="text-[11px] text-slate-500">
-                    {document.file_type === 'pdf' ? 'PyMuPDF vector redaction' : 'Unavailable for TXT uploads'}
+                    {document.file_type === 'pdf' ? 'PyMuPDF stream redaction' : 'Unavailable for TXT uploads'}
                   </span>
                 </div>
               </div>
@@ -227,7 +290,7 @@ export default function ExportView() {
         {/* Placeholder Mask Configuration */}
         <div className="space-y-2">
           <label className="block text-xs font-semibold text-slate-300">Redaction Mask Pattern</label>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
             {PLACEHOLDER_OPTIONS.map((opt) => (
               <label
                 key={opt.id}
@@ -254,11 +317,11 @@ export default function ExportView() {
           </div>
         </div>
 
-        {/* PDF Fallback Rule Option */}
-        {exportFormat === 'pdf' && (
+        {/* PDF Reconstruction Fallback Option */}
+        {document.file_type === 'pdf' && (
           <div className="p-3.5 rounded-lg bg-slate-950 border border-slate-800 space-y-2">
             <div className="flex items-center justify-between">
-              <span className="text-xs font-semibold text-slate-300">Clean-Text PDF Reconstruction</span>
+              <span className="text-xs font-semibold text-slate-300">Clean-Text PDF Reconstruction (DEC-004)</span>
               <input
                 type="checkbox"
                 checked={useReconstructionFallback}
@@ -267,32 +330,165 @@ export default function ExportView() {
               />
             </div>
             <p className="text-[11px] text-slate-400">
-              Per architectural rule, if native PyMuPDF PDF redaction fails verification, export is blocked.
-              Enabling this allows falling back to generating a fresh reconstructed PDF with layout warnings.
+              When checked, rebuilds a brand new PDF purely from sanitized text. Use this if the original PDF contains
+              unsupported vector objects, complex layers, or fails native stream verification.
             </p>
           </div>
         )}
 
-        {/* Verification & Download Action */}
-        <div className="pt-4 border-t border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-4">
+        {/* Execution Button */}
+        <div className="pt-2 flex flex-col sm:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-2 text-xs text-slate-400">
             <ShieldCheck className="w-4 h-4 text-emerald-400" />
-            <span>Cryptographic offset and leak checks active</span>
+            <span>Independent post-export leak audit active</span>
           </div>
 
           <button
-            onClick={() => {
-              alert(
-                `Phase P4 Human Review Verified!\n\nExport configuration ready:\n- Format: ${exportFormat.toUpperCase()}\n- Redactions: ${approvedCandidates.length} approved spans\n- Mask: ${placeholderType}\n\nPhase P5 Redaction Engine will generate and verify the sanitized bytes.`
-              );
-            }}
-            className="w-full sm:w-auto flex items-center justify-center gap-2 px-6 py-2.5 rounded-lg bg-sky-600 hover:bg-sky-500 text-white text-xs font-semibold shadow-lg shadow-sky-600/20 transition"
+            onClick={handleExecuteRedaction}
+            disabled={isProcessing}
+            className="w-full sm:w-auto flex items-center justify-center gap-2 px-6 py-2.5 rounded-lg bg-sky-600 hover:bg-sky-500 text-white text-xs font-semibold shadow-lg shadow-sky-600/20 transition disabled:opacity-50"
           >
-            <Download className="w-4 h-4" />
-            <span>Generate & Export Redacted File</span>
+            {isProcessing ? (
+              <>
+                <RefreshCw className="w-4 h-4 animate-spin" />
+                <span>Executing Redaction & Verification...</span>
+              </>
+            ) : (
+              <>
+                <ShieldCheck className="w-4 h-4" />
+                <span>Execute Redaction & Verify Output</span>
+              </>
+            )}
           </button>
         </div>
       </div>
+
+      {/* Redaction Error Message */}
+      {redactionError && (
+        <div className="p-4 rounded-xl bg-rose-950/40 border border-rose-900/60 text-rose-300 text-xs flex items-start gap-3">
+          <XCircle className="w-5 h-5 flex-shrink-0 text-rose-400 mt-0.5" />
+          <div>
+            <span className="font-semibold block text-white">Redaction Execution Error</span>
+            <span>{redactionError}</span>
+          </div>
+        </div>
+      )}
+
+      {/* Verification Audit Card & Download Section */}
+      {redactionResult && (
+        <div className="p-6 rounded-xl bg-slate-900 border border-slate-800 space-y-6">
+          <div className="flex items-center justify-between">
+            <h2 className="text-sm font-bold text-white flex items-center gap-2">
+              <ShieldCheck className="w-4 h-4 text-emerald-400" />
+              Post-Export Verification Report
+            </h2>
+
+            {redactionResult.export_state === 'VERIFIED' ? (
+              <span className="px-3 py-1 rounded-full bg-emerald-950 border border-emerald-700 text-emerald-300 text-xs font-bold flex items-center gap-1.5">
+                <CheckCircle2 className="w-4 h-4" />
+                EXPORT VERIFIED SAFE
+              </span>
+            ) : (
+              <span className="px-3 py-1 rounded-full bg-rose-950 border border-rose-700 text-rose-300 text-xs font-bold flex items-center gap-1.5">
+                <XCircle className="w-4 h-4" />
+                VERIFICATION FAILED (EXPORT BLOCKED)
+              </span>
+            )}
+          </div>
+
+          {/* Layout Loss Warning (if clean-text PDF used) */}
+          {redactionResult.layout_warning && (
+            <div className="p-3.5 rounded-lg bg-amber-950/40 border border-amber-900/60 text-amber-300 text-xs flex items-start gap-2.5">
+              <AlertTriangle className="w-4 h-4 flex-shrink-0 text-amber-400 mt-0.5" />
+              <div>
+                <span className="font-semibold block text-white">Layout Notice</span>
+                <span>{redactionResult.layout_warning}</span>
+              </div>
+            </div>
+          )}
+
+          {/* Verification Checks Audit Grid */}
+          <div className="space-y-2">
+            <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
+              Verification Checks Performed
+            </span>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+              {redactionResult.verification.checks_run.map((check) => (
+                <div
+                  key={check}
+                  className="p-2.5 rounded-lg bg-slate-950 border border-slate-800/80 flex items-center justify-between text-xs"
+                >
+                  <span className="font-mono text-slate-300">{check}</span>
+                  <span className="text-[11px] text-emerald-400 font-semibold flex items-center gap-1">
+                    <CheckCircle2 className="w-3.5 h-3.5" />
+                    Passed
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Issues List (if failed) */}
+          {redactionResult.verification.issues.length > 0 && (
+            <div className="p-4 rounded-lg bg-rose-950/30 border border-rose-900/50 space-y-2">
+              <span className="text-xs font-bold text-rose-300 block">
+                Verification Violations Detected ({redactionResult.verification.issues.length})
+              </span>
+              <ul className="space-y-1.5">
+                {redactionResult.verification.issues.map((issue, idx) => (
+                  <li key={idx} className="text-xs text-rose-200 flex items-start gap-2">
+                    <XCircle className="w-3.5 h-3.5 text-rose-400 flex-shrink-0 mt-0.5" />
+                    <span>
+                      <strong className="font-mono text-rose-100">{issue.check_name}:</strong> {issue.description}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+
+          {/* Sanitized Text Preview */}
+          {redactionResult.sanitized_text_preview && (
+            <div className="space-y-1.5">
+              <span className="text-xs font-semibold text-slate-400">Sanitized Output Preview</span>
+              <pre className="p-3 rounded-lg bg-slate-950 border border-slate-800 text-xs font-mono text-slate-300 overflow-x-auto whitespace-pre-wrap">
+                {redactionResult.sanitized_text_preview}
+              </pre>
+            </div>
+          )}
+
+          {/* Download Action Bar */}
+          <div className="pt-4 border-t border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-4">
+            <div className="text-xs text-slate-400">
+              <span className="block font-medium text-slate-300">
+                Applied Redactions: {redactionResult.approved_redactions_applied}
+              </span>
+              <span className="text-[11px] text-slate-500">
+                Preserved: {redactionResult.rejected_spans_preserved} rejected, {redactionResult.unreviewed_spans_preserved} unreviewed
+              </span>
+            </div>
+
+            <button
+              onClick={handleDownload}
+              disabled={!redactionResult.download_ready || isDownloading}
+              className={`flex items-center gap-2 px-6 py-2.5 rounded-lg text-xs font-semibold transition ${
+                redactionResult.download_ready
+                  ? 'bg-emerald-600 hover:bg-emerald-500 text-white shadow-lg shadow-emerald-600/20'
+                  : 'bg-slate-800 text-slate-500 cursor-not-allowed border border-slate-700/50'
+              }`}
+            >
+              <Download className="w-4 h-4" />
+              <span>
+                {isDownloading
+                  ? 'Preparing Download...'
+                  : redactionResult.download_ready
+                  ? `Download ${redactionResult.export_filename}`
+                  : 'Download Blocked (Unverified)'}
+              </span>
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

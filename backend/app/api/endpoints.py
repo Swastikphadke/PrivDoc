@@ -6,7 +6,7 @@ Strictly adheres to local-first privacy (NFR-001) and storage separation (TDR-00
 
 import json
 import uuid
-from typing import List
+from typing import Any, Dict, List, Optional
 from fastapi import APIRouter, File, HTTPException, Response, UploadFile, status
 from app.core.config import settings
 from app.core.security import (
@@ -572,5 +572,138 @@ def render_pdf_page(document_id: str, page_number: int) -> Response:
     finally:
         if doc is not None and not doc.is_closed:
             doc.close()
+
+
+# =========================================================================
+# Phase P5: Redaction & Export Endpoints
+# =========================================================================
+
+from fastapi.responses import FileResponse
+from app.schemas.redaction import RedactionRequest, RedactionResponse, ExportState
+from app.services.redaction_service import RedactionService
+
+
+@router.post(
+    "/documents/{document_id}/redact",
+    response_model=RedactionResponse,
+    tags=["Redaction & Export"],
+)
+def execute_redaction(
+    document_id: str,
+    request: Optional[RedactionRequest] = None,
+) -> RedactionResponse:
+    """Execute document redaction (TXT and native PyMuPDF PDF) and post-export verification."""
+    meta = get_document_metadata(document_id)
+    if not meta:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Document session '{document_id}' not found."
+        )
+
+    try:
+        response = RedactionService.redact_document(document_id, request)
+        return response
+    except FileNotFoundError as fnf:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=str(fnf),
+        ) from fnf
+    except ValueError as ve:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(ve),
+        ) from ve
+    except Exception as exc:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Redaction execution failed: {str(exc)}"
+        ) from exc
+
+
+@router.get(
+    "/documents/{document_id}/export/status",
+    response_model=RedactionResponse,
+    tags=["Redaction & Export"],
+)
+def get_export_status(document_id: str) -> RedactionResponse:
+    """Retrieve post-export verification report and export status."""
+    meta = get_document_metadata(document_id)
+    if not meta:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Document session '{document_id}' not found."
+        )
+
+    session_dir = get_safe_session_dir(document_id)
+    meta_path = session_dir / "export_metadata.json"
+    if not meta_path.exists():
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"No export has been generated yet for document session '{document_id}'."
+        )
+
+    data = json.loads(meta_path.read_text(encoding="utf-8"))
+    return RedactionResponse(**data)
+
+
+@router.get(
+    "/documents/{document_id}/export",
+    tags=["Redaction & Export"],
+)
+def download_exported_document(document_id: str):
+    """Download verified sanitized output document.
+    
+    Security Guarantee (FR-019, FR-020, NFR-012):
+    Only documents that successfully passed 100% of export verification checks
+    (status == VERIFIED) can be downloaded. Unverified or failed outputs are strictly blocked.
+    """
+    meta = get_document_metadata(document_id)
+    if not meta:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Document session '{document_id}' not found."
+        )
+
+    session_dir = get_safe_session_dir(document_id)
+    meta_path = session_dir / "export_metadata.json"
+    if not meta_path.exists():
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Document has not been redacted or exported yet. Call POST /api/documents/{id}/redact first."
+        )
+
+    export_meta = json.loads(meta_path.read_text(encoding="utf-8"))
+    export_state = export_meta.get("export_state")
+
+    if export_state != ExportState.VERIFIED.value:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=(
+                f"Export download blocked: document has not passed verification "
+                f"(current state: '{export_state}'). Only VERIFIED exports can be downloaded."
+            )
+        )
+
+    file_type = meta["file_type"]
+    if file_type == "pdf":
+        export_file_path = session_dir / "sanitized.pdf"
+        media_type = "application/pdf"
+    else:
+        export_file_path = session_dir / "sanitized.txt"
+        media_type = "text/plain; charset=utf-8"
+
+    if not export_file_path.exists():
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Sanitized file not found on server."
+        )
+
+    download_name = f"sanitized_{meta['original_filename']}"
+    return FileResponse(
+        path=export_file_path,
+        filename=download_name,
+        media_type=media_type,
+    )
+
 
 
