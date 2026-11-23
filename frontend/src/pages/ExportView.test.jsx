@@ -90,6 +90,11 @@ describe('ExportView Page', () => {
     vi.spyOn(api, 'getReviewSummary').mockResolvedValue(mockSummary);
     vi.spyOn(api, 'getExportStatus').mockResolvedValue(null);
     vi.spyOn(api, 'redactDocument').mockResolvedValue(mockVerifiedResult);
+    vi.spyOn(api, 'reconstructPdf').mockResolvedValue({
+      ...mockVerifiedResult,
+      reconstructed_pdf_used: true,
+      layout_warning: 'Export generated via clean-text PDF reconstruction. Original graphical layout, styling, and embedded images were omitted to guarantee verifiable privacy.',
+    });
     vi.spyOn(api, 'downloadExport').mockResolvedValue({ data: new ArrayBuffer(8) });
   });
 
@@ -238,6 +243,91 @@ describe('ExportView Page', () => {
       expect(
         screen.getByText(/Reconstructed clean layout PDF from sanitized text/i)
       ).toBeDefined();
+    });
+  });
+
+  it('offers clean-text reconstruction as a separate user-triggered action when native verification fails', async () => {
+    const failedResult = {
+      ...mockVerifiedResult,
+      export_state: 'FAILED',
+      download_ready: false,
+      reconstructed_pdf_used: false,
+      reconstruction_offered: true,
+      layout_warning: 'Native PDF redaction verification failed: extractable sensitive content or unsupported structures were detected.',
+      verification: {
+        status: 'FAILED',
+        checks_run: ['File Integrity Check', 'Direct Text Scan'],
+        issues: [
+          {
+            check_name: 'Direct Text Scan',
+            severity: 'ERROR',
+            description: 'Approved candidate leak detected.',
+            page_number: 1,
+            candidate_id: 'c_01',
+          },
+        ],
+        warnings: [],
+        verified_at: '2026-11-23T06:30:00Z',
+      },
+    };
+
+    api.redactDocument.mockResolvedValueOnce(failedResult);
+
+    renderComponent();
+
+    await waitFor(() => {
+      expect(screen.getByText(/Execute Redaction & Verify Output/i)).toBeDefined();
+    });
+
+    fireEvent.click(screen.getByText(/Execute Redaction & Verify Output/i));
+
+    await waitFor(() => {
+      expect(screen.getByText(/VERIFICATION FAILED \(EXPORT BLOCKED\)/i)).toBeDefined();
+      expect(screen.getByText(/Native PDF Verification Failed — Clean-Text Reconstruction Available/i)).toBeDefined();
+      expect(screen.getByText(/Reconstruct Clean-Text PDF Alternative/i)).toBeDefined();
+    });
+  });
+
+  it('allows user to explicitly trigger clean-text reconstruction after native verification failure and promotes to VERIFIED on pass', async () => {
+    const failedResult = {
+      ...mockVerifiedResult,
+      export_state: 'FAILED',
+      download_ready: false,
+      reconstructed_pdf_used: false,
+      reconstruction_offered: true,
+      layout_warning: 'Native PDF redaction verification failed.',
+      verification: {
+        status: 'FAILED',
+        checks_run: ['File Integrity Check'],
+        issues: [{ check_name: 'Direct Text Scan', severity: 'ERROR', description: 'Leak', page_number: 1 }],
+        warnings: [],
+        verified_at: '2026-11-23T06:30:00Z',
+      },
+    };
+
+    api.redactDocument.mockResolvedValueOnce(failedResult);
+
+    renderComponent();
+
+    await waitFor(() => {
+      expect(screen.getByText(/Execute Redaction & Verify Output/i)).toBeDefined();
+    });
+
+    fireEvent.click(screen.getByText(/Execute Redaction & Verify Output/i));
+
+    await waitFor(() => {
+      expect(screen.getByText(/Reconstruct Clean-Text PDF Alternative/i)).toBeDefined();
+    });
+
+    // Explicitly click clean-text reconstruction button
+    fireEvent.click(screen.getByText(/Reconstruct Clean-Text PDF Alternative/i));
+
+    await waitFor(() => {
+      expect(api.reconstructPdf).toHaveBeenCalledWith('doc_exp_123', {
+        placeholderStyle: 'CATEGORY',
+      });
+      expect(screen.getByText(/EXPORT VERIFIED SAFE/i)).toBeDefined();
+      expect(screen.getByText(/Download sanitized_executive_memo\.pdf/i)).toBeDefined();
     });
   });
 });

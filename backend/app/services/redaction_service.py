@@ -85,6 +85,7 @@ class RedactionService:
         file_type = meta["file_type"]
         export_filename = f"sanitized_{meta['original_filename']}"
         reconstructed_pdf_used = False
+        reconstruction_offered = False
         layout_warning: Optional[str] = None
 
         sanitized_txt_tmp = session_dir / "sanitized.txt.tmp"
@@ -97,9 +98,11 @@ class RedactionService:
         sanitized_txt_tmp.write_text(sanitized_text, encoding="utf-8")
 
         # 2. Execute PDF Redaction (if PDF)
+        # DEC-004 Policy: Native PDF redaction is ALWAYS attempted first unless
+        # the user explicitly selected clean-text reconstruction.
         if file_type == "pdf":
             if request.force_text_reconstruction:
-                # Clean-text PDF reconstruction alternative (DEC-004)
+                # Clean-text PDF reconstruction explicitly requested by user as alternative
                 cls.reconstruct_pdf_from_text(sanitized_text, sanitized_pdf_tmp)
                 reconstructed_pdf_used = True
                 layout_warning = (
@@ -107,6 +110,7 @@ class RedactionService:
                     "styling, and embedded images were omitted to guarantee verifiable privacy."
                 )
             else:
+                # Native PyMuPDF stream redaction attempted by default
                 try:
                     cls.apply_native_pdf_redaction(
                         session_dir=session_dir,
@@ -145,16 +149,22 @@ class RedactionService:
                     entities=entities,
                 )
 
+            # Security Correction: If native verification fails, fail closed, do NOT auto-reconstruct.
+            # Instead, offer clean-text reconstruction as an explicit, separate user-triggered action.
             if verif_result.status == "FAILED" and not reconstructed_pdf_used:
+                reconstruction_offered = True
                 layout_warning = (
-                    "Native PDF redaction verification detected potential leaks or unsupported structures. "
-                    "Export is blocked. You may select 'Clean-text PDF Reconstruction' to export a verifiably safe PDF."
+                    "Native PDF redaction verification failed: extractable sensitive content or unsupported structures "
+                    "were detected. Export is blocked to prevent data leakage. You may explicitly trigger "
+                    "'Clean-text PDF Reconstruction' as a separate safe alternative (note: original layout and "
+                    "graphical formatting will not be preserved)."
                 )
 
         # 4. Atomic Output Promotion or Invalidation
         if verif_result.status == "PASSED":
             export_state = ExportState.VERIFIED
             download_ready = True
+            reconstruction_offered = False
             # Promote temp files atomically to final export files
             if sanitized_txt_tmp.exists():
                 sanitized_txt_tmp.replace(sanitized_txt_final)
@@ -163,7 +173,7 @@ class RedactionService:
         else:
             export_state = ExportState.FAILED
             download_ready = False
-            # Clean up temp files; ensure no final export file exists
+            # Clean up all temporary files and ensure no partial or unverified final export exists
             if sanitized_txt_tmp.exists():
                 sanitized_txt_tmp.unlink()
             if sanitized_pdf_tmp.exists():
@@ -191,6 +201,7 @@ class RedactionService:
             verification=verif_result,
             download_ready=download_ready,
             reconstructed_pdf_used=reconstructed_pdf_used,
+            reconstruction_offered=reconstruction_offered,
             layout_warning=layout_warning,
         )
 

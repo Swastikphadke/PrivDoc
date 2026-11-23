@@ -177,8 +177,9 @@ PrivyDoc's redaction pipeline guarantees that sensitive data approved for remova
   - Applying redactions (`page.apply_redactions`) physically purges characters and font subsets from the PDF byte stream.
   - Sanitization scrubs document metadata dictionaries, embedded file attachments, and active JavaScript scripts.
 - **Clean-Text PDF Reconstruction (DEC-004)**:
-  - If a source PDF contains complex non-standard vector elements, corrupted font encodings, or fails stream verification, PrivyDoc provides a clean-text PDF reconstruction option.
-  - Generates a brand-new, clean A4 PDF rendered purely from sanitized text with prominent layout-loss disclosures.
+  - Native PDF stream redaction is always attempted first by default. If verification fails, export state is set to `FAILED`, temporary artifacts are purged, and download is blocked.
+  - Clean-text PDF reconstruction is **never automatically initiated**; it is offered strictly as an explicit, separate user-triggered alternative (`POST /api/documents/{id}/reconstruct-pdf`).
+  - Generates a brand-new, clean A4 PDF rendered purely from sanitized text with prominent layout-loss disclosures, and runs the complete independent verification suite before promoting to `VERIFIED`.
 - **Post-Export Verification Service**:
   - Re-opens every exported file independently and executes an 8-point audit check:
     1. Export file integrity and readability.

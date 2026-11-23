@@ -115,6 +115,15 @@ export const redactDocument = async (documentId, options = {}) => {
   return response.data;
 };
 
+export const reconstructPdf = async (documentId, options = {}) => {
+  const response = await apiClient.post(`/api/documents/${documentId}/reconstruct-pdf`, {
+    placeholder_style: options.placeholderStyle || 'CATEGORY',
+    custom_placeholder: options.customPlaceholder || null,
+    force_text_reconstruction: true,
+  });
+  return response.data;
+};
+
 export const getExportStatus = async (documentId) => {
   const response = await apiClient.get(`/api/documents/${documentId}/export/status`);
   return response.data;

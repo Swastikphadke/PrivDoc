@@ -627,6 +627,64 @@ def execute_redaction(
         ) from exc
 
 
+@router.post(
+    "/documents/{document_id}/reconstruct-pdf",
+    response_model=RedactionResponse,
+    tags=["Redaction & Export"],
+)
+def reconstruct_pdf_export(
+    document_id: str,
+    request: Optional[RedactionRequest] = None,
+) -> RedactionResponse:
+    """Explicitly reconstruct a clean-text PDF alternative from sanitized text (DEC-004).
+    
+    Security Guarantee:
+    Reconstruction must never be triggered automatically when native PDF redaction verification fails.
+    It must be an explicit, user-selected action. The reconstructed output is subjected to the full
+    independent verification audit and only promoted to VERIFIED after passing all checks.
+    """
+    if not re.match(r"^[a-zA-Z0-9_\-]+$", document_id):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid document ID format."
+        )
+
+    meta = get_document_metadata(document_id)
+    if not meta:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Document session '{document_id}' not found."
+        )
+
+    if meta["file_type"] != "pdf":
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Clean-text PDF reconstruction is only applicable to PDF documents."
+        )
+
+    req = request or RedactionRequest()
+    req.force_text_reconstruction = True
+
+    try:
+        response = RedactionService.redact_document(document_id, req)
+        return response
+    except FileNotFoundError as fnf:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=str(fnf),
+        ) from fnf
+    except ValueError as ve:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(ve),
+        ) from ve
+    except Exception as exc:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Clean-text PDF reconstruction failed: {str(exc)}"
+        ) from exc
+
+
 @router.get(
     "/documents/{document_id}/export/status",
     response_model=RedactionResponse,

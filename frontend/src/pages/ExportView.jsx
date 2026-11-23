@@ -20,6 +20,7 @@ import {
   getCandidates,
   getReviewSummary,
   redactDocument,
+  reconstructPdf,
   getExportStatus,
   downloadExport,
 } from '../services/api';
@@ -96,6 +97,22 @@ export default function ExportView() {
     } catch (err) {
       console.error('Redaction failed:', err);
       setRedactionError(err.response?.data?.detail || err.message || 'Redaction execution failed.');
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  const handleExecuteReconstruction = async () => {
+    setIsProcessing(true);
+    setRedactionError(null);
+    try {
+      const res = await reconstructPdf(documentId, {
+        placeholderStyle: placeholderType,
+      });
+      setRedactionResult(res);
+    } catch (err) {
+      console.error('Clean-text PDF reconstruction failed:', err);
+      setRedactionError(err.response?.data?.detail || err.message || 'Clean-text reconstruction failed.');
     } finally {
       setIsProcessing(false);
     }
@@ -406,6 +423,52 @@ export default function ExportView() {
               </div>
             </div>
           )}
+
+          {/* Clean-Text PDF Reconstruction Offer Card (DEC-004 User-Triggered Fallback) */}
+          {document.file_type === 'pdf' &&
+            redactionResult.export_state === 'FAILED' &&
+            !redactionResult.reconstructed_pdf_used && (
+              <div className="p-5 rounded-xl bg-amber-950/30 border border-amber-800/80 space-y-3">
+                <div className="flex items-start gap-3">
+                  <AlertTriangle className="w-5 h-5 text-amber-400 flex-shrink-0 mt-0.5" />
+                  <div className="space-y-1">
+                    <h3 className="text-xs font-bold text-amber-200 uppercase tracking-wider">
+                      Native PDF Verification Failed — Clean-Text Reconstruction Available
+                    </h3>
+                    <p className="text-xs text-amber-300/90 leading-relaxed">
+                      Native PyMuPDF stream redaction could not be verified (extractable text, annotations, or unsupported structures remain).
+                      To guarantee zero data leakage, export download is strictly blocked.
+                    </p>
+                    <p className="text-xs text-amber-400 font-medium">
+                      DEC-004 Fallback: You can explicitly trigger <strong>Clean-Text PDF Reconstruction</strong> to generate a brand-new, clean PDF exclusively from verified sanitized text.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="pt-2 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 border-t border-amber-900/60">
+                  <span className="text-[11px] text-amber-400/80 italic">
+                    * Note: Original graphical layout, images, and styling will be omitted.
+                  </span>
+                  <button
+                    onClick={handleExecuteReconstruction}
+                    disabled={isProcessing}
+                    className="flex items-center gap-2 px-4 py-2 rounded-lg bg-amber-600 hover:bg-amber-500 text-slate-950 font-bold text-xs shadow-md transition disabled:opacity-50"
+                  >
+                    {isProcessing ? (
+                      <>
+                        <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                        <span>Reconstructing & Verifying...</span>
+                      </>
+                    ) : (
+                      <>
+                        <FileCode className="w-3.5 h-3.5" />
+                        <span>Reconstruct Clean-Text PDF Alternative</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+              </div>
+            )}
 
           {/* Verification Checks Audit Grid */}
           <div className="space-y-2">

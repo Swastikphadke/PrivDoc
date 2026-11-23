@@ -112,7 +112,8 @@
   - [x] PDF redaction: native PyMuPDF stream redaction (`add_redact_annot` + `apply_redactions`) physically purging text and image streams with bounding-box inflation padding (0.5pt).
   - [x] Form widget sanitization (`AcroForm` text/choice fields scrubbed of approved PII) and hyperlink URI deletion/sanitization.
   - [x] Metadata stripping (author, title, producer, subject, keywords), active JavaScript removal, and embedded attachment scrubbing for exported PDFs.
-  - [x] Clean-text PDF reconstruction as an explicit, user-selected fallback (DEC-004) when native PDF redaction verification fails or is requested, with layout-loss warnings.
+  - [x] DEC-004 Fallback Policy Enforcement: Clean-text PDF reconstruction is strictly an explicit user-selected alternative. Native PyMuPDF redaction is ALWAYS attempted first unless clean-text reconstruction is explicitly chosen.
+  - [x] Post-Verification Failure Handling: If native PDF verification fails, `export_state` is set to `FAILED`, all temporary and unverified artifacts are deleted, auto-reconstruction is NOT initiated, a clear explanation is presented, and clean-text reconstruction is offered as a separate user-triggered action.
   - [x] Atomic promotion workflow: redact to ephemeral `.tmp` files; verify independently; atomically promote to `sanitized.txt` / `sanitized.pdf` only on verification `PASSED`.
   - [x] Export invalidation: delete any pre-existing exports and temporary files before re-processing to prevent stale export downloads.
 - [x] Implement `services/verification_service.py` (Stages D, E):
@@ -123,24 +124,26 @@
   - [x] Fail-closed export lifecycle: block safe export status if any sensitive value remains (`export_state = FAILED`, download disabled).
   - [x] Re-verify reconstructed clean-text PDF output before release.
 - [x] Implement export API routes & security hardening (Stage E):
-  - [x] Path traversal defense: strict regex validation (`^[a-zA-Z0-9_\-]+$`) on `/redact`, `/export/status`, and `/export`.
+  - [x] Path traversal defense: strict regex validation (`^[a-zA-Z0-9_\-]+$`) on `/redact`, `/reconstruct-pdf`, `/export/status`, and `/export`.
   - [x] Dual-state authorization check: verify `meta["status"] == "VERIFIED"` and `export_meta["export_state"] == "VERIFIED"` prior to file release.
   - [x] Containment check: verify resolved target file path resides strictly inside the session directory.
   - [x] Security headers: `X-Content-Type-Options: nosniff` and `Cache-Control: no-store` on file downloads.
-  - [x] `POST /api/documents/{id}/redact` (executes redaction + post-export verification).
+  - [x] `POST /api/documents/{id}/redact` (executes native redaction + post-export verification by default).
+  - [x] `POST /api/documents/{id}/reconstruct-pdf` (explicit, separate user-triggered clean-text reconstruction action).
   - [x] `GET /api/documents/{id}/export/status` (retrieves verification status & audit report).
   - [x] `GET /api/documents/{id}/export` (serves file only when `export_state === VERIFIED`, blocks unverified with HTTP 400).
 - [x] Implement frontend Export Workspace (`frontend/src/pages/ExportView.jsx`):
   - [x] Review gatekeeper verification card (Approved, Rejected, Pending counts).
   - [x] Mask pattern selector (`[CATEGORY]`, `[REDACTED]`, block characters).
-  - [x] Clean-text PDF reconstruction toggle (DEC-004).
+  - [x] Clean-text PDF reconstruction toggle and dedicated failure fallback card with explicit trigger button (`Reconstruct Clean-Text PDF Alternative`).
   - [x] Post-export verification audit report card with passed checks grid.
   - [x] Sanitized text preview and verified download button.
-- [x] Adversarial Test Suite (`backend/tests/test_redaction.py`):
+- [x] Adversarial & DEC-004 Regression Test Suite (`backend/tests/test_redaction.py`):
   - [x] 10 baseline integration and unit tests.
-  - [x] 18 mandatory adversarial test scenarios (Scenarios 1–18 covering multiple occurrences, name variants, non-ASCII scripts, nested overlaps, out-of-range offsets, approved vs rejected identical text, pending candidates preserved, entity bulk approval, multipage PDFs, recurring headers/footers, hyphenated spans, metadata purging, widgets/links/annotations, malformed PDFs, verification failure injection, path traversal attacks, export cache invalidation, and clean-text fallback disclosures).
-- [x] Write frontend export interaction tests (`frontend/src/pages/ExportView.test.jsx`).
-- **Exit Condition:** Post-export extraction verifies zero approved source strings in the exported artifact; all 18 adversarial scenarios pass; unverified downloads fail closed. (ACHIEVED — 79 backend tests [28 redaction tests] + 26 frontend tests passing)
+  - [x] 18 mandatory adversarial test scenarios (Scenarios 1–18).
+  - [x] 3 DEC-004 regression tests verifying native PDF redaction is attempted by default, failed native verification fails closed without auto-reconstruction, and user-triggered clean-text reconstruction is independently verified before promotion.
+- [x] Write frontend export interaction & DEC-004 regression tests (`frontend/src/pages/ExportView.test.jsx`).
+- **Exit Condition:** Post-export extraction verifies zero approved source strings in the exported artifact; clean-text reconstruction is strictly user-selected; all 18 adversarial scenarios + 3 DEC-004 regression tests pass; unverified downloads fail closed. (ACHIEVED — 82 backend tests [31 redaction tests] + 28 frontend tests passing)
 
 ---
 

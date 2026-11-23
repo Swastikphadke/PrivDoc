@@ -115,8 +115,8 @@ This document logs critical architectural and technical decisions made for Privy
 - **Decision:**
   - **Primary Action:** Attempt native PyMuPDF true redaction (`apply_redactions()`) to physically delete underlying characters, paths, and annotations from the PDF content stream.
   - **Immediate Output Verification:** Reopen the exported PDF in-process and scan page text and metadata for approved sensitive values and lingering annotations.
-  - **Verification Failure Action:** If post-export verification fails, **block the export completely** (do not permit user download of the unverified PDF).
-  - **Explicit Alternative:** Offer clean-text PDF reconstruction (rebuilding a clean, structured PDF from sanitized text) strictly as an explicit user-selected alternative.
+  - **Verification Failure Action:** If post-export verification fails, **block the export completely** (do not permit user download of the unverified PDF). Set export state to `FAILED` and delete all temporary/partial artifacts immediately.
+  - **Explicit Alternative (DEC-004 Policy):** Clean-text PDF reconstruction (rebuilding a clean, structured PDF from sanitized text) must **never be initiated automatically** when native verification fails. It must be offered as an explicit, separate user-triggered alternative or requested upfront.
   - **Re-Verification & Layout Warning:** Re-verify the reconstructed output before allowing download, and display prominent layout-loss warnings in the UI.
 - **Rationale:** Prevents catastrophic data leaks from visual-only redactions (R-06) while providing a robust, verified fallback mechanism.
 

@@ -75,4 +75,5 @@ class RedactionResponse(BaseModel):
     verification: VerificationResult
     download_ready: bool
     reconstructed_pdf_used: bool = False
+    reconstruction_offered: bool = False
     layout_warning: Optional[str] = None

@@ -908,3 +908,180 @@ def test_adversarial_18_clean_text_pdf_reconstruction_with_warnings(tmp_path):
     assert "RECONSTRUCTED DOCUMENT" in extracted
     assert "[PERSON]" in extracted
     doc.close()
+
+
+# =========================================================================
+# DEC-004 Regression Tests: User-Selected PDF Reconstruction Alternative
+# =========================================================================
+
+def test_dec004_native_pdf_attempted_by_default(tmp_path):
+    """DEC-004: Native PyMuPDF redaction is always attempted first when force_text_reconstruction is False."""
+    client = TestClient(app)
+
+    # Create a simple PDF
+    doc = pymupdf.open()
+    p = doc.new_page(width=595, height=842)
+    p.insert_text((50, 50), "Patient Name: Dr. John Watson. Diagnosis: Confidential.", fontsize=11)
+    pdf_bytes = doc.tobytes()
+    doc.close()
+
+    up = client.post(
+        "/api/documents/upload",
+        files={"file": ("watson_memo.pdf", pdf_bytes, "application/pdf")},
+    )
+    assert up.status_code in (200, 201)
+    doc_id = up.json()["document_id"]
+
+    # Add candidate for John Watson
+    client.post(
+        f"/api/documents/{doc_id}/candidates/manual",
+        json={"start": 18, "end": 29, "text": "John Watson", "type": "PERSON"},
+    )
+    client.post(f"/api/documents/{doc_id}/review/all", json={"decision": "APPROVE"})
+
+    # Standard redaction (force_text_reconstruction defaults to False)
+    red = client.post(f"/api/documents/{doc_id}/redact", json={})
+    assert red.status_code == 200
+    data = red.json()
+
+    assert data["export_state"] == "VERIFIED"
+    assert data["download_ready"] is True
+    assert data["reconstructed_pdf_used"] is False  # Native redaction succeeded; reconstruction not used
+    assert data["reconstruction_offered"] is False
+
+    exp = client.get(f"/api/documents/{doc_id}/export")
+    assert exp.status_code == 200
+    assert exp.headers["content-type"] == "application/pdf"
+
+    client.delete(f"/api/documents/{doc_id}")
+
+
+def test_dec004_failed_native_pdf_verification_fails_closed_without_auto_reconstruction(monkeypatch):
+    """DEC-004 Security Correction: Failed native verification must NOT auto-reconstruct.
+    Must fail closed, delete temporary artifacts, and offer reconstruction as a separate action.
+    """
+    client = TestClient(app)
+
+    doc = pymupdf.open()
+    p = doc.new_page(width=595, height=842)
+    p.insert_text((50, 50), "Classified leak: Agent Smith is here.", fontsize=11)
+    pdf_bytes = doc.tobytes()
+    doc.close()
+
+    up = client.post(
+        "/api/documents/upload",
+        files={"file": ("smith_leak.pdf", pdf_bytes, "application/pdf")},
+    )
+    assert up.status_code in (200, 201)
+    doc_id = up.json()["document_id"]
+
+    client.post(
+        f"/api/documents/{doc_id}/candidates/manual",
+        json={"start": 17, "end": 28, "text": "Agent Smith", "type": "PERSON"},
+    )
+    client.post(f"/api/documents/{doc_id}/review/all", json={"decision": "APPROVE"})
+
+    # Force native redaction to leave a leak so verification FAILS
+    def mock_failing_native_redaction(*args, **kwargs):
+        # Simply save original PDF without removing text
+        session_dir = kwargs.get("session_dir") or args[0]
+        out_path = kwargs.get("output_pdf_path") or args[1]
+        orig_pdf = session_dir / "original.pdf"
+        out_path.write_bytes(orig_pdf.read_bytes())
+
+    monkeypatch.setattr(RedactionService, "apply_native_pdf_redaction", mock_failing_native_redaction)
+
+    red = client.post(f"/api/documents/{doc_id}/redact", json={"force_text_reconstruction": False})
+    assert red.status_code == 200
+    data = red.json()
+
+    # Must be FAILED
+    assert data["export_state"] == "FAILED"
+    assert data["download_ready"] is False
+    # CRITICAL INVARIANT: Did NOT automatically initiate clean-text reconstruction!
+    assert data["reconstructed_pdf_used"] is False
+    # Offered clean-text reconstruction as a separate user action
+    assert data["reconstruction_offered"] is True
+    assert "Native PDF redaction verification failed" in data["layout_warning"]
+    assert "Clean-text PDF Reconstruction" in data["layout_warning"]
+
+    # Check disk state: no partial or unverified sanitized PDF file exists
+    session_dir = get_safe_session_dir(doc_id)
+    assert not (session_dir / "sanitized.pdf").exists()
+    assert not (session_dir / "sanitized.pdf.tmp").exists()
+
+    # Download must fail closed
+    exp = client.get(f"/api/documents/{doc_id}/export")
+    assert exp.status_code == 400
+    assert "Export download blocked" in exp.json()["detail"]
+
+    client.delete(f"/api/documents/{doc_id}")
+
+
+def test_dec004_explicit_user_triggered_reconstruction_workflow(monkeypatch):
+    """DEC-004: When explicitly requested, reconstruct a new PDF exclusively from sanitized text,
+    run verification on it, and only promote to VERIFIED after passing checks.
+    """
+    client = TestClient(app)
+
+    doc = pymupdf.open()
+    p = doc.new_page(width=595, height=842)
+    p.insert_text((50, 50), "Medical Chart: Patient Bruce Wayne. Treatment required.", fontsize=11)
+    pdf_bytes = doc.tobytes()
+    doc.close()
+
+    up = client.post(
+        "/api/documents/upload",
+        files={"file": ("wayne_chart.pdf", pdf_bytes, "application/pdf")},
+    )
+    assert up.status_code in (200, 201)
+    doc_id = up.json()["document_id"]
+
+    client.post(
+        f"/api/documents/{doc_id}/candidates/manual",
+        json={"start": 23, "end": 34, "text": "Bruce Wayne", "type": "PERSON"},
+    )
+    client.post(f"/api/documents/{doc_id}/review/all", json={"decision": "APPROVE"})
+
+    # Step 1: Native fails
+    def mock_failing_native_redaction(*args, **kwargs):
+        session_dir = kwargs.get("session_dir") or args[0]
+        out_path = kwargs.get("output_pdf_path") or args[1]
+        orig_pdf = session_dir / "original.pdf"
+        out_path.write_bytes(orig_pdf.read_bytes())
+
+    monkeypatch.setattr(RedactionService, "apply_native_pdf_redaction", mock_failing_native_redaction)
+
+    red1 = client.post(f"/api/documents/{doc_id}/redact", json={})
+    assert red1.json()["export_state"] == "FAILED"
+    assert red1.json()["reconstruction_offered"] is True
+    assert red1.json()["reconstructed_pdf_used"] is False
+
+    # Step 2: User explicitly triggers separate reconstruction action via /reconstruct-pdf endpoint
+    recon = client.post(f"/api/documents/{doc_id}/reconstruct-pdf", json={})
+    assert recon.status_code == 200
+    recon_data = recon.json()
+
+    assert recon_data["export_state"] == "VERIFIED"
+    assert recon_data["download_ready"] is True
+    assert recon_data["reconstructed_pdf_used"] is True
+    assert recon_data["reconstruction_offered"] is False
+    assert "clean-text PDF reconstruction" in recon_data["layout_warning"]
+    assert recon_data["verification"]["status"] == "PASSED"
+
+    # Step 3: File is now downloadable
+    session_dir = get_safe_session_dir(doc_id)
+    assert (session_dir / "sanitized.pdf").exists()
+
+    exp = client.get(f"/api/documents/{doc_id}/export")
+    assert exp.status_code == 200
+    assert exp.headers["content-type"] == "application/pdf"
+
+    # Verify content of reconstructed PDF: Bruce Wayne absent, [PERSON] present
+    out_doc = pymupdf.open(session_dir / "sanitized.pdf")
+    text = out_doc[0].get_text("text")
+    assert "Bruce Wayne" not in text
+    assert "[PERSON]" in text
+    out_doc.close()
+
+    client.delete(f"/api/documents/{doc_id}")
