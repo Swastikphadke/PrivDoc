@@ -581,6 +581,7 @@ def render_pdf_page(document_id: str, page_number: int) -> Response:
 from fastapi.responses import FileResponse
 from app.schemas.redaction import RedactionRequest, RedactionResponse, ExportState
 from app.services.redaction_service import RedactionService
+import re
 
 
 @router.post(
@@ -593,6 +594,12 @@ def execute_redaction(
     request: Optional[RedactionRequest] = None,
 ) -> RedactionResponse:
     """Execute document redaction (TXT and native PyMuPDF PDF) and post-export verification."""
+    if not re.match(r"^[a-zA-Z0-9_\-]+$", document_id):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid document ID format."
+        )
+
     meta = get_document_metadata(document_id)
     if not meta:
         raise HTTPException(
@@ -627,6 +634,12 @@ def execute_redaction(
 )
 def get_export_status(document_id: str) -> RedactionResponse:
     """Retrieve post-export verification report and export status."""
+    if not re.match(r"^[a-zA-Z0-9_\-]+$", document_id):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid document ID format."
+        )
+
     meta = get_document_metadata(document_id)
     if not meta:
         raise HTTPException(
@@ -657,6 +670,12 @@ def download_exported_document(document_id: str):
     Only documents that successfully passed 100% of export verification checks
     (status == VERIFIED) can be downloaded. Unverified or failed outputs are strictly blocked.
     """
+    if not re.match(r"^[a-zA-Z0-9_\-]+$", document_id):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid document ID format."
+        )
+
     meta = get_document_metadata(document_id)
     if not meta:
         raise HTTPException(
@@ -675,7 +694,8 @@ def download_exported_document(document_id: str):
     export_meta = json.loads(meta_path.read_text(encoding="utf-8"))
     export_state = export_meta.get("export_state")
 
-    if export_state != ExportState.VERIFIED.value:
+    # Double-check: both SQLite status and export_metadata must be VERIFIED
+    if export_state != ExportState.VERIFIED.value or meta.get("status") != ExportState.VERIFIED.value:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=(
@@ -698,11 +718,24 @@ def download_exported_document(document_id: str):
             detail="Sanitized file not found on server."
         )
 
+    resolved_file = export_file_path.resolve()
+    if resolved_file.parent != session_dir.resolve():
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Access denied: path traversal attempt detected."
+        )
+
     download_name = f"sanitized_{meta['original_filename']}"
+    headers = {
+        "X-Content-Type-Options": "nosniff",
+        "Cache-Control": "no-store, no-cache, must-revalidate",
+        "Pragma": "no-cache",
+    }
     return FileResponse(
         path=export_file_path,
         filename=download_name,
         media_type=media_type,
+        headers=headers,
     )
 
 

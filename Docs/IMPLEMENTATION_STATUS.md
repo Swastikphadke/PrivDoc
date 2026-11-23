@@ -107,17 +107,26 @@
 ---
 
 ### Phase 5: Redaction Engine & Export Verification
-- [x] Implement `services/redaction_service.py`:
-  - [x] TXT redaction: descending offset replacement with configurable placeholders (`[PERSON]`, `[EMAIL]`, `[REDACTED]`, block characters) with overlapping span interval merging.
-  - [x] PDF redaction: native PyMuPDF stream redaction (`add_redact_annot` + `apply_redactions`) physically purging text and image streams.
-  - [x] Metadata stripping, active JavaScript removal, and embedded attachment scrubbing for exported PDFs.
+- [x] Implement `services/redaction_service.py` (Stages A, B, C):
+  - [x] TXT redaction: descending offset replacement with configurable placeholders (`[PERSON]`, `[EMAIL]`, `[REDACTED]`, block characters) with overlapping span interval merging and offset validation.
+  - [x] PDF redaction: native PyMuPDF stream redaction (`add_redact_annot` + `apply_redactions`) physically purging text and image streams with bounding-box inflation padding (0.5pt).
+  - [x] Form widget sanitization (`AcroForm` text/choice fields scrubbed of approved PII) and hyperlink URI deletion/sanitization.
+  - [x] Metadata stripping (author, title, producer, subject, keywords), active JavaScript removal, and embedded attachment scrubbing for exported PDFs.
   - [x] Clean-text PDF reconstruction as an explicit, user-selected fallback (DEC-004) when native PDF redaction verification fails or is requested, with layout-loss warnings.
-- [x] Implement `services/verification_service.py`:
+  - [x] Atomic promotion workflow: redact to ephemeral `.tmp` files; verify independently; atomically promote to `sanitized.txt` / `sanitized.pdf` only on verification `PASSED`.
+  - [x] Export invalidation: delete any pre-existing exports and temporary files before re-processing to prevent stale export downloads.
+- [x] Implement `services/verification_service.py` (Stages D, E):
   - [x] Reopen exported TXT/PDF files.
-  - [x] Search extracted text, page contents, metadata, annotations, attachments, and active JS for approved sensitive values.
-  - [x] Block safe export status if any sensitive value remains (`export_state = FAILED`, download disabled).
+  - [x] Occurrence-aware string verification ($N_{exported} \le N_{preserved}$): preserves legitimate unreviewed/rejected occurrences while strictly eliminating approved occurrences.
+  - [x] Search extracted text, page contents, metadata, annotations, form widgets, link URIs, attachments, and active JS for approved sensitive values and known entity variants.
+  - [x] Zero-PII leak guarantee: verification reports and issues report only candidate IDs, entity IDs, categories, page numbers, and diagnostic codes (no raw PII logged or emitted).
+  - [x] Fail-closed export lifecycle: block safe export status if any sensitive value remains (`export_state = FAILED`, download disabled).
   - [x] Re-verify reconstructed clean-text PDF output before release.
-- [x] Implement export API routes:
+- [x] Implement export API routes & security hardening (Stage E):
+  - [x] Path traversal defense: strict regex validation (`^[a-zA-Z0-9_\-]+$`) on `/redact`, `/export/status`, and `/export`.
+  - [x] Dual-state authorization check: verify `meta["status"] == "VERIFIED"` and `export_meta["export_state"] == "VERIFIED"` prior to file release.
+  - [x] Containment check: verify resolved target file path resides strictly inside the session directory.
+  - [x] Security headers: `X-Content-Type-Options: nosniff` and `Cache-Control: no-store` on file downloads.
   - [x] `POST /api/documents/{id}/redact` (executes redaction + post-export verification).
   - [x] `GET /api/documents/{id}/export/status` (retrieves verification status & audit report).
   - [x] `GET /api/documents/{id}/export` (serves file only when `export_state === VERIFIED`, blocks unverified with HTTP 400).
@@ -127,9 +136,11 @@
   - [x] Clean-text PDF reconstruction toggle (DEC-004).
   - [x] Post-export verification audit report card with passed checks grid.
   - [x] Sanitized text preview and verified download button.
-- [x] Write backend verification tests (`backend/tests/test_redaction.py`).
+- [x] Adversarial Test Suite (`backend/tests/test_redaction.py`):
+  - [x] 10 baseline integration and unit tests.
+  - [x] 18 mandatory adversarial test scenarios (Scenarios 1–18 covering multiple occurrences, name variants, non-ASCII scripts, nested overlaps, out-of-range offsets, approved vs rejected identical text, pending candidates preserved, entity bulk approval, multipage PDFs, recurring headers/footers, hyphenated spans, metadata purging, widgets/links/annotations, malformed PDFs, verification failure injection, path traversal attacks, export cache invalidation, and clean-text fallback disclosures).
 - [x] Write frontend export interaction tests (`frontend/src/pages/ExportView.test.jsx`).
-- **Exit Condition:** Post-export extraction verifies zero approved source strings in the exported artifact. (ACHIEVED — 61 backend tests + 26 frontend tests passing)
+- **Exit Condition:** Post-export extraction verifies zero approved source strings in the exported artifact; all 18 adversarial scenarios pass; unverified downloads fail closed. (ACHIEVED — 79 backend tests [28 redaction tests] + 26 frontend tests passing)
 
 ---
 

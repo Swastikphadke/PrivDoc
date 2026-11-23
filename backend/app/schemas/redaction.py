@@ -45,9 +45,10 @@ class RedactionRequest(BaseModel):
 
 class VerificationIssue(BaseModel):
     """Individual issue or violation detected by post-export verification."""
-    check_name: str = Field(description="Name of verification rule (e.g. EXACT_MATCH, METADATA_LEAK).")
+    check_name: str = Field(description="Name of verification rule (e.g. EXACT_APPROVED_STRINGS, METADATA_INSPECTION).")
     description: str = Field(description="Masked description of the issue. NEVER contains raw PII.")
     severity: str = Field(default="ERROR", description="'ERROR' (fails export) or 'WARNING'.")
+    diagnostic_code: Optional[str] = Field(default=None, description="Diagnostic error code for automated triage.")
     page_number: Optional[int] = Field(default=None, description="Page number where issue was detected.")
     candidate_id: Optional[str] = Field(default=None, description="Related candidate ID, if applicable.")
 
