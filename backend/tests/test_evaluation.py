@@ -192,3 +192,38 @@ def test_markdown_report_formatting():
     assert "Pairwise Precision" in md
     assert "Resource & Efficiency Profiling" in md
     assert "All metrics above were obtained exclusively from synthetic corpus" in md
+
+
+def test_stage4_dataset_split_integrity_and_strategy_comparison():
+    """Verify Stage 4 benchmark split isolation (zero cross-split entity or document leakage),
+    5-strategy detection comparison, explicit pairwise entity denominators, and OS Process RSS vs Python heap profiling.
+    """
+    base_dir = Path(__file__).resolve().parent.parent.parent
+    s4_dir = base_dir / "datasets" / "evaluation_stage4"
+    assert s4_dir.exists(), "Stage 4 benchmark directory missing!"
+
+    integrity = EvaluationService.verify_dataset_integrity(s4_dir)
+    assert integrity["splits"]["dev"]["document_count"] == 12
+    assert integrity["splits"]["val"]["document_count"] == 12
+    assert integrity["splits"]["test"]["document_count"] == 12
+    # Negative (0-PII) documents must be present in every split
+    assert integrity["splits"]["dev"]["negative_document_count"] >= 1
+    assert integrity["splits"]["val"]["negative_document_count"] >= 1
+    assert integrity["splits"]["test"]["negative_document_count"] >= 1
+    # Zero cross-split duplicate documents or entity surface string leakage
+    assert integrity["cross_split_duplicate_docs"] == {"dev_vs_val": 0, "dev_vs_test": 0, "val_vs_test": 0}
+    assert integrity["cross_split_entity_overlaps"] == {"dev_vs_val": [], "dev_vs_test": [], "val_vs_test": []}
+
+    # Verify strategy comparison on held-out test split
+    strat_cmp = EvaluationService.compare_detection_strategies(s4_dir, "test")
+    assert set(strat_cmp.keys()) == {"regex_only", "ner_only", "hybrid_no_slm", "hybrid_with_slm"}
+    assert strat_cmp["hybrid_no_slm"]["exact_micro"]["f1"] > strat_cmp["regex_only"]["exact_micro"]["f1"]
+    assert strat_cmp["hybrid_no_slm"]["exact_micro"]["f1"] > strat_cmp["ner_only"]["exact_micro"]["f1"]
+
+    # Verify benchmark report records both OS Process RSS MB and Python heap tracemalloc MB
+    rep = EvaluationService.run_benchmark_on_dataset(s4_dir, "test", "exact")
+    assert rep.performance.process_rss_mb > 10.0  # Real OS process RSS (>10 MB, typically ~85 MB)
+    assert rep.performance.peak_memory_mb >= 0.0
+    assert rep.entity_metrics.gold_positive_pairs == 8
+    assert rep.entity_metrics.predicted_positive_links == 8
+    assert rep.entity_metrics.false_discovery_rate == 0.0

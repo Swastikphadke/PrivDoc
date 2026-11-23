@@ -100,19 +100,17 @@ flowchart LR
 - **PDF Documents:** PyMuPDF extracts text word-by-word with page numbers and graphical bounding boxes `[x0, y0, x1, y1]`. Stored in `data/sessions/{doc_id}/coordinates.json`.
 
 ### Stage 2: Hybrid PII Detection
-Combines complementary detection techniques into a unified candidate pool:
-1. **Deterministic Regex Engine:** High-precision patterns for email addresses, phone numbers, SSNs, credit cards, dates, and internal identifiers.
-2. **Contextual NER Engine:** Local spaCy `en_core_web_sm` model extracts names (`PERSON`), organizations (`ORG`), and geopolitical locations (`GPE`).
-3. **Deterministic Deduplication & Merge:** Overlapping spans are resolved using priority scoring (Regex > NER; longer match takes precedence on conflict).
+Combines complementary detection techniques into a unified candidate pool with explicit `HEURISTIC_EVIDENCE` provenance:
+1. **Deterministic Regex Engine:** High-precision patterns for standard and obfuscated email addresses, country-aware phone numbers, PAN/Aadhaar/SSN, masked identifiers (`XXXX-XXXX-4829`), street/postal addresses, and honorific/header person names.
+2. **Contextual NER Engine:** Two-pass linguistic detector that strips leading occupational/role prefixes (`"Senior Compliance Officer"`, `"Lead Auditor"`) from `PERSON` offsets, enforces single-space column boundaries in tables, suppresses organizational head nouns, and performs a document-local standalone surname scan with multi-anchor ambiguity safeguards (`is_ambiguous_suggestion`).
+3. **Selective Local SLM Assistance & Span Unioning:** Coordinates optional `SLMDetector` proposals (always held as `PENDING`) and unions partially overlapping same-category spans (`[min_start, max_end)`), recording `MULTI_DETECTOR_CONSENSUS` or `TYPE_CONFLICT`.
 
-### Stage 3: Entity Resolution & Variant Grouping
-Clusters candidate mentions referring to the same real-world identity:
-1. **Exact Normalized Matching:** Groups identical normalized mentions.
-2. **Initial-to-Surname Matching:** Links `R. Sharma` to `Richa Sharma` if unambiguous within document scope.
-3. **Title Matching:** Links `Dr. Vance` to `Evelyn Vance`.
-4. **Lexical Fuzzy Matching:** Identifies minor typographical errors (token sort ratio >= 88%).
-5. **Local SLM Corroboration:** Analyzes context for subtle alias relationships in non-degraded mode.
-6. **Ambiguity Protection:** Mentions matching multiple distinct persons (e.g., `J. Smith` with `John Smith` and `James Smith`) are flagged as ambiguous and kept separate.
+### Stage 3: Explainable Entity Resolution & Variant Grouping
+Clusters candidate mentions referring to the same identity within document scope using cycle-safe Union-Find transitive closure and structured `EntityLinkReason` explanations:
+1. **Category-Aware Normalization:** Normalizes obfuscated emails (`[at]`/`[dot]` -> `@`/`.`), country-aware phone numbers (linking national 10-digit numbers to unambiguous international numbers while never merging distinct country codes like `+1` vs `+91`), and address suffixes/city transliterations (`Bangalore` <-> `Bengaluru`).
+2. **Initial, Multi-Initial & Honorific Full-Name Matching:** Links `Dr. Richa K. Sharma`, `Richa K. Sharma`, `R. K. Sharma`, `Ms. Sharma`, and unambiguous standalone surname `Sharma` into a single cluster.
+3. **Phonetic Transliteration & Typo Matching:** Links Indian/English phonetic variants (`Aarav Choudhary` <-> `Aarav Chaudhary`, `Swastik` <-> `Swasthik`) while recording borderline matches in `suggested_links`.
+4. **Ambiguity & Shared-Surname Protection:** Mentions matching multiple distinct anchors (`J. Smith` with `John Smith` and `James Smith`, or standalone `Vance` with `John Vance` and `Elena Vance`) or distinct given names sharing a surname (`Anil Kumar` vs `Sunil Kumar`, `Arjun Verma` vs `Arun Verma`) are never merged.
 
 ### Stage 4: Human Review & Decision Management
 - Interactive workspace presenting candidates grouped by category, entity cluster, or page appearance.

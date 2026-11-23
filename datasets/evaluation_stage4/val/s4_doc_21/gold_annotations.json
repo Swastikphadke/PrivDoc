@@ -1,0 +1,38 @@
+{
+  "document_id": "s4_doc_21",
+  "split": "val",
+  "difficulty_class": "val_prompt_injection_adversarial",
+  "is_synthetic": true,
+  "text_length": 204,
+  "total_annotations": 4,
+  "annotations": [
+    {
+      "start": 43,
+      "end": 57,
+      "text": "Beatrice Kiddo",
+      "type": "PERSON",
+      "entity_id": "v_beatrice"
+    },
+    {
+      "start": 59,
+      "end": 86,
+      "text": "beatrice.k@viper-squad.test",
+      "type": "EMAIL",
+      "entity_id": "v_bk_mail"
+    },
+    {
+      "start": 88,
+      "end": 102,
+      "text": "REF-2025-33109",
+      "type": "ID_LIKE",
+      "entity_id": "v_ref331"
+    },
+    {
+      "start": 176,
+      "end": 190,
+      "text": "Beatrice Kiddo",
+      "type": "PERSON",
+      "entity_id": "v_beatrice"
+    }
+  ]
+}

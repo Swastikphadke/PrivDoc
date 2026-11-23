@@ -22,14 +22,17 @@ from app.services.evaluation_service import EvaluationReport, EvaluationService
 def run_evaluation(
     split: str = "test",
     matching: str = "exact",
+    dataset_dir_arg: str | None = None,
     output_md: str | None = None,
     output_json: str | None = None,
 ) -> int:
     """Run evaluation benchmark across specified split and render report."""
-    dataset_dir = BASE_DIR / "datasets" / "evaluation"
+    dataset_dir = Path(dataset_dir_arg) if dataset_dir_arg else (BASE_DIR / "datasets" / "evaluation")
+    if not dataset_dir.is_absolute():
+        dataset_dir = BASE_DIR / dataset_dir
     if not dataset_dir.exists():
         print(f"Error: Dataset directory '{dataset_dir}' does not exist.")
-        print("Please run 'python scripts/generate_synthetic_corpus.py' first.")
+        print("Please run 'python scripts/generate_synthetic_corpus.py' or 'python scripts/generate_stage4_benchmark.py' first.")
         return 1
 
     print(f"============================================================")
@@ -99,9 +102,14 @@ def main():
         help="Span matching mode (default: exact)",
     )
     parser.add_argument(
+        "--dataset-dir",
+        default="datasets/evaluation",
+        help="Dataset directory to evaluate (e.g. datasets/evaluation or datasets/evaluation_stage4)",
+    )
+    parser.add_argument(
         "--output-md",
-        default="Docs/EVALUATION_REPORT.md",
-        help="Path for generated Markdown evaluation report",
+        default=None,
+        help="Optional path for generated Markdown evaluation report",
     )
     parser.add_argument(
         "--output-json",
@@ -113,6 +121,7 @@ def main():
     ret = run_evaluation(
         split=args.split,
         matching=args.matching,
+        dataset_dir_arg=args.dataset_dir,
         output_md=args.output_md,
         output_json=args.output_json,
     )

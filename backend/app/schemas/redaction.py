@@ -21,10 +21,11 @@ class ExportState(str, Enum):
 
 class PlaceholderStyle(str, Enum):
     """Placeholder formatting strategy for redacted spans."""
-    CATEGORY = "CATEGORY"  # [PERSON], [EMAIL], [PHONE], etc.
-    GENERIC = "GENERIC"    # [REDACTED]
-    BLOCK = "BLOCK"        # ████████
-    CUSTOM = "CUSTOM"      # Custom user string template
+    CATEGORY = "CATEGORY"                # [PERSON], [EMAIL], [PHONE], etc.
+    ENTITY_INDEXED = "ENTITY_INDEXED"    # [PERSON_1], [PERSON_2], [EMAIL_1] (coreference-preserving)
+    GENERIC = "GENERIC"                  # [REDACTED]
+    BLOCK = "BLOCK"                      # ████████
+    CUSTOM = "CUSTOM"                    # Custom user string template
 
 
 class RedactionRequest(BaseModel):
@@ -77,3 +78,11 @@ class RedactionResponse(BaseModel):
     reconstructed_pdf_used: bool = False
     reconstruction_offered: bool = False
     layout_warning: Optional[str] = None
+    pseudonymization_notice: Optional[str] = Field(
+        default=(
+            "Pseudonymization vs. Anonymization Notice: Placeholder tokens (such as [PERSON_1] or [PERSON]) "
+            "remove direct surface identifiers and preserve document readability, but pseudonymization does not "
+            "guarantee mathematical or legal anonymity against contextual or quasi-identifier linkage."
+        ),
+        description="Explicit disclosure that pseudonymization placeholders do not guarantee mathematical anonymity.",
+    )

@@ -16,6 +16,10 @@ Recommended corpus: - 20--30 TXT documents. - 20--30 text-based PDFs. -
 At least 5 documents per major difficulty class. - A separate held-out
 set not used to tune patterns/prompts.
 
+Implemented benchmark suites:
+- **Suite V1 (`datasets/evaluation/`):** 25 synthetic documents (50 TXT+PDF files: `dev`=10, `val`=7, held-out `test`=8).
+- **Suite V2 (`datasets/evaluation_stage4/`):** 36 expanded multi-difficulty synthetic documents (72 TXT+PDF files: `dev`=12, `val`=12, held-out `test`=12), including negative (0-PII) documents and adversarial edge cases, totaling **61 synthetic documents (122 TXT+PDF files)**.
+
 Difficulty classes: 1. Clean business reports. 2. Names in headers,
 signatures and running text. 3. Initials and name variants. 4.
 International and locally formatted phone numbers. 5. Addresses with

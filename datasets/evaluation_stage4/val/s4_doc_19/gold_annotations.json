@@ -1,0 +1,38 @@
+{
+  "document_id": "s4_doc_19",
+  "split": "val",
+  "difficulty_class": "val_indian_property_and_masked_id",
+  "is_synthetic": true,
+  "text_length": 205,
+  "total_annotations": 4,
+  "annotations": [
+    {
+      "start": 42,
+      "end": 59,
+      "text": "Ananya Chatterjee",
+      "type": "PERSON",
+      "entity_id": "v_ananya"
+    },
+    {
+      "start": 108,
+      "end": 118,
+      "text": "LMNPQ4455R",
+      "type": "ID_LIKE",
+      "entity_id": "v_pan_a"
+    },
+    {
+      "start": 141,
+      "end": 176,
+      "text": "House 88, Salt Lake, Kolkata 700091",
+      "type": "ADDRESS",
+      "entity_id": "v_kolkata"
+    },
+    {
+      "start": 189,
+      "end": 203,
+      "text": "XXXX-XXXX-9102",
+      "type": "ID_LIKE",
+      "entity_id": "v_mask_a"
+    }
+  ]
+}

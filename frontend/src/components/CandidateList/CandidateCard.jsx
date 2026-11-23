@@ -80,7 +80,7 @@ export default function CandidateCard({
       </div>
 
       {/* Metadata & Provenance */}
-      <div className="flex items-center justify-between text-[11px] text-slate-400 mb-3">
+      <div className="flex items-center justify-between text-[11px] text-slate-400 mb-2">
         <span className="font-mono">
           [{candidate.start}, {candidate.end})
         </span>
@@ -93,6 +93,26 @@ export default function CandidateCard({
           ))}
         </div>
       </div>
+
+      {/* Explanation & Agreement Signals (Stage 2 Provenance) */}
+      {(candidate.explanation?.length > 0 || candidate.is_ambiguous_suggestion || candidate.detector_agreement === 'TYPE_CONFLICT') && (
+        <div className="mb-2.5 px-2 py-1 rounded bg-slate-950/70 border border-slate-800/70 text-[10px] text-slate-400 space-y-0.5">
+          {candidate.detector_agreement === 'MULTI_DETECTOR_CONSENSUS' && (
+            <span className="text-emerald-400 font-semibold block">✓ Multi-Detector Consensus</span>
+          )}
+          {candidate.detector_agreement === 'TYPE_CONFLICT' && (
+            <span className="text-amber-400 font-semibold block">⚠ Detector Category Conflict</span>
+          )}
+          {candidate.is_ambiguous_suggestion && (
+            <span className="text-amber-400 font-semibold block">⚠ Ambiguous Surname Suggestion</span>
+          )}
+          {candidate.explanation?.[0] && (
+            <span className="block truncate" title={candidate.explanation.join(' • ')}>
+              {candidate.explanation[0]}
+            </span>
+          )}
+        </div>
+      )}
 
       {/* Actions Toolbar */}
       <div className="flex items-center justify-between pt-2 border-t border-slate-800/80">
@@ -180,7 +200,7 @@ export default function CandidateCard({
         <button
           onClick={(e) => {
             e.stopPropagation();
-            onRedactSimilar?.(candidate);
+            onRedactSimilar?.(candidate.candidate_id);
           }}
           className="text-cyan-400 hover:text-cyan-300 flex items-center gap-1"
           title="Preview and redact all identical occurrences"

@@ -1,0 +1,38 @@
+{
+  "document_id": "s4_doc_01",
+  "split": "dev",
+  "difficulty_class": "role_prefix_and_obfuscated_email",
+  "is_synthetic": true,
+  "text_length": 220,
+  "total_annotations": 4,
+  "annotations": [
+    {
+      "start": 73,
+      "end": 92,
+      "text": "Nandini Subramanian",
+      "type": "PERSON",
+      "entity_id": "e_nandini"
+    },
+    {
+      "start": 117,
+      "end": 130,
+      "text": "Austin Miller",
+      "type": "PERSON",
+      "entity_id": "e_austin"
+    },
+    {
+      "start": 155,
+      "end": 199,
+      "text": "nandini.subramanian [at] aegis-fin [dot] org",
+      "type": "EMAIL",
+      "entity_id": "e_nandini_m"
+    },
+    {
+      "start": 203,
+      "end": 218,
+      "text": "+91 98451 67210",
+      "type": "PHONE",
+      "entity_id": "e_nandini_p"
+    }
+  ]
+}

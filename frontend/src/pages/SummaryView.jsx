@@ -129,9 +129,9 @@ export default function SummaryView() {
   const isVerified = state === 'VERIFIED';
   const isRequiresReview = state === 'REQUIRES_REVIEW';
   const engineUsed = summaryData?.engine_used || 'UNKNOWN';
-  const structured = summaryData?.structured_content;
+  const structured = summaryData?.content;
   const verifReport = summaryData?.verification_report;
-  const quasiAssessment = summaryData?.quasi_identifier_assessment;
+  const quasiAssessment = verifReport?.quasi_assessment;
 
   return (
     <div className="max-w-4xl mx-auto px-4 py-8 space-y-6">
@@ -222,7 +222,7 @@ export default function SummaryView() {
             className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-mono bg-slate-800/80 text-sky-400 border border-slate-700"
           >
             <Cpu className="w-3.5 h-3.5" />
-            {engineUsed === 'LOCAL_SLM'
+            {engineUsed === 'SLM'
               ? 'Local SLM'
               : engineUsed === 'EXTRACTIVE_FALLBACK'
               ? 'Extractive Fallback (SLM Unavailable)'
@@ -230,9 +230,9 @@ export default function SummaryView() {
           </span>
         </div>
 
-        {summaryData?.attempts && (
+        {summaryData?.retry_count !== undefined && (
           <span className="text-xs text-slate-400 font-mono">
-            Attempts: {summaryData.attempts}
+            Retries: {summaryData.retry_count}
           </span>
         )}
       </div>
@@ -251,9 +251,9 @@ export default function SummaryView() {
             The generated summary failed post-generation privacy verification checks and has been suppressed to prevent sensitive data leakage.
             No unverified text or residual PII is displayed.
           </p>
-          {summaryData?.suppression_reason && (
+          {summaryData?.warning_message && (
             <div className="p-3 rounded-lg bg-slate-950 border border-rose-900/50 text-xs font-mono text-rose-300">
-              Cause: {summaryData.suppression_reason}
+              Cause: {summaryData.warning_message}
             </div>
           )}
           <div className="pt-2">
@@ -265,6 +265,20 @@ export default function SummaryView() {
               <RefreshCw className="w-3.5 h-3.5" />
               <span>Retry with Deterministic Extractive Fallback</span>
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* Requires Review Warning Banner */}
+      {isRequiresReview && summaryData?.warning_message && (
+        <div
+          data-testid="requires-review-warning-banner"
+          className="p-4 rounded-xl bg-amber-950/40 border border-amber-800/60 flex items-start gap-2.5 text-xs text-amber-200"
+        >
+          <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
+          <div>
+            <span className="font-semibold block text-amber-300">Human Review Advisory</span>
+            <span>{summaryData.warning_message}</span>
           </div>
         </div>
       )}
@@ -342,9 +356,9 @@ export default function SummaryView() {
                 <Calendar className="w-3.5 h-3.5" />
                 Relevant Dates & Figures
               </h3>
-              {structured.relevant_dates_and_figures && structured.relevant_dates_and_figures.length > 0 ? (
+              {structured.relevant_dates_or_figures && structured.relevant_dates_or_figures.length > 0 ? (
                 <ul className="space-y-1.5 text-xs text-slate-300">
-                  {structured.relevant_dates_and_figures.map((item, i) => (
+                  {structured.relevant_dates_or_figures.map((item, i) => (
                     <li key={i} className="flex items-start gap-2 font-mono">
                       <span className="text-amber-400">•</span>
                       <span>{item}</span>
@@ -389,41 +403,55 @@ export default function SummaryView() {
             </div>
             <span
               className={`text-xs font-semibold px-2 py-0.5 rounded ${
-                verifReport.overall_passed
+                verifReport.status === 'PASSED'
                   ? 'bg-emerald-950 text-emerald-400 border border-emerald-800'
+                  : verifReport.status === 'REQUIRES_REVIEW'
+                  ? 'bg-amber-950 text-amber-400 border border-amber-800'
                   : 'bg-rose-950 text-rose-400 border border-rose-800'
               }`}
             >
-              {verifReport.overall_passed ? 'ALL CHECKS PASSED' : 'CHECKS FAILED'}
+              {verifReport.status === 'PASSED'
+                ? 'ALL CHECKS PASSED'
+                : verifReport.status === 'REQUIRES_REVIEW'
+                ? 'REQUIRES REVIEW'
+                : 'CHECKS FAILED'}
             </span>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             {verifReport.checks &&
-              verifReport.checks.map((chk, idx) => (
-                <div
-                  key={idx}
-                  className={`p-3.5 rounded-lg border text-xs flex flex-col justify-between space-y-1 ${
-                    chk.passed
-                      ? 'bg-slate-950/60 border-slate-800 text-slate-300'
-                      : 'bg-rose-950/30 border-rose-900/60 text-rose-300'
-                  }`}
-                >
-                  <div className="flex items-center justify-between">
-                    <span className="font-semibold text-white uppercase tracking-wider text-[11px]">
-                      {chk.check_name.replace(/_/g, ' ')}
-                    </span>
-                    {chk.passed ? (
-                      <CheckCircle2 className="w-4 h-4 text-emerald-400" />
-                    ) : (
-                      <XCircle className="w-4 h-4 text-rose-400" />
-                    )}
+              verifReport.checks.map((chk, idx) => {
+                const checkPassed = chk.status === 'PASSED';
+                const checkWarn = chk.status === 'WARNING';
+                return (
+                  <div
+                    key={idx}
+                    className={`p-3.5 rounded-lg border text-xs flex flex-col justify-between space-y-1 ${
+                      checkPassed
+                        ? 'bg-slate-950/60 border-slate-800 text-slate-300'
+                        : checkWarn
+                        ? 'bg-amber-950/30 border-amber-900/60 text-amber-300'
+                        : 'bg-rose-950/30 border-rose-900/60 text-rose-300'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between">
+                      <span className="font-semibold text-white uppercase tracking-wider text-[11px]">
+                        {chk.check_name.replace(/_/g, ' ')}
+                      </span>
+                      {checkPassed ? (
+                        <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+                      ) : checkWarn ? (
+                        <AlertTriangle className="w-4 h-4 text-amber-400" />
+                      ) : (
+                        <XCircle className="w-4 h-4 text-rose-400" />
+                      )}
+                    </div>
+                    <p className="text-slate-400 text-[11px] leading-tight">
+                      {chk.details || (checkPassed ? 'Check passed with 0 leaks.' : 'Failed.')}
+                    </p>
                   </div>
-                  <p className="text-slate-400 text-[11px] leading-tight">
-                    {chk.details || (chk.passed ? 'Check passed with 0 leaks.' : 'Failed.')}
-                  </p>
-                </div>
-              ))}
+                );
+              })}
           </div>
         </div>
       )}

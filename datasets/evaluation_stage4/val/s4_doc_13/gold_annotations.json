@@ -1,0 +1,38 @@
+{
+  "document_id": "s4_doc_13",
+  "split": "val",
+  "difficulty_class": "val_role_and_obfuscated_email",
+  "is_synthetic": true,
+  "text_length": 195,
+  "total_annotations": 4,
+  "annotations": [
+    {
+      "start": 63,
+      "end": 81,
+      "text": "Meenakshi Sundaram",
+      "type": "PERSON",
+      "entity_id": "v_meenakshi"
+    },
+    {
+      "start": 98,
+      "end": 118,
+      "text": "Lucas Vance-Sterling",
+      "type": "PERSON",
+      "entity_id": "v_lucas"
+    },
+    {
+      "start": 129,
+      "end": 170,
+      "text": "meenakshi.s (at) treasury-audit (dot) org",
+      "type": "EMAIL",
+      "entity_id": "v_meen_m"
+    },
+    {
+      "start": 178,
+      "end": 193,
+      "text": "+91 97312 88401",
+      "type": "PHONE",
+      "entity_id": "v_meen_p"
+    }
+  ]
+}

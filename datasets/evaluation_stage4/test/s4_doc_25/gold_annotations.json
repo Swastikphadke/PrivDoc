@@ -1,0 +1,38 @@
+{
+  "document_id": "s4_doc_25",
+  "split": "test",
+  "difficulty_class": "test_role_hyphen_obfuscated_mail",
+  "is_synthetic": true,
+  "text_length": 200,
+  "total_annotations": 4,
+  "annotations": [
+    {
+      "start": 50,
+      "end": 73,
+      "text": "Madeline Sterling-Cross",
+      "type": "PERSON",
+      "entity_id": "t_madeline"
+    },
+    {
+      "start": 108,
+      "end": 125,
+      "text": "Devendra Fadnavis",
+      "type": "PERSON",
+      "entity_id": "t_devendra"
+    },
+    {
+      "start": 136,
+      "end": 177,
+      "text": "madeline.sc [at] forensics-unit [dot] net",
+      "type": "EMAIL",
+      "entity_id": "t_mad_m"
+    },
+    {
+      "start": 181,
+      "end": 198,
+      "text": "+1 (415) 555-0192",
+      "type": "PHONE",
+      "entity_id": "t_mad_p"
+    }
+  ]
+}

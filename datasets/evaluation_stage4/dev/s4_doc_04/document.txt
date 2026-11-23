@@ -1,0 +1,7 @@
+VENDOR PROCUREMENT COMPLIANCE MATRIX
+
+Vendors evaluated under ISO 27001-2022 and Version 4.2.0:
+1. Morgan Stanley Wealth Management (Order 100200300)
+2. Goldman Sachs Group (Routing Code 021000021)
+3. Grant Thornton LLP & Lincoln Memorial Hospital
+Account Holder and Account Status: Active. Reference Code: Pending.

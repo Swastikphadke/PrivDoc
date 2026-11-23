@@ -11,6 +11,23 @@ class EntityLinkAction(str, Enum):
     MERGE = "MERGE"
 
 
+class ResolutionTier(str, Enum):
+    EXACT = "EXACT"
+    DETERMINISTIC_VARIANT = "DETERMINISTIC_VARIANT"
+    PROBABLE_HEURISTIC = "PROBABLE_HEURISTIC"
+    AMBIGUOUS_CONFLICT = "AMBIGUOUS_CONFLICT"
+    USER_DEFINED = "USER_DEFINED"
+
+
+class EntityLinkReason(BaseModel):
+    """Structured explanation record for why two surface mentions were linked or kept separate."""
+    rule: str = Field(..., description="Rule identifier (e.g. EXACT_NORMALIZED, UNAMBIGUOUS_INITIAL, PHONETIC_TYPO_SIMILARITY)")
+    source_variant: str = Field(..., description="Source surface mention")
+    target_variant: str = Field(..., description="Target canonical/anchor mention")
+    score: float = Field(default=1.0, ge=0.0, le=1.0, description="Heuristic evidence score for this link")
+    explanation: str = Field(..., description="Human-readable explanation of the linkage evidence")
+
+
 class Entity(BaseModel):
     """Represents a resolved cluster of candidate occurrences belonging to the same entity."""
     entity_id: str = Field(..., description="Unique entity cluster identifier (e.g. ent_1)")
@@ -19,7 +36,11 @@ class Entity(BaseModel):
     candidate_ids: List[str] = Field(default_factory=list, description="IDs of candidates belonging to this entity")
     variants: List[str] = Field(default_factory=list, description="Distinct surface text representations")
     confidence: float = Field(..., ge=0.0, le=1.0, description="Overall cluster confidence score")
-    evidence: List[str] = Field(default_factory=list, description="Deterministic and heuristic evidence for grouping")
+    resolution_tier: str = Field(default=ResolutionTier.EXACT.value, description="Resolution confidence tier")
+    evidence: List[str] = Field(default_factory=list, description="Deterministic and heuristic evidence strings")
+    link_reasons: List[EntityLinkReason] = Field(default_factory=list, description="Structured link explanation objects")
+    suggested_links: List[EntityLinkReason] = Field(default_factory=list, description="Non-merged borderline link suggestions for human review")
+    normalized_value: Optional[str] = Field(default=None, description="Category-normalized representation within the document")
     is_ambiguous: bool = Field(default=False, description="True if potential conflicting links were detected")
     is_user_defined: bool = Field(default=False, description="True if manually grouped or edited by the user")
 

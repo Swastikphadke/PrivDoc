@@ -1,0 +1,38 @@
+{
+  "document_id": "s4_doc_11",
+  "split": "dev",
+  "difficulty_class": "field_dispatch_initial_link",
+  "is_synthetic": true,
+  "text_length": 165,
+  "total_annotations": 4,
+  "annotations": [
+    {
+      "start": 30,
+      "end": 46,
+      "text": "Vikramaditya Rao",
+      "type": "PERSON",
+      "entity_id": "e_vrao"
+    },
+    {
+      "start": 61,
+      "end": 108,
+      "text": "Plot 19, Phase 2, Indiranagar, Bengaluru 560038",
+      "type": "ADDRESS",
+      "entity_id": "e_blr11"
+    },
+    {
+      "start": 129,
+      "end": 135,
+      "text": "V. Rao",
+      "type": "PERSON",
+      "entity_id": "e_vrao"
+    },
+    {
+      "start": 137,
+      "end": 162,
+      "text": "vikram.rao@field-ops.test",
+      "type": "EMAIL",
+      "entity_id": "e_vrao_m"
+    }
+  ]
+}

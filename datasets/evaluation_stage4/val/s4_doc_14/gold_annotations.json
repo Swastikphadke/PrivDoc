@@ -1,0 +1,38 @@
+{
+  "document_id": "s4_doc_14",
+  "split": "val",
+  "difficulty_class": "val_medical_apostrophe_hyphen",
+  "is_synthetic": true,
+  "text_length": 199,
+  "total_annotations": 4,
+  "annotations": [
+    {
+      "start": 38,
+      "end": 54,
+      "text": "Patrick O'Malley",
+      "type": "PERSON",
+      "entity_id": "v_omalley"
+    },
+    {
+      "start": 88,
+      "end": 111,
+      "text": "Dr. Marie-Claire Dubois",
+      "type": "PERSON",
+      "entity_id": "v_dubois"
+    },
+    {
+      "start": 131,
+      "end": 179,
+      "text": "310 Oakwood Avenue, Suite 400, Chicago, IL 60611",
+      "type": "ADDRESS",
+      "entity_id": "v_chicago"
+    },
+    {
+      "start": 186,
+      "end": 197,
+      "text": "412-55-8930",
+      "type": "ID_LIKE",
+      "entity_id": "v_ssn14"
+    }
+  ]
+}

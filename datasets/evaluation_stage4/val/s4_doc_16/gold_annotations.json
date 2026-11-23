@@ -1,0 +1,9 @@
+{
+  "document_id": "s4_doc_16",
+  "split": "val",
+  "difficulty_class": "val_negative_zero_pii",
+  "is_synthetic": true,
+  "text_length": 210,
+  "total_annotations": 0,
+  "annotations": []
+}

@@ -1,0 +1,4 @@
+CLINICAL TRIAL PARTICIPANT TABLE
+PARTICIPANT            COHORT             PATIENT ID        MASKED AADHAAR
+Arundhati Bhattacharya Group Alpha        PAT-90214         XXXX-XXXX-7731
+Desmond MacAllister    Group Beta         EMP-60412         XXX-XX-4410

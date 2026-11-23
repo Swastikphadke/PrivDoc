@@ -1,0 +1,45 @@
+{
+  "document_id": "s4_doc_06",
+  "split": "dev",
+  "difficulty_class": "ambiguous_surname_and_initial",
+  "is_synthetic": true,
+  "text_length": 193,
+  "total_annotations": 5,
+  "annotations": [
+    {
+      "start": 36,
+      "end": 46,
+      "text": "John Vance",
+      "type": "PERSON",
+      "entity_id": "e_jvance"
+    },
+    {
+      "start": 51,
+      "end": 62,
+      "text": "Elena Vance",
+      "type": "PERSON",
+      "entity_id": "e_evance"
+    },
+    {
+      "start": 88,
+      "end": 104,
+      "text": "Tariq Al-Mansoor",
+      "type": "PERSON",
+      "entity_id": "e_tariq"
+    },
+    {
+      "start": 142,
+      "end": 150,
+      "text": "J. Vance",
+      "type": "PERSON",
+      "entity_id": "e_jvance_init"
+    },
+    {
+      "start": 172,
+      "end": 177,
+      "text": "Vance",
+      "type": "PERSON",
+      "entity_id": "e_vance_ambig"
+    }
+  ]
+}

@@ -1,0 +1,45 @@
+{
+  "document_id": "s4_doc_02",
+  "split": "dev",
+  "difficulty_class": "hyphenated_apostrophe_names",
+  "is_synthetic": true,
+  "text_length": 222,
+  "total_annotations": 5,
+  "annotations": [
+    {
+      "start": 42,
+      "end": 61,
+      "text": "Dr. Jean-Luc Picard",
+      "type": "PERSON",
+      "entity_id": "e_picard"
+    },
+    {
+      "start": 77,
+      "end": 98,
+      "text": "Prof. Siobhan O'Brien",
+      "type": "PERSON",
+      "entity_id": "e_obrien"
+    },
+    {
+      "start": 103,
+      "end": 120,
+      "text": "D'Artagnan Moreau",
+      "type": "PERSON",
+      "entity_id": "e_moreau"
+    },
+    {
+      "start": 141,
+      "end": 188,
+      "text": "742 Maple Boulevard, Apt 12C, Seattle, WA 98101",
+      "type": "ADDRESS",
+      "entity_id": "e_seattle"
+    },
+    {
+      "start": 203,
+      "end": 220,
+      "text": "+1 (206) 555-0184",
+      "type": "PHONE",
+      "entity_id": "e_seattle_p"
+    }
+  ]
+}

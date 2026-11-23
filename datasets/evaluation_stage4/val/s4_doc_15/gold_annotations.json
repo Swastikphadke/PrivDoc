@@ -1,0 +1,52 @@
+{
+  "document_id": "s4_doc_15",
+  "split": "val",
+  "difficulty_class": "val_coreference_chain",
+  "is_synthetic": true,
+  "text_length": 205,
+  "total_annotations": 6,
+  "annotations": [
+    {
+      "start": 51,
+      "end": 69,
+      "text": "Siddharth Malhotra",
+      "type": "PERSON",
+      "entity_id": "v_sid"
+    },
+    {
+      "start": 85,
+      "end": 96,
+      "text": "S. Malhotra",
+      "type": "PERSON",
+      "entity_id": "v_sid"
+    },
+    {
+      "start": 101,
+      "end": 113,
+      "text": "Mr. Malhotra",
+      "type": "PERSON",
+      "entity_id": "v_sid"
+    },
+    {
+      "start": 142,
+      "end": 150,
+      "text": "Malhotra",
+      "type": "PERSON",
+      "entity_id": "v_sid"
+    },
+    {
+      "start": 155,
+      "end": 183,
+      "text": "s.malhotra@lex-chambers.test",
+      "type": "EMAIL",
+      "entity_id": "v_sid_m"
+    },
+    {
+      "start": 187,
+      "end": 203,
+      "text": "+44 20 7946 0551",
+      "type": "PHONE",
+      "entity_id": "v_sid_p"
+    }
+  ]
+}

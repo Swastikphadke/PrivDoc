@@ -129,8 +129,10 @@ export const getExportStatus = async (documentId) => {
   return response.data;
 };
 
-export const downloadExport = async (documentId) => {
+export const downloadExport = async (documentId, format = null) => {
+  const params = format ? { format } : undefined;
   const response = await apiClient.get(`/api/documents/${documentId}/export`, {
+    params,
     responseType: 'blob',
   });
   return response;

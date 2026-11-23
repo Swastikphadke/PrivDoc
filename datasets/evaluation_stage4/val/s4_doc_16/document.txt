@@ -1,0 +1,4 @@
+INFRASTRUCTURE RELEASE NOTES — BUILD 2025.11
+
+Validated by Deloitte Touche Tohmatsu Limited and PricewaterhouseCoopers LLP.
+Complies with RFC 8446, Version 3.1.4, and Section 10.20.30. Zero incidents reported.

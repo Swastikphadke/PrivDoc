@@ -13,7 +13,7 @@ import json
 import uuid
 from pathlib import Path
 from typing import List, Optional
-from app.core.security import get_safe_session_dir
+from app.core.security import atomic_write_text, get_safe_session_dir
 from app.database.session import record_review_decision, update_document_status
 from app.detectors.entity_resolver import EntityResolver
 from app.schemas.candidate import Candidate, ConfidenceBand, ReviewStatus
@@ -23,6 +23,7 @@ from app.schemas.review import (
     ReviewDecisionAction,
     ReviewSummaryResponse,
 )
+from app.services.detection_service import DetectionService
 from app.services.feedback_service import FeedbackService
 
 
@@ -85,11 +86,11 @@ class ReviewService:
                 scope=scope,
             )
 
-        # Save mutated candidates
+        # Save mutated candidates atomically
         session_dir = get_safe_session_dir(document_id)
         cands_path = session_dir / "candidates.json"
         cands_data = [c.model_dump() for c in candidates]
-        cands_path.write_text(json.dumps(cands_data, indent=2), encoding="utf-8")
+        atomic_write_text(cands_path, json.dumps(cands_data, indent=2), encoding="utf-8")
 
         # Invalidate any stale export or summary artifacts (TDR-018)
         cls._invalidate_stale_exports_and_summaries(document_id, session_dir)
@@ -138,6 +139,11 @@ class ReviewService:
             bbox=req.bbox,
             review_status=ReviewStatus.APPROVED.value,  # Manual selections are auto-approved by human
         )
+
+        # Enrich PDF page_number and bbox from coordinates.json if not explicitly supplied
+        coords_path = session_dir / "coordinates.json"
+        if (manual_cand.bbox is None or manual_cand.page_number is None) and coords_path.exists():
+            DetectionService._enrich_coordinates([manual_cand], coords_path)
 
         candidates.append(manual_cand)
         candidates.sort(key=lambda c: (c.start, -(c.end - c.start)))

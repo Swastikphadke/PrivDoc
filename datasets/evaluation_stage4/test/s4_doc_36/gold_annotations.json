@@ -1,0 +1,52 @@
+{
+  "document_id": "s4_doc_36",
+  "split": "test",
+  "difficulty_class": "test_multi_country_escalation",
+  "is_synthetic": true,
+  "text_length": 213,
+  "total_annotations": 6,
+  "annotations": [
+    {
+      "start": 69,
+      "end": 82,
+      "text": "Amrita Pritam",
+      "type": "PERSON",
+      "entity_id": "t_amrita"
+    },
+    {
+      "start": 84,
+      "end": 99,
+      "text": "+91 98180 77665",
+      "type": "PHONE",
+      "entity_id": "t_amrita_p"
+    },
+    {
+      "start": 120,
+      "end": 133,
+      "text": "Hannah Arendt",
+      "type": "PERSON",
+      "entity_id": "t_hannah"
+    },
+    {
+      "start": 135,
+      "end": 152,
+      "text": "+1 (212) 555-0139",
+      "type": "PHONE",
+      "entity_id": "t_hannah_p"
+    },
+    {
+      "start": 172,
+      "end": 186,
+      "text": "6789 1234 5678",
+      "type": "ID_LIKE",
+      "entity_id": "t_aadhaar36"
+    },
+    {
+      "start": 201,
+      "end": 211,
+      "text": "STAFF_9042",
+      "type": "ID_LIKE",
+      "entity_id": "t_staff9042"
+    }
+  ]
+}

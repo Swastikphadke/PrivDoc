@@ -67,4 +67,52 @@ describe('TextViewer Component', () => {
     render(<TextViewer text="" candidates={[]} />);
     expect(screen.getByText('No canonical text available.')).toBeDefined();
   });
+
+  it('resolves exact character offset when selecting a repeated substring later in the document', () => {
+    const repeatedText = 'First mention of SecretToken and second mention of SecretToken in body.';
+    const firstCand = [
+      {
+        candidate_id: 'c_rep_1',
+        start: 17,
+        end: 28,
+        text: 'SecretToken',
+        type: 'ID_LIKE',
+        confidence: 0.9,
+        confidence_band: 'HIGH',
+        review_status: 'APPROVED',
+      },
+    ];
+    const onTextSelected = vi.fn();
+
+    const { container } = render(
+      <TextViewer
+        text={repeatedText}
+        candidates={firstCand}
+        onTextSelected={onTextSelected}
+      />
+    );
+
+    // Find the trailing span starting at offset 28: ' and second mention of SecretToken in body.'
+    const trailingSpan = container.querySelector('span[data-char-start="28"]');
+    expect(trailingSpan).not.toBeNull();
+    const textNode = trailingSpan.firstChild;
+
+    // Select the second "SecretToken" inside trailingSpan (starts at offset 23 within trailingSpan -> 28 + 23 = 51)
+    const range = document.createRange();
+    range.setStart(textNode, 23);
+    range.setEnd(textNode, 34);
+
+    const selection = window.getSelection();
+    selection.removeAllRanges();
+    selection.addRange(range);
+
+    fireEvent.mouseUp(trailingSpan);
+
+    expect(onTextSelected).toHaveBeenCalledWith({
+      start: 51,
+      end: 62,
+      text: 'SecretToken',
+    });
+    selection.removeAllRanges();
+  });
 });

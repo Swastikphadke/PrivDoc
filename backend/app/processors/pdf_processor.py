@@ -95,19 +95,51 @@ class PDFProcessor:
             if len(words) == 0 and len(image_list) > 0:
                 warnings.append(f"Page {page_num} contains images but no extractable text.")
 
-            # Map words to canonical character offsets
+            # Extract page geometry (accounting for rotation and cropbox)
+            p_rect = page.rect
+            p_x0 = round(float(p_rect.x0), 2)
+            p_y0 = round(float(p_rect.y0), 2)
+            p_width = round(float(p_rect.width), 2) if p_rect.width > 0 else 595.0
+            p_height = round(float(p_rect.height), 2) if p_rect.height > 0 else 842.0
+            p_rot = int(getattr(page, "rotation", 0) or 0)
+
+            # Map words to canonical character offsets monotonically without resetting to 0
             search_idx = 0
+            claimed_intervals: List[Tuple[int, int]] = []
             for w in words:
                 x0, y0, x1, y1, word_str = float(w[0]), float(w[1]), float(w[2]), float(w[3]), str(w[4])
-                # Locate in normalized_page_text
+                if not word_str:
+                    continue
+
+                # 1. Primary monotonic forward search from search_idx
                 idx = normalized_page_text.find(word_str, search_idx)
-                if idx == -1:
-                    # Retry search from beginning of page text if word ordering in 'words' deviated
-                    idx = normalized_page_text.find(word_str)
+
+                # 2. If block/column ordering caused minor local inversion, search a bounded local window
+                if idx == -1 or idx > search_idx + 120:
+                    win_start = max(0, search_idx - 60)
+                    win_end = min(len(normalized_page_text), search_idx + 200)
+                    scan_pos = win_start
+                    found_local = -1
+                    while scan_pos < win_end:
+                        cand_idx = normalized_page_text.find(word_str, scan_pos, win_end)
+                        if cand_idx == -1:
+                            break
+                        cand_end = cand_idx + len(word_str)
+                        already_claimed = any(
+                            not (cand_end <= c_s or cand_idx >= c_e)
+                            for c_s, c_e in claimed_intervals
+                        )
+                        if not already_claimed:
+                            found_local = cand_idx
+                            break
+                        scan_pos = cand_idx + 1
+                    if found_local != -1:
+                        idx = found_local
 
                 if idx != -1:
                     char_start = page_start_offset + idx
                     char_end = char_start + len(word_str)
+                    claimed_intervals.append((idx, idx + len(word_str)))
                     coordinates.append(
                         CoordinateSpan(
                             page_number=page_num,
@@ -115,9 +147,15 @@ class PDFProcessor:
                             char_start=char_start,
                             char_end=char_end,
                             text=word_str,
+                            page_x0=p_x0,
+                            page_y0=p_y0,
+                            page_width=p_width,
+                            page_height=p_height,
+                            page_rotation=p_rot,
                         )
                     )
-                    search_idx = idx + len(word_str)
+                    # Monotonic progress: never move search_idx backward
+                    search_idx = max(search_idx, idx + len(word_str))
 
         doc.close()
 

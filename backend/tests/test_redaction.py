@@ -1085,3 +1085,409 @@ def test_dec004_explicit_user_triggered_reconstruction_workflow(monkeypatch):
     out_doc.close()
 
     client.delete(f"/api/documents/{doc_id}")
+
+
+# =========================================================================
+# Stage 1 (Priority 0) Correctness & Security Regression Tests
+# =========================================================================
+
+def test_stage1_p0_occurrence_safe_pdf_redaction_preserves_rejected_duplicate():
+    """Priority 0 (#8): Identical text on the same PDF page where one occurrence is APPROVED
+    and the second occurrence is REJECTED must redact ONLY the approved occurrence.
+    """
+    client = TestClient(app)
+
+    doc = pymupdf.open()
+    page = doc.new_page(width=595, height=842)
+    page.insert_text((50, 100), "Lead Investigator Miller filed the report.", fontsize=11)
+    page.insert_text((50, 200), "Equipment manufacturer Miller Corp supplied the sensors.", fontsize=11)
+    pdf_bytes = doc.tobytes()
+    doc.close()
+
+    up = client.post(
+        "/api/documents/upload",
+        files={"file": ("miller_occurrence.pdf", pdf_bytes, "application/pdf")},
+    )
+    assert up.status_code == 201
+    doc_id = up.json()["document_id"]
+    extracted_text = up.json()["extracted_text"]
+
+    first_idx = extracted_text.index("Miller")
+    second_idx = extracted_text.index("Miller", first_idx + 6)
+
+    try:
+        # Add both occurrences as candidates
+        r1 = client.post(
+            f"/api/documents/{doc_id}/candidates/manual",
+            json={"start": first_idx, "end": first_idx + 6, "type": "PERSON"},
+        )
+        assert r1.status_code == 201
+        c1_id = r1.json()["candidate_id"]
+
+        r2 = client.post(
+            f"/api/documents/{doc_id}/candidates/manual",
+            json={"start": second_idx, "end": second_idx + 6, "type": "PERSON"},
+        )
+        assert r2.status_code == 201
+        c2_id = r2.json()["candidate_id"]
+
+        # Approve first occurrence, explicitly REJECT second occurrence
+        client.post(
+            f"/api/documents/{doc_id}/review",
+            json={"candidate_id": c1_id, "decision": "APPROVE"},
+        )
+        client.post(
+            f"/api/documents/{doc_id}/review",
+            json={"candidate_id": c2_id, "decision": "REJECT"},
+        )
+
+        # Execute native PDF redaction
+        red = client.post(f"/api/documents/{doc_id}/redact", json={"placeholder_style": "CATEGORY"})
+        assert red.status_code == 200
+        red_data = red.json()
+        assert red_data["export_state"] == "VERIFIED"
+
+        # Inspect physical PDF output: first "Miller" must be gone, second "Miller" must remain
+        dl = client.get(f"/api/documents/{doc_id}/export")
+        assert dl.status_code == 200
+        out_doc = pymupdf.open(stream=dl.content, filetype="pdf")
+        out_text = out_doc[0].get_text("text")
+        out_doc.close()
+
+        assert out_text.count("Miller") == 1
+        assert "Miller Corp" in out_text
+        assert "Lead Investigator Miller" not in out_text
+
+        # Also test ?format=txt download on the same PDF session (Priority 0 #6)
+        dl_txt = client.get(f"/api/documents/{doc_id}/export?format=txt")
+        assert dl_txt.status_code == 200
+        assert dl_txt.headers["content-type"].startswith("text/plain")
+        assert dl_txt.text.count("Miller") == 1
+        assert "[PERSON]" in dl_txt.text
+    finally:
+        client.delete(f"/api/documents/{doc_id}")
+
+
+def test_stage1_p0_pdf_redaction_fails_closed_on_unresolvable_coordinates(tmp_path):
+    """Priority 0 (#8): If coordinate mappings exist or an ambiguous preserved occurrence exists
+    and exact occurrence coordinates cannot be established, fail closed.
+    """
+    session_dir = tmp_path / "ambig_pdf"
+    session_dir.mkdir(parents=True, exist_ok=True)
+    orig_pdf = session_dir / "original.pdf"
+
+    doc = pymupdf.open()
+    page = doc.new_page(width=595, height=842)
+    page.insert_text((50, 100), "Contact Smith or Smith for details.", fontsize=11)
+    doc.save(orig_pdf)
+    doc.close()
+
+    c_app = Candidate(
+        candidate_id="c_s1", document_id="d_ambig", start=8, end=13,
+        text="Smith", type="PERSON", confidence=0.9, confidence_band="HIGH",
+        sources=["ner"], review_status="APPROVED",
+    )
+    c_rej = Candidate(
+        candidate_id="c_s2", document_id="d_ambig", start=17, end=22,
+        text="Smith", type="PERSON", confidence=0.9, confidence_band="HIGH",
+        sources=["ner"], review_status="REJECTED",
+    )
+
+    # Without coordinates.json or candidate bboxes, disambiguating approved Smith vs rejected Smith is impossible
+    with pytest.raises(ValueError, match="Occurrence-safety violation"):
+        RedactionService.apply_native_pdf_redaction(
+            session_dir=session_dir,
+            output_pdf_path=session_dir / "sanitized.pdf",
+            approved_candidates=[c_app],
+            all_candidates=[c_app, c_rej],
+        )
+
+
+def test_stage1_p0_pdf_rotated_page_coordinate_redaction():
+    """Priority 0 (#7): Validate coordinate extraction and native redaction on rotated PDF pages."""
+    client = TestClient(app)
+
+    doc = pymupdf.open()
+    page = doc.new_page(width=595, height=842)
+    page.insert_text((100, 150), "Rotated record for Agent Vikram Seth in Vault.", fontsize=11)
+    page.set_rotation(90)
+    pdf_bytes = doc.tobytes()
+    doc.close()
+
+    up = client.post(
+        "/api/documents/upload",
+        files={"file": ("rotated.pdf", pdf_bytes, "application/pdf")},
+    )
+    assert up.status_code == 201
+    doc_id = up.json()["document_id"]
+    text = up.json()["extracted_text"]
+
+    try:
+        coords_res = client.get(f"/api/documents/{doc_id}/coordinates")
+        assert coords_res.status_code == 200
+        coords = coords_res.json()["coordinates"]
+        assert len(coords) > 0
+        assert coords[0]["page_rotation"] == 90
+
+        idx = text.index("Vikram Seth")
+        man_res = client.post(
+            f"/api/documents/{doc_id}/candidates/manual",
+            json={"start": idx, "end": idx + len("Vikram Seth"), "type": "PERSON"},
+        )
+        assert man_res.status_code == 201
+        assert man_res.json()["bbox"] is not None
+
+        red = client.post(f"/api/documents/{doc_id}/redact")
+        assert red.status_code == 200
+        assert red.json()["export_state"] == "VERIFIED"
+
+        dl = client.get(f"/api/documents/{doc_id}/export")
+        out_doc = pymupdf.open(stream=dl.content, filetype="pdf")
+        out_text = out_doc[0].get_text("text")
+        out_doc.close()
+        assert "Vikram Seth" not in out_text
+        assert "Rotated record" in out_text
+    finally:
+        client.delete(f"/api/documents/{doc_id}")
+
+
+def test_stage1_p0_short_token_verification_no_false_positive(tmp_path):
+    """Priority 0 (#9): Short 2-3 char approved tokens ('Al', 'Ed') must not trigger
+    false verification failure when normal words ('also', 'medical', 'redacted') exist.
+    """
+    san_file = tmp_path / "sanitized_short.txt"
+    san_file.write_text(
+        "Also, all medical records were redacted and validated by [PERSON].",
+        encoding="utf-8",
+    )
+
+    c_al = Candidate(
+        candidate_id="c_al", document_id="d_short", start=0, end=2,
+        text="Al", type="PERSON", confidence=0.85, confidence_band="HIGH",
+        sources=["ner"], review_status="APPROVED",
+    )
+    c_ed = Candidate(
+        candidate_id="c_ed", document_id="d_short", start=5, end=7,
+        text="Ed", type="PERSON", confidence=0.85, confidence_band="HIGH",
+        sources=["ner"], review_status="APPROVED",
+    )
+
+    res = VerificationService.verify_txt_export(
+        document_id="d_short",
+        sanitized_txt_path=san_file,
+        canonical_text="Al and Ed: Also, all medical records were redacted.",
+        approved_candidates=[c_al, c_ed],
+        all_candidates=[c_al, c_ed],
+        entities=[],
+    )
+    assert res.status == "PASSED"
+    assert len(res.issues) == 0
+
+    # Conversely, if standalone "Al" actually leaked, verification MUST fail
+    san_file.write_text("Also, contact Al regarding the medical records.", encoding="utf-8")
+    res_leak = VerificationService.verify_txt_export(
+        document_id="d_short",
+        sanitized_txt_path=san_file,
+        canonical_text="Al and Ed: Also, contact Al.",
+        approved_candidates=[c_al, c_ed],
+        all_candidates=[c_al, c_ed],
+        entities=[],
+    )
+    assert res_leak.status == "FAILED"
+
+
+def test_stage1_p0_pdf_xmp_xml_and_toc_bookmark_sanitization(tmp_path):
+    """Priority 0 (#10): PDF XMP XML metadata streams and TOC bookmark outlines
+    must be scrubbed during redaction and inspected by VerificationService.
+    """
+    session_dir = tmp_path / "pdf_xmp_toc"
+    session_dir.mkdir(parents=True, exist_ok=True)
+    orig_pdf = session_dir / "original.pdf"
+    san_pdf = session_dir / "sanitized.pdf"
+
+    doc = pymupdf.open()
+    page = doc.new_page(width=595, height=842)
+    page.insert_text((50, 100), "Section 1: Review of Dr. Elena Fisher.", fontsize=11)
+    doc.set_xml_metadata(
+        '<?xpacket begin="" id="W5M0MpCehiHzreSzNTczkc9d"?>'
+        '<x:xmpmeta xmlns:x="adobe:ns:meta/"><rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">'
+        '<rdf:Description rdf:about="" xmlns:dc="http://purl.org/dc/elements/1.1/">'
+        '<dc:creator>Elena Fisher</dc:creator></rdf:Description></rdf:RDF></x:xmpmeta><?xpacket end="w"?>'
+    )
+    doc.set_toc([[1, "Dossier for Elena Fisher", 1]])
+    doc.save(orig_pdf)
+    doc.close()
+
+    c_elena = Candidate(
+        candidate_id="c_xmp1", document_id="d_xmp", start=21, end=37,
+        text="Elena Fisher", type="PERSON", confidence=0.99, confidence_band="HIGH",
+        sources=["ner"], review_status="APPROVED",
+    )
+
+    # First verify that an unredacted copy with XMP and TOC leaks is caught by VerificationService
+    unredacted_check = VerificationService.verify_pdf_export("d_xmp", orig_pdf, [c_elena], [c_elena], [])
+    assert unredacted_check.status == "FAILED"
+    diag_codes = {i.diagnostic_code for i in unredacted_check.issues}
+    assert "METADATA_PII_LEAK_PDF" in diag_codes
+    assert "TOC_BOOKMARK_PII_LEAK_PDF" in diag_codes
+
+    # Now execute native PDF redaction and verify both XMP and TOC are scrubbed
+    RedactionService.apply_native_pdf_redaction(session_dir, san_pdf, [c_elena])
+    redacted_check = VerificationService.verify_pdf_export("d_xmp", san_pdf, [c_elena], [c_elena], [])
+    assert redacted_check.status == "PASSED"
+
+    out_doc = pymupdf.open(san_pdf)
+    assert "Elena Fisher" not in (out_doc.get_xml_metadata() or "")
+    for item in out_doc.get_toc():
+        assert "Elena Fisher" not in str(item[1])
+    out_doc.close()
+
+
+def test_stage1_gap1_pdf_session_export_formats_and_failed_blocking(monkeypatch):
+    """Stage 1 Verification Gap 1:
+    - GET ?format=pdf returns the verified sanitized PDF.
+    - GET ?format=txt returns the verified sanitized TXT.
+    - Unsupported formats (?format=docx, ?format=json) are rejected with 400.
+    - Failed verification prevents downloads in both ?format=pdf and ?format=txt.
+    """
+    client = TestClient(app)
+
+    doc = pymupdf.open()
+    page = doc.new_page(width=595, height=842)
+    page.insert_text((50, 100), "Confidential record for Dr. Aris Thorne at Lab.", fontsize=11)
+    pdf_bytes = doc.tobytes()
+    doc.close()
+
+    up = client.post(
+        "/api/documents/upload",
+        files={"file": ("thorne_export.pdf", pdf_bytes, "application/pdf")},
+    )
+    assert up.status_code == 201
+    doc_id = up.json()["document_id"]
+    text = up.json()["extracted_text"]
+
+    try:
+        idx = text.index("Dr. Aris Thorne")
+        man = client.post(
+            f"/api/documents/{doc_id}/candidates/manual",
+            json={"start": idx, "end": idx + len("Dr. Aris Thorne"), "type": "PERSON"},
+        )
+        assert man.status_code == 201
+
+        # 1. Execute valid redaction -> VERIFIED
+        red_ok = client.post(f"/api/documents/{doc_id}/redact", json={"placeholder_style": "CATEGORY"})
+        assert red_ok.status_code == 200
+        assert red_ok.json()["export_state"] == "VERIFIED"
+
+        # 1a. GET ?format=pdf returns verified sanitized PDF
+        dl_pdf = client.get(f"/api/documents/{doc_id}/export?format=pdf")
+        assert dl_pdf.status_code == 200
+        assert dl_pdf.headers["content-type"] == "application/pdf"
+        out_pdf = pymupdf.open(stream=dl_pdf.content, filetype="pdf")
+        pdf_text = out_pdf[0].get_text("text")
+        out_pdf.close()
+        assert "Aris Thorne" not in pdf_text
+        assert "Confidential record" in pdf_text
+
+        # 1b. GET ?format=txt returns verified sanitized TXT
+        dl_txt = client.get(f"/api/documents/{doc_id}/export?format=txt")
+        assert dl_txt.status_code == 200
+        assert dl_txt.headers["content-type"].startswith("text/plain")
+        assert "Aris Thorne" not in dl_txt.text
+        assert "[PERSON]" in dl_txt.text
+
+        # 1c. Unsupported formats are rejected with HTTP 400
+        for bad_fmt in ("docx", "xml", "html", "exe"):
+            dl_bad = client.get(f"/api/documents/{doc_id}/export?format={bad_fmt}")
+            assert dl_bad.status_code == 400
+            assert "Unsupported export format" in dl_bad.json()["detail"]
+
+        # 2. Simulate failed verification and verify BOTH ?format=pdf and ?format=txt are blocked
+        def mock_failing_native(*args, **kwargs):
+            s_dir = kwargs.get("session_dir") or args[0]
+            o_path = kwargs.get("output_pdf_path") or args[1]
+            o_path.write_bytes((s_dir / "original.pdf").read_bytes())
+
+        monkeypatch.setattr(RedactionService, "apply_native_pdf_redaction", mock_failing_native)
+        red_fail = client.post(f"/api/documents/{doc_id}/redact", json={"force_text_reconstruction": False})
+        assert red_fail.status_code == 200
+        assert red_fail.json()["export_state"] == "FAILED"
+
+        blocked_pdf = client.get(f"/api/documents/{doc_id}/export?format=pdf")
+        assert blocked_pdf.status_code == 400
+        assert "Export download blocked" in blocked_pdf.json()["detail"]
+
+        blocked_txt = client.get(f"/api/documents/{doc_id}/export?format=txt")
+        assert blocked_txt.status_code == 400
+        assert "Export download blocked" in blocked_txt.json()["detail"]
+    finally:
+        client.delete(f"/api/documents/{doc_id}")
+
+
+def test_stage3_coreference_preserving_entity_indexed_placeholders_and_summary():
+    """Verify Stage 3 coreference-preserving placeholders ([PERSON_1], [PERSON_2], [EMAIL_1]):
+    - Stable ordering within a document.
+    - All linked variants of Entity 1 map to [PERSON_1], Entity 2 to [PERSON_2].
+    - Consistent across TXT and PDF reconstruction exports.
+    - Propagates cleanly to SummaryService with VERIFIED status.
+    - Includes explicit pseudonymization vs. anonymization disclosure.
+    """
+    client = TestClient(app)
+    text = (
+        "Audit opened by Dr. Richa Sharma (email: richa.sharma@privydoc.local). "
+        "Inspector Anil Kumar reviewed the findings with R. Sharma and Ms. Sharma. "
+        "Later, A. Kumar countersigned the ledger."
+    )
+    up = client.post(
+        "/api/documents/upload",
+        files={"file": ("coref_placeholders.txt", text.encode("utf-8"), "text/plain")},
+    )
+    assert up.status_code in (200, 201)
+    doc_id = up.json()["document_id"]
+
+    try:
+        det = client.post(f"/api/documents/{doc_id}/detect")
+        assert det.status_code == 200
+        cands = det.json()["candidates"]
+
+        # Approve all detected candidates
+        for c in cands:
+            client.post(
+                f"/api/documents/{doc_id}/review",
+                json={"candidate_id": c["candidate_id"], "decision": "APPROVE"},
+            )
+
+        # Redact with ENTITY_INDEXED style
+        red = client.post(
+            f"/api/documents/{doc_id}/redact",
+            json={"placeholder_style": "ENTITY_INDEXED"},
+        )
+        assert red.status_code == 200
+        red_data = red.json()
+        assert red_data["export_state"] == "VERIFIED"
+        assert "pseudonymization" in (red_data.get("pseudonymization_notice") or "").lower()
+
+        dl_txt = client.get(f"/api/documents/{doc_id}/export?format=txt").text
+        # Dr. Richa Sharma, R. Sharma, Ms. Sharma -> [PERSON_1]
+        # Anil Kumar, A. Kumar -> [PERSON_2]
+        # richa.sharma@privydoc.local -> [EMAIL_1]
+        assert dl_txt.count("[PERSON_1]") == 3
+        assert dl_txt.count("[PERSON_2]") == 2
+        assert dl_txt.count("[EMAIL_1]") == 1
+        assert "Richa" not in dl_txt
+        assert "Sharma" not in dl_txt
+        assert "Anil" not in dl_txt
+        assert "Kumar" not in dl_txt
+
+        # Verify propagation to SummaryService with VERIFIED status
+        sum_res = client.post(
+            f"/api/documents/{doc_id}/summary",
+            json={"force_extractive": True},
+        )
+        assert sum_res.status_code == 200
+        sum_data = sum_res.json()
+        assert sum_data["state"] == "VERIFIED"
+        summary_body = sum_data["content"]["summary_text"]
+        assert "[PERSON_1]" in summary_body or "[PERSON_2]" in summary_body
+    finally:
+        client.delete(f"/api/documents/{doc_id}")

@@ -1,0 +1,52 @@
+{
+  "document_id": "s4_doc_24",
+  "split": "val",
+  "difficulty_class": "val_shared_surname_nair",
+  "is_synthetic": true,
+  "text_length": 156,
+  "total_annotations": 6,
+  "annotations": [
+    {
+      "start": 45,
+      "end": 57,
+      "text": "Pradeep Nair",
+      "type": "PERSON",
+      "entity_id": "v_pradeep"
+    },
+    {
+      "start": 59,
+      "end": 67,
+      "text": "EMP-6101",
+      "type": "ID_LIKE",
+      "entity_id": "v_e6101"
+    },
+    {
+      "start": 80,
+      "end": 92,
+      "text": "Sandeep Nair",
+      "type": "PERSON",
+      "entity_id": "v_sandeep"
+    },
+    {
+      "start": 94,
+      "end": 102,
+      "text": "EMP-6102",
+      "type": "ID_LIKE",
+      "entity_id": "v_e6102"
+    },
+    {
+      "start": 117,
+      "end": 136,
+      "text": "Dr. K. R. Narayanan",
+      "type": "PERSON",
+      "entity_id": "v_krn"
+    },
+    {
+      "start": 138,
+      "end": 153,
+      "text": "+91 94440 11223",
+      "type": "PHONE",
+      "entity_id": "v_krn_p"
+    }
+  ]
+}

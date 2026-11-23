@@ -325,3 +325,164 @@ def test_entity_resolution_api_e2e():
     finally:
         # Cleanup
         client.delete(f"/api/documents/{doc_id}")
+
+
+# =========================================================================
+# 10. Stage 3 (Priority 2): Explainable Entity Resolution & Safeguard Tests
+# =========================================================================
+
+def test_stage3_category_aware_normalization_email_phone_address(tmp_path, monkeypatch):
+    """Verify category-aware normalization across EMAIL (obfuscated), PHONE (country-aware),
+    and ADDRESS (street suffix & city transliteration), including ambiguity safeguards for conflicting country codes.
+    """
+    monkeypatch.setattr("app.detectors.entity_resolver.get_safe_session_dir", lambda _: tmp_path)
+
+    # 1. Obfuscated + Standard Email -> 1 entity with OBFUSCATED_EMAIL_NORMALIZATION link reason
+    # 2. +91 98765 43210 + national 09876543210 -> 1 entity with COUNTRY_AWARE_PHONE link reason
+    # 3. Distinct country code +1 202-555-0143 -> kept strictly separate
+    # 4. Address variants ("12B, MG Rd., Bangalore - 560001" vs "12B, MG Road, Bengaluru 560001") -> 1 entity
+    cands = [
+        _make_candidate("e1", "richa.sharma@privydoc.local", "EMAIL", 10),
+        _make_candidate("e2", "richa.sharma [at] privydoc [dot] local", "EMAIL", 60),
+        _make_candidate("p1", "+91 98765 43210", "PHONE", 120),
+        _make_candidate("p2", "09876543210", "PHONE", 150),
+        _make_candidate("p3", "+1 202-555-0143", "PHONE", 180),
+        _make_candidate("a1", "12B, MG Rd., Bangalore - 560001", "ADDRESS", 220),
+        _make_candidate("a2", "12B, MG Road, Bengaluru 560001", "ADDRESS", 280),
+    ]
+
+    resp = EntityResolver.resolve_entities("doc_s3_norm", cands, use_slm=False)
+    emails = [e for e in resp.entities if e.entity_type == "EMAIL"]
+    phones = [e for e in resp.entities if e.entity_type == "PHONE"]
+    addrs = [e for e in resp.entities if e.entity_type == "ADDRESS"]
+
+    assert len(emails) == 1
+    assert set(emails[0].candidate_ids) == {"e1", "e2"}
+    assert any(lr.rule == "OBFUSCATED_EMAIL_NORMALIZATION" for lr in emails[0].link_reasons)
+
+    assert len(phones) == 2
+    in_phone = next(e for e in phones if "p1" in e.candidate_ids)
+    assert set(in_phone.candidate_ids) == {"p1", "p2"}
+    assert any(lr.rule == "COUNTRY_AWARE_PHONE" for lr in in_phone.link_reasons)
+
+    assert len(addrs) == 1
+    assert set(addrs[0].candidate_ids) == {"a1", "a2"}
+
+    # Verify conflicting country codes sharing the same 10-digit subscriber number NEVER auto-merge
+    conflict_phones = [
+        _make_candidate("cp1", "+91 98765 43210", "PHONE", 10),
+        _make_candidate("cp2", "+1 98765 43210", "PHONE", 40),
+        _make_candidate("cp3", "98765-43210", "PHONE", 70),
+    ]
+    resp_conflict = EntityResolver.resolve_entities("doc_s3_phone_conflict", conflict_phones, use_slm=False)
+    assert resp_conflict.total_entities == 3
+    nat_ent = next(e for e in resp_conflict.entities if "cp3" in e.candidate_ids)
+    assert nat_ent.is_ambiguous is True
+    assert nat_ent.resolution_tier == "AMBIGUOUS_CONFLICT"
+
+
+def test_stage3_phonetic_multi_initial_and_local_surname_coreference(tmp_path, monkeypatch):
+    """Verify phonetic transliteration ('Aarav Choudhary' <-> 'Aarav Chaudhary'),
+    multi-initial ('R. K. Sharma' <-> 'Richa K. Sharma'), and standalone document-local surname
+    coreference ('Vance' <-> 'Elena Vance') with ambiguity safeguards.
+    """
+    monkeypatch.setattr("app.detectors.entity_resolver.get_safe_session_dir", lambda _: tmp_path)
+
+    cands = [
+        _make_candidate("c1", "Aarav Choudhary", "PERSON", 10),
+        _make_candidate("c2", "Aarav Chaudhary", "PERSON", 50),
+        _make_candidate("c3", "Richa K. Sharma", "PERSON", 100),
+        _make_candidate("c4", "R. K. Sharma", "PERSON", 140),
+        _make_candidate("c5", "Elena Vance", "PERSON", 190),
+        _make_candidate("c6", "Vance", "PERSON", 230),
+    ]
+    resp = EntityResolver.resolve_entities("doc_s3_person", cands, use_slm=False)
+    assert resp.total_entities == 3
+
+    aarav = next(e for e in resp.entities if "c1" in e.candidate_ids)
+    assert set(aarav.candidate_ids) == {"c1", "c2"}
+    assert aarav.resolution_tier == "PROBABLE_HEURISTIC"
+    assert any(lr.rule == "PHONETIC_TRANSLITERATION" for lr in aarav.link_reasons)
+
+    richa = next(e for e in resp.entities if "c3" in e.candidate_ids)
+    assert set(richa.candidate_ids) == {"c3", "c4"}
+    assert any(lr.rule == "MULTI_INITIAL_SURNAME" for lr in richa.link_reasons)
+
+    elena = next(e for e in resp.entities if "c5" in e.candidate_ids)
+    assert set(elena.candidate_ids) == {"c5", "c6"}
+    assert any(lr.rule == "DOCUMENT_LOCAL_SURNAME" for lr in elena.link_reasons)
+
+    # Ambiguous standalone surname ('Vance' when both 'John Vance' and 'Elena Vance' exist) must NOT merge
+    ambig_cands = [
+        _make_candidate("a1", "John Vance", "PERSON", 10),
+        _make_candidate("a2", "Elena Vance", "PERSON", 40),
+        _make_candidate("a3", "Vance", "PERSON", 80),
+    ]
+    resp_ambig = EntityResolver.resolve_entities("doc_s3_ambig_surname", ambig_cands, use_slm=False)
+    assert resp_ambig.total_entities == 3
+    vance_single = next(e for e in resp_ambig.entities if "a3" in e.candidate_ids)
+    assert vance_single.is_ambiguous is True
+    assert vance_single.resolution_tier == "AMBIGUOUS_CONFLICT"
+
+
+def test_stage3_transitive_cluster_consistency_and_redaction_propagation():
+    """Verify transitive cluster merging across 5 surface variants ('Dr. Richa Sharma',
+    'Richa Sharma', 'R. Sharma', 'Ms. Sharma', 'Sharma') and verify that linking a new candidate
+    into an APPROVED entity cluster propagates the decision and updates redaction output.
+    """
+    text = (
+        "Report by Dr. Richa Sharma. Reviewed by Richa Sharma and R. Sharma. "
+        "Consult Ms. Sharma or call Sharma regarding Anil Kumar."
+    )
+    up = client.post(
+        "/api/documents/upload",
+        files={"file": ("transitive_test.txt", text.encode("utf-8"), "text/plain")},
+    )
+    assert up.status_code in (200, 201)
+    doc_id = up.json()["document_id"]
+
+    try:
+        det = client.post(f"/api/documents/{doc_id}/detect")
+        assert det.status_code == 200
+        ents = client.get(f"/api/documents/{doc_id}/entities").json()["entities"]
+
+        sharma_ent = next(e for e in ents if "Richa Sharma" in e["canonical_name"])
+        # All 5 Sharma mentions must transitively belong to a single entity cluster
+        assert len(sharma_ent["candidate_ids"]) == 5
+        assert sharma_ent["canonical_name"] == "Richa Sharma"
+
+        # Approve all occurrences of Richa Sharma's cluster
+        first_cid = sharma_ent["candidate_ids"][0]
+        rev = client.post(
+            f"/api/documents/{doc_id}/review",
+            json={"candidate_id": first_cid, "decision": "APPROVE", "apply_to_linked": True},
+        )
+        assert rev.status_code == 200
+
+        # Manually link Anil Kumar into Richa Sharma's already-APPROVED cluster -> inherits APPROVED status
+        anil_ent = next(e for e in ents if "Anil Kumar" in e["canonical_name"])
+        anil_cid = anil_ent["candidate_ids"][0]
+        link_res = client.post(
+            f"/api/documents/{doc_id}/entities/link",
+            json={
+                "candidate_ids": [anil_cid],
+                "target_entity_id": sharma_ent["entity_id"],
+                "action": "LINK",
+            },
+        )
+        assert link_res.status_code == 200
+
+        # Execute redaction -> both Richa Sharma variants and newly linked Anil Kumar are redacted
+        red_res = client.post(
+            f"/api/documents/{doc_id}/redact",
+            json={"placeholder_style": "ENTITY_INDEXED"},
+        )
+        assert red_res.status_code == 200
+        assert red_res.json()["export_state"] == "VERIFIED"
+        dl = client.get(f"/api/documents/{doc_id}/export")
+        assert "Richa" not in dl.text
+        assert "Sharma" not in dl.text
+        assert "Anil Kumar" not in dl.text
+        assert "[PERSON_1]" in dl.text
+    finally:
+        client.delete(f"/api/documents/{doc_id}")

@@ -32,8 +32,10 @@ This document details the genuine technical constraints, architectural boundarie
 - **Impact:** Space-padded ASCII columns or fixed-width financial tables may experience column shifts around redacted cells.
 - **Mitigation:** The system supports `BLOCK` placeholder style (`████`) or `CUSTOM` fixed-length placeholders to minimize typographical distortion where strict column alignment is desired.
 
-### 2.2 Right-to-Left (RTL) and Complex Script Offsets
+### 2.2 Right-to-Left (RTL), Case-Sensitivity, and Non-ASCII Script Offsets
 - **Limitation:** All canonical offsets are indexed strictly using Unicode code-point positions `[start, end)`. Bidirectional text (e.g. Arabic or Hebrew interspersed with Latin phone numbers or emails) may visually render in reverse order in certain browser textareas despite correct underlying string indices.
+- **Lowercase & Diacritic Name Mentions:** Heuristic contextual NER relies on title-case capitalization boundaries (`[A-Z][a-z]+`). Consequently, all-lowercase personal names in informal chat logs (e.g., `"rohit verma"`) or names containing non-ASCII diacritics (e.g., `"Renée Müller"`) without an explicit header label may be missed by automated detection and require human manual selection (`M` shortcut) in the Review Workspace.
+- **Unconfigured Identifier Prefixes:** Deterministic `ID_LIKE` detection targets configured prefixes (`EMP`, `STAFF`, `STU`, `ACC`, `ACCT`, `CUST`, `REF`, `PAT`, `MRN`, `PAN`, `Aadhaar`, `SSN`). Arbitrary custom prefixes (`TRK-`, `ASSET-`, `BDG-`) are omitted by default to prevent false positives on version numbers and ISO standards.
 
 ---
 

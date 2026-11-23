@@ -1,6 +1,6 @@
 import React from 'react';
 import { CopyCheck, X, AlertCircle, ShieldAlert } from 'lucide-react';
-import { CATEGORY_THEMES, REVIEW_STATUS_THEMES } from '../../utils/theme';
+import { CATEGORY_THEMES, STATUS_BADGES } from '../../utils/theme';
 
 export default function RedactSimilarModal({
   isOpen,
@@ -66,7 +66,7 @@ export default function RedactSimilarModal({
           <div className="max-h-48 overflow-y-auto rounded-lg border border-slate-800 bg-slate-950 p-2 space-y-1.5">
             {matchingCandidates.map((cand, idx) => {
               const theme = CATEGORY_THEMES[cand.type] || CATEGORY_THEMES.DEFAULT;
-              const statusTheme = REVIEW_STATUS_THEMES[cand.review_status] || REVIEW_STATUS_THEMES.PENDING;
+              const statusTheme = STATUS_BADGES[cand.review_status] || STATUS_BADGES.PENDING;
 
               return (
                 <div
@@ -84,7 +84,7 @@ export default function RedactSimilarModal({
                       {cand.text}
                     </span>
                   </div>
-                  <span className={`px-1.5 py-0.5 rounded text-[10px] font-medium border ${statusTheme.badgeClass}`}>
+                  <span className={`px-1.5 py-0.5 rounded text-[10px] font-medium border ${statusTheme.className}`}>
                     {statusTheme.label}
                   </span>
                 </div>

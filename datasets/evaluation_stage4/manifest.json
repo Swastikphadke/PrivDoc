@@ -1,0 +1,236 @@
+{
+  "corpus_name": "PrivyDoc Stage 4 Expanded Multi-Difficulty Synthetic Benchmark",
+  "corpus_version": "2.0-stage4",
+  "is_synthetic": true,
+  "seed": 202604,
+  "total_documents": 36,
+  "splits": {
+    "dev": [
+      {
+        "document_id": "s4_doc_01",
+        "difficulty_class": "role_prefix_and_obfuscated_email",
+        "annotations_count": 4,
+        "char_length": 220
+      },
+      {
+        "document_id": "s4_doc_02",
+        "difficulty_class": "hyphenated_apostrophe_names",
+        "annotations_count": 5,
+        "char_length": 222
+      },
+      {
+        "document_id": "s4_doc_03",
+        "difficulty_class": "transitive_coreference_chain",
+        "annotations_count": 6,
+        "char_length": 252
+      },
+      {
+        "document_id": "s4_doc_04",
+        "difficulty_class": "negative_zero_pii_traps",
+        "annotations_count": 0,
+        "char_length": 316
+      },
+      {
+        "document_id": "s4_doc_05",
+        "difficulty_class": "multi_column_table_masked_ids",
+        "annotations_count": 6,
+        "char_length": 247
+      },
+      {
+        "document_id": "s4_doc_06",
+        "difficulty_class": "ambiguous_surname_and_initial",
+        "annotations_count": 5,
+        "char_length": 193
+      },
+      {
+        "document_id": "s4_doc_07",
+        "difficulty_class": "indian_kyc_and_country_phone_link",
+        "annotations_count": 6,
+        "char_length": 235
+      },
+      {
+        "document_id": "s4_doc_08",
+        "difficulty_class": "phonetic_transliteration_pair",
+        "annotations_count": 5,
+        "char_length": 181
+      },
+      {
+        "document_id": "s4_doc_09",
+        "difficulty_class": "chat_log_landline_and_ref_id",
+        "annotations_count": 4,
+        "char_length": 159
+      },
+      {
+        "document_id": "s4_doc_10",
+        "difficulty_class": "conflicting_country_code_phones",
+        "annotations_count": 4,
+        "char_length": 171
+      },
+      {
+        "document_id": "s4_doc_11",
+        "difficulty_class": "field_dispatch_initial_link",
+        "annotations_count": 4,
+        "char_length": 165
+      },
+      {
+        "document_id": "s4_doc_12",
+        "difficulty_class": "similar_unrelated_names_guard",
+        "annotations_count": 6,
+        "char_length": 182
+      }
+    ],
+    "val": [
+      {
+        "document_id": "s4_doc_13",
+        "difficulty_class": "val_role_and_obfuscated_email",
+        "annotations_count": 4,
+        "char_length": 195
+      },
+      {
+        "document_id": "s4_doc_14",
+        "difficulty_class": "val_medical_apostrophe_hyphen",
+        "annotations_count": 4,
+        "char_length": 199
+      },
+      {
+        "document_id": "s4_doc_15",
+        "difficulty_class": "val_coreference_chain",
+        "annotations_count": 6,
+        "char_length": 205
+      },
+      {
+        "document_id": "s4_doc_16",
+        "difficulty_class": "val_negative_zero_pii",
+        "annotations_count": 0,
+        "char_length": 210
+      },
+      {
+        "document_id": "s4_doc_17",
+        "difficulty_class": "val_table_roster",
+        "annotations_count": 6,
+        "char_length": 244
+      },
+      {
+        "document_id": "s4_doc_18",
+        "difficulty_class": "val_ambiguous_initial_r_green",
+        "annotations_count": 4,
+        "char_length": 193
+      },
+      {
+        "document_id": "s4_doc_19",
+        "difficulty_class": "val_indian_property_and_masked_id",
+        "annotations_count": 4,
+        "char_length": 205
+      },
+      {
+        "document_id": "s4_doc_20",
+        "difficulty_class": "val_phonetic_and_phone_link",
+        "annotations_count": 5,
+        "char_length": 185
+      },
+      {
+        "document_id": "s4_doc_21",
+        "difficulty_class": "val_prompt_injection_adversarial",
+        "annotations_count": 4,
+        "char_length": 204
+      },
+      {
+        "document_id": "s4_doc_22",
+        "difficulty_class": "val_hard_lowercase_person",
+        "annotations_count": 4,
+        "char_length": 167
+      },
+      {
+        "document_id": "s4_doc_23",
+        "difficulty_class": "val_escrow_address",
+        "annotations_count": 3,
+        "char_length": 210
+      },
+      {
+        "document_id": "s4_doc_24",
+        "difficulty_class": "val_shared_surname_nair",
+        "annotations_count": 6,
+        "char_length": 156
+      }
+    ],
+    "test": [
+      {
+        "document_id": "s4_doc_25",
+        "difficulty_class": "test_role_hyphen_obfuscated_mail",
+        "annotations_count": 4,
+        "char_length": 200
+      },
+      {
+        "document_id": "s4_doc_26",
+        "difficulty_class": "test_medical_discharge",
+        "annotations_count": 5,
+        "char_length": 177
+      },
+      {
+        "document_id": "s4_doc_27",
+        "difficulty_class": "test_five_mention_coreference",
+        "annotations_count": 7,
+        "char_length": 243
+      },
+      {
+        "document_id": "s4_doc_28",
+        "difficulty_class": "test_negative_zero_pii",
+        "annotations_count": 0,
+        "char_length": 210
+      },
+      {
+        "document_id": "s4_doc_29",
+        "difficulty_class": "test_tabular_clinical",
+        "annotations_count": 6,
+        "char_length": 255
+      },
+      {
+        "document_id": "s4_doc_30",
+        "difficulty_class": "test_ambiguous_initial_kapoor",
+        "annotations_count": 5,
+        "char_length": 182
+      },
+      {
+        "document_id": "s4_doc_31",
+        "difficulty_class": "test_phonetic_and_phone_coref",
+        "annotations_count": 6,
+        "char_length": 200
+      },
+      {
+        "document_id": "s4_doc_32",
+        "difficulty_class": "test_hard_lowercase_and_custom_id",
+        "annotations_count": 5,
+        "char_length": 182
+      },
+      {
+        "document_id": "s4_doc_33",
+        "difficulty_class": "test_hard_unicode_diacritics",
+        "annotations_count": 5,
+        "char_length": 190
+      },
+      {
+        "document_id": "s4_doc_34",
+        "difficulty_class": "test_quasi_identifier_cooccurrence",
+        "annotations_count": 2,
+        "char_length": 238
+      },
+      {
+        "document_id": "s4_doc_35",
+        "difficulty_class": "test_indian_warehouse_lease",
+        "annotations_count": 5,
+        "char_length": 202
+      },
+      {
+        "document_id": "s4_doc_36",
+        "difficulty_class": "test_multi_country_escalation",
+        "annotations_count": 6,
+        "char_length": 213
+      }
+    ]
+  },
+  "split_hashes": {
+    "dev": "5f08546b25ff891366b2082e4ad4afdca3e6299d5b44e35fc599db692dda3cab",
+    "val": "874376118bf6720baefca8f4a77ae124ecff16e7076c99373514071fc776807e",
+    "test": "c89498faf177fd55b1016971b1a8c5ebc5a693e2d025e01dd9e7fda6fa935213"
+  }
+}

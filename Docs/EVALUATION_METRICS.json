@@ -1,320 +1,1510 @@
-[
-  {
-    "split_name": "dev",
-    "matching_mode": "exact",
-    "document_count": 10,
-    "micro_detection": {
-      "tp": 46,
-      "fp": 38,
-      "fn": 16,
-      "precision": 0.5476,
-      "recall": 0.7419,
-      "f1": 0.6301,
-      "has_zero_denominator": false
+{
+  "v1_integrity": {
+    "dataset_dir": "datasets\\evaluation",
+    "splits": {
+      "dev": {
+        "document_count": 10,
+        "negative_document_count": 0,
+        "total_annotations": 62,
+        "category_counts": {
+          "PERSON": 27,
+          "EMAIL": 9,
+          "PHONE": 12,
+          "ADDRESS": 5,
+          "ID_LIKE": 9
+        },
+        "sha256": "bb6780faf1e7a9e8d4a84cee7ea1fc7635ef00538ee4ce21d525ebe2d10903c7"
+      },
+      "val": {
+        "document_count": 7,
+        "negative_document_count": 0,
+        "total_annotations": 37,
+        "category_counts": {
+          "PERSON": 16,
+          "EMAIL": 8,
+          "PHONE": 7,
+          "ADDRESS": 3,
+          "ID_LIKE": 3
+        },
+        "sha256": "346158a0cbc8e2ce33da90e09d4b2fc7e7123a1d623f7227ef4a94fe00c1008d"
+      },
+      "test": {
+        "document_count": 8,
+        "negative_document_count": 0,
+        "total_annotations": 45,
+        "category_counts": {
+          "PERSON": 16,
+          "ID_LIKE": 8,
+          "EMAIL": 8,
+          "PHONE": 9,
+          "ADDRESS": 4
+        },
+        "sha256": "e5433edc98c45d0a99a7f3363276528d9c565377317627e16bd9e388b14f15fb"
+      }
     },
-    "macro_detection": {
-      "tp": 0,
-      "fp": 0,
-      "fn": 0,
-      "precision": 0.591,
-      "recall": 0.7093,
-      "f1": 0.6447,
-      "has_zero_denominator": false
+    "cross_split_entity_overlaps": {
+      "dev_vs_val": [],
+      "dev_vs_test": [],
+      "val_vs_test": []
     },
-    "category_metrics": {
-      "ADDRESS": {
-        "tp": 0,
-        "fp": 6,
+    "cross_split_duplicate_docs": {
+      "dev_vs_val": 0,
+      "dev_vs_test": 0,
+      "val_vs_test": 0
+    }
+  },
+  "v2_integrity": {
+    "dataset_dir": "datasets\\evaluation_stage4",
+    "splits": {
+      "dev": {
+        "document_count": 12,
+        "negative_document_count": 1,
+        "total_annotations": 55,
+        "category_counts": {
+          "PERSON": 27,
+          "EMAIL": 6,
+          "PHONE": 8,
+          "ADDRESS": 3,
+          "ID_LIKE": 11
+        },
+        "sha256": "5f08546b25ff891366b2082e4ad4afdca3e6299d5b44e35fc599db692dda3cab"
+      },
+      "val": {
+        "document_count": 12,
+        "negative_document_count": 1,
+        "total_annotations": 50,
+        "category_counts": {
+          "PERSON": 25,
+          "EMAIL": 4,
+          "PHONE": 6,
+          "ADDRESS": 3,
+          "ID_LIKE": 12
+        },
+        "sha256": "874376118bf6720baefca8f4a77ae124ecff16e7076c99373514071fc776807e"
+      },
+      "test": {
+        "document_count": 12,
+        "negative_document_count": 1,
+        "total_annotations": 56,
+        "category_counts": {
+          "PERSON": 25,
+          "EMAIL": 6,
+          "PHONE": 8,
+          "ID_LIKE": 14,
+          "ADDRESS": 3
+        },
+        "sha256": "c89498faf177fd55b1016971b1a8c5ebc5a693e2d025e01dd9e7fda6fa935213"
+      }
+    },
+    "cross_split_entity_overlaps": {
+      "dev_vs_val": [],
+      "dev_vs_test": [],
+      "val_vs_test": []
+    },
+    "cross_split_duplicate_docs": {
+      "dev_vs_val": 0,
+      "dev_vs_test": 0,
+      "val_vs_test": 0
+    }
+  },
+  "v1_test_strategies": {
+    "regex_only": {
+      "exact_micro": {
+        "tp": 32,
+        "fp": 2,
+        "fn": 13,
+        "precision": 0.9412,
+        "recall": 0.7111,
+        "f1": 0.8101,
+        "has_zero_denominator": false
+      },
+      "exact_macro": {
+        "precision": 0.92,
+        "recall": 0.775,
+        "f1": 0.8413
+      },
+      "overlap_micro": {
+        "tp": 33,
+        "fp": 1,
+        "fn": 12,
+        "precision": 0.9706,
+        "recall": 0.7333,
+        "f1": 0.8354,
+        "has_zero_denominator": false
+      },
+      "per_category_exact": {
+        "ADDRESS": {
+          "tp": 3,
+          "fp": 2,
+          "fn": 1,
+          "precision": 0.6,
+          "recall": 0.75,
+          "f1": 0.6667,
+          "has_zero_denominator": false
+        },
+        "EMAIL": {
+          "tp": 8,
+          "fp": 0,
+          "fn": 0,
+          "precision": 1.0,
+          "recall": 1.0,
+          "f1": 1.0,
+          "has_zero_denominator": false
+        },
+        "ID_LIKE": {
+          "tp": 6,
+          "fp": 0,
+          "fn": 2,
+          "precision": 1.0,
+          "recall": 0.75,
+          "f1": 0.8571,
+          "has_zero_denominator": false
+        },
+        "PERSON": {
+          "tp": 6,
+          "fp": 0,
+          "fn": 10,
+          "precision": 1.0,
+          "recall": 0.375,
+          "f1": 0.5455,
+          "has_zero_denominator": false
+        },
+        "PHONE": {
+          "tp": 9,
+          "fp": 0,
+          "fn": 0,
+          "precision": 1.0,
+          "recall": 1.0,
+          "f1": 1.0,
+          "has_zero_denominator": false
+        }
+      },
+      "avg_latency_ms": 1.45
+    },
+    "ner_only": {
+      "exact_micro": {
+        "tp": 12,
+        "fp": 2,
+        "fn": 33,
+        "precision": 0.8571,
+        "recall": 0.2667,
+        "f1": 0.4068,
+        "has_zero_denominator": false
+      },
+      "exact_macro": {
+        "precision": 0.3692,
+        "recall": 0.1875,
+        "f1": 0.2487
+      },
+      "overlap_micro": {
+        "tp": 12,
+        "fp": 2,
+        "fn": 33,
+        "precision": 0.8571,
+        "recall": 0.2667,
+        "f1": 0.4068,
+        "has_zero_denominator": false
+      },
+      "per_category_exact": {
+        "ADDRESS": {
+          "tp": 1,
+          "fp": 0,
+          "fn": 3,
+          "precision": 1.0,
+          "recall": 0.25,
+          "f1": 0.4,
+          "has_zero_denominator": false
+        },
+        "EMAIL": {
+          "tp": 0,
+          "fp": 0,
+          "fn": 8,
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1": 0.0,
+          "has_zero_denominator": true
+        },
+        "ID_LIKE": {
+          "tp": 0,
+          "fp": 0,
+          "fn": 8,
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1": 0.0,
+          "has_zero_denominator": true
+        },
+        "PERSON": {
+          "tp": 11,
+          "fp": 2,
+          "fn": 5,
+          "precision": 0.8462,
+          "recall": 0.6875,
+          "f1": 0.7586,
+          "has_zero_denominator": false
+        },
+        "PHONE": {
+          "tp": 0,
+          "fp": 0,
+          "fn": 9,
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1": 0.0,
+          "has_zero_denominator": true
+        }
+      },
+      "avg_latency_ms": 1.06
+    },
+    "hybrid_no_slm": {
+      "exact_micro": {
+        "tp": 40,
+        "fp": 4,
         "fn": 5,
-        "precision": 0.0,
-        "recall": 0.0,
-        "f1": 0.0,
+        "precision": 0.9091,
+        "recall": 0.8889,
+        "f1": 0.8989,
         "has_zero_denominator": false
       },
-      "EMAIL": {
-        "tp": 9,
+      "exact_macro": {
+        "precision": 0.895,
+        "recall": 0.875,
+        "f1": 0.8849
+      },
+      "overlap_micro": {
+        "tp": 41,
+        "fp": 3,
+        "fn": 4,
+        "precision": 0.9318,
+        "recall": 0.9111,
+        "f1": 0.9213,
+        "has_zero_denominator": false
+      },
+      "per_category_exact": {
+        "ADDRESS": {
+          "tp": 3,
+          "fp": 2,
+          "fn": 1,
+          "precision": 0.6,
+          "recall": 0.75,
+          "f1": 0.6667,
+          "has_zero_denominator": false
+        },
+        "EMAIL": {
+          "tp": 8,
+          "fp": 0,
+          "fn": 0,
+          "precision": 1.0,
+          "recall": 1.0,
+          "f1": 1.0,
+          "has_zero_denominator": false
+        },
+        "ID_LIKE": {
+          "tp": 6,
+          "fp": 0,
+          "fn": 2,
+          "precision": 1.0,
+          "recall": 0.75,
+          "f1": 0.8571,
+          "has_zero_denominator": false
+        },
+        "PERSON": {
+          "tp": 14,
+          "fp": 2,
+          "fn": 2,
+          "precision": 0.875,
+          "recall": 0.875,
+          "f1": 0.875,
+          "has_zero_denominator": false
+        },
+        "PHONE": {
+          "tp": 9,
+          "fp": 0,
+          "fn": 0,
+          "precision": 1.0,
+          "recall": 1.0,
+          "f1": 1.0,
+          "has_zero_denominator": false
+        }
+      },
+      "avg_latency_ms": 2.01
+    },
+    "hybrid_with_slm": {
+      "exact_micro": {
+        "tp": 40,
+        "fp": 4,
+        "fn": 5,
+        "precision": 0.9091,
+        "recall": 0.8889,
+        "f1": 0.8989,
+        "has_zero_denominator": false
+      },
+      "exact_macro": {
+        "precision": 0.895,
+        "recall": 0.875,
+        "f1": 0.8849
+      },
+      "overlap_micro": {
+        "tp": 41,
+        "fp": 3,
+        "fn": 4,
+        "precision": 0.9318,
+        "recall": 0.9111,
+        "f1": 0.9213,
+        "has_zero_denominator": false
+      },
+      "per_category_exact": {
+        "ADDRESS": {
+          "tp": 3,
+          "fp": 2,
+          "fn": 1,
+          "precision": 0.6,
+          "recall": 0.75,
+          "f1": 0.6667,
+          "has_zero_denominator": false
+        },
+        "EMAIL": {
+          "tp": 8,
+          "fp": 0,
+          "fn": 0,
+          "precision": 1.0,
+          "recall": 1.0,
+          "f1": 1.0,
+          "has_zero_denominator": false
+        },
+        "ID_LIKE": {
+          "tp": 6,
+          "fp": 0,
+          "fn": 2,
+          "precision": 1.0,
+          "recall": 0.75,
+          "f1": 0.8571,
+          "has_zero_denominator": false
+        },
+        "PERSON": {
+          "tp": 14,
+          "fp": 2,
+          "fn": 2,
+          "precision": 0.875,
+          "recall": 0.875,
+          "f1": 0.875,
+          "has_zero_denominator": false
+        },
+        "PHONE": {
+          "tp": 9,
+          "fp": 0,
+          "fn": 0,
+          "precision": 1.0,
+          "recall": 1.0,
+          "f1": 1.0,
+          "has_zero_denominator": false
+        }
+      },
+      "avg_latency_ms": 540.13
+    }
+  },
+  "v2_dev_strategies": {
+    "regex_only": {
+      "exact_micro": {
+        "tp": 35,
+        "fp": 2,
+        "fn": 20,
+        "precision": 0.9459,
+        "recall": 0.6364,
+        "f1": 0.7609,
+        "has_zero_denominator": false
+      },
+      "exact_macro": {
+        "precision": 0.9083,
+        "recall": 0.775,
+        "f1": 0.8364
+      },
+      "overlap_micro": {
+        "tp": 37,
         "fp": 0,
-        "fn": 0,
+        "fn": 18,
         "precision": 1.0,
-        "recall": 1.0,
-        "f1": 1.0,
+        "recall": 0.6727,
+        "f1": 0.8043,
         "has_zero_denominator": false
       },
-      "ID_LIKE": {
-        "tp": 9,
+      "per_category_exact": {
+        "ADDRESS": {
+          "tp": 2,
+          "fp": 1,
+          "fn": 1,
+          "precision": 0.6667,
+          "recall": 0.6667,
+          "f1": 0.6667,
+          "has_zero_denominator": false
+        },
+        "EMAIL": {
+          "tp": 6,
+          "fp": 0,
+          "fn": 0,
+          "precision": 1.0,
+          "recall": 1.0,
+          "f1": 1.0,
+          "has_zero_denominator": false
+        },
+        "ID_LIKE": {
+          "tp": 11,
+          "fp": 0,
+          "fn": 0,
+          "precision": 1.0,
+          "recall": 1.0,
+          "f1": 1.0,
+          "has_zero_denominator": false
+        },
+        "PERSON": {
+          "tp": 9,
+          "fp": 0,
+          "fn": 18,
+          "precision": 1.0,
+          "recall": 0.3333,
+          "f1": 0.5,
+          "has_zero_denominator": false
+        },
+        "PHONE": {
+          "tp": 7,
+          "fp": 1,
+          "fn": 1,
+          "precision": 0.875,
+          "recall": 0.875,
+          "f1": 0.875,
+          "has_zero_denominator": false
+        }
+      },
+      "avg_latency_ms": 0.42
+    },
+    "ner_only": {
+      "exact_micro": {
+        "tp": 19,
+        "fp": 4,
+        "fn": 36,
+        "precision": 0.8261,
+        "recall": 0.3455,
+        "f1": 0.4872,
+        "has_zero_denominator": false
+      },
+      "exact_macro": {
+        "precision": 0.3619,
+        "recall": 0.2593,
+        "f1": 0.3021
+      },
+      "overlap_micro": {
+        "tp": 22,
+        "fp": 1,
+        "fn": 33,
+        "precision": 0.9565,
+        "recall": 0.4,
+        "f1": 0.5641,
+        "has_zero_denominator": false
+      },
+      "per_category_exact": {
+        "ADDRESS": {
+          "tp": 2,
+          "fp": 0,
+          "fn": 1,
+          "precision": 1.0,
+          "recall": 0.6667,
+          "f1": 0.8,
+          "has_zero_denominator": false
+        },
+        "EMAIL": {
+          "tp": 0,
+          "fp": 0,
+          "fn": 6,
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1": 0.0,
+          "has_zero_denominator": true
+        },
+        "ID_LIKE": {
+          "tp": 0,
+          "fp": 0,
+          "fn": 11,
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1": 0.0,
+          "has_zero_denominator": true
+        },
+        "PERSON": {
+          "tp": 17,
+          "fp": 4,
+          "fn": 10,
+          "precision": 0.8095,
+          "recall": 0.6296,
+          "f1": 0.7083,
+          "has_zero_denominator": false
+        },
+        "PHONE": {
+          "tp": 0,
+          "fp": 0,
+          "fn": 8,
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1": 0.0,
+          "has_zero_denominator": true
+        }
+      },
+      "avg_latency_ms": 0.64
+    },
+    "hybrid_no_slm": {
+      "exact_micro": {
+        "tp": 50,
         "fp": 5,
-        "fn": 0,
-        "precision": 0.6429,
-        "recall": 1.0,
-        "f1": 0.7826,
+        "fn": 5,
+        "precision": 0.9091,
+        "recall": 0.9091,
+        "f1": 0.9091,
         "has_zero_denominator": false
       },
-      "PERSON": {
-        "tp": 17,
-        "fp": 26,
-        "fn": 10,
-        "precision": 0.3953,
-        "recall": 0.6296,
-        "f1": 0.4857,
-        "has_zero_denominator": false
+      "exact_macro": {
+        "precision": 0.8861,
+        "recall": 0.8861,
+        "f1": 0.8861
       },
-      "PHONE": {
-        "tp": 11,
+      "overlap_micro": {
+        "tp": 54,
         "fp": 1,
         "fn": 1,
-        "precision": 0.9167,
-        "recall": 0.9167,
-        "f1": 0.9167,
+        "precision": 0.9818,
+        "recall": 0.9818,
+        "f1": 0.9818,
         "has_zero_denominator": false
-      }
+      },
+      "per_category_exact": {
+        "ADDRESS": {
+          "tp": 2,
+          "fp": 1,
+          "fn": 1,
+          "precision": 0.6667,
+          "recall": 0.6667,
+          "f1": 0.6667,
+          "has_zero_denominator": false
+        },
+        "EMAIL": {
+          "tp": 6,
+          "fp": 0,
+          "fn": 0,
+          "precision": 1.0,
+          "recall": 1.0,
+          "f1": 1.0,
+          "has_zero_denominator": false
+        },
+        "ID_LIKE": {
+          "tp": 11,
+          "fp": 0,
+          "fn": 0,
+          "precision": 1.0,
+          "recall": 1.0,
+          "f1": 1.0,
+          "has_zero_denominator": false
+        },
+        "PERSON": {
+          "tp": 24,
+          "fp": 3,
+          "fn": 3,
+          "precision": 0.8889,
+          "recall": 0.8889,
+          "f1": 0.8889,
+          "has_zero_denominator": false
+        },
+        "PHONE": {
+          "tp": 7,
+          "fp": 1,
+          "fn": 1,
+          "precision": 0.875,
+          "recall": 0.875,
+          "f1": 0.875,
+          "has_zero_denominator": false
+        }
+      },
+      "avg_latency_ms": 0.57
     },
-    "entity_metrics": {
-      "pairwise_tp": 2,
-      "pairwise_fp": 84,
-      "pairwise_fn": 0,
-      "pairwise_tn": 949,
-      "precision": 0.0233,
-      "recall": 1.0,
-      "f1": 0.0455,
-      "false_merge_rate": 0.0813,
-      "missed_link_rate": 0.0
-    },
-    "redaction_metrics": {
-      "total_approved_spans": 0,
-      "approved_removed_count": 0,
-      "approved_removal_rate": 1.0,
-      "total_rejected_spans": 0,
-      "rejected_preserved_count": 0,
-      "preserved_rejected_rate": 1.0,
-      "verification_failure_detection_rate": 1.0
-    },
-    "summary_metrics": {
-      "total_summaries_evaluated": 0,
-      "direct_leakages_detected": 0,
-      "direct_leakage_rate": 0.0,
-      "pii_redetected_count": 0,
-      "quasi_identifier_flags": 0,
-      "suppression_correctness_rate": 1.0
-    },
-    "performance": {
-      "total_latency_seconds": 0.7507,
-      "avg_latency_per_doc_seconds": 0.0751,
-      "peak_memory_mb": 0.18,
-      "total_chars_processed": 2869,
-      "total_pages_processed": 10
-    },
-    "generated_at": "2026-11-23T10:55:39.810454+00:00"
+    "hybrid_with_slm": {
+      "exact_micro": {
+        "tp": 50,
+        "fp": 5,
+        "fn": 5,
+        "precision": 0.9091,
+        "recall": 0.9091,
+        "f1": 0.9091,
+        "has_zero_denominator": false
+      },
+      "exact_macro": {
+        "precision": 0.8861,
+        "recall": 0.8861,
+        "f1": 0.8861
+      },
+      "overlap_micro": {
+        "tp": 54,
+        "fp": 1,
+        "fn": 1,
+        "precision": 0.9818,
+        "recall": 0.9818,
+        "f1": 0.9818,
+        "has_zero_denominator": false
+      },
+      "per_category_exact": {
+        "ADDRESS": {
+          "tp": 2,
+          "fp": 1,
+          "fn": 1,
+          "precision": 0.6667,
+          "recall": 0.6667,
+          "f1": 0.6667,
+          "has_zero_denominator": false
+        },
+        "EMAIL": {
+          "tp": 6,
+          "fp": 0,
+          "fn": 0,
+          "precision": 1.0,
+          "recall": 1.0,
+          "f1": 1.0,
+          "has_zero_denominator": false
+        },
+        "ID_LIKE": {
+          "tp": 11,
+          "fp": 0,
+          "fn": 0,
+          "precision": 1.0,
+          "recall": 1.0,
+          "f1": 1.0,
+          "has_zero_denominator": false
+        },
+        "PERSON": {
+          "tp": 24,
+          "fp": 3,
+          "fn": 3,
+          "precision": 0.8889,
+          "recall": 0.8889,
+          "f1": 0.8889,
+          "has_zero_denominator": false
+        },
+        "PHONE": {
+          "tp": 7,
+          "fp": 1,
+          "fn": 1,
+          "precision": 0.875,
+          "recall": 0.875,
+          "f1": 0.875,
+          "has_zero_denominator": false
+        }
+      },
+      "avg_latency_ms": 374.64
+    }
   },
-  {
-    "split_name": "val",
-    "matching_mode": "exact",
-    "document_count": 7,
-    "micro_detection": {
-      "tp": 27,
-      "fp": 30,
-      "fn": 10,
-      "precision": 0.4737,
-      "recall": 0.7297,
-      "f1": 0.5745,
-      "has_zero_denominator": false
-    },
-    "macro_detection": {
-      "tp": 0,
-      "fp": 0,
-      "fn": 0,
-      "precision": 0.5916,
-      "recall": 0.7667,
-      "f1": 0.6679,
-      "has_zero_denominator": false
-    },
-    "category_metrics": {
-      "ADDRESS": {
-        "tp": 1,
-        "fp": 4,
-        "fn": 2,
-        "precision": 0.2,
-        "recall": 0.3333,
-        "f1": 0.25,
+  "v2_val_strategies": {
+    "regex_only": {
+      "exact_micro": {
+        "tp": 30,
+        "fp": 2,
+        "fn": 20,
+        "precision": 0.9375,
+        "recall": 0.6,
+        "f1": 0.7317,
         "has_zero_denominator": false
       },
-      "EMAIL": {
-        "tp": 8,
+      "exact_macro": {
+        "precision": 0.9429,
+        "recall": 0.84,
+        "f1": 0.8885
+      },
+      "overlap_micro": {
+        "tp": 32,
         "fp": 0,
-        "fn": 0,
+        "fn": 18,
         "precision": 1.0,
-        "recall": 1.0,
-        "f1": 1.0,
+        "recall": 0.64,
+        "f1": 0.7805,
         "has_zero_denominator": false
       },
-      "ID_LIKE": {
-        "tp": 3,
+      "per_category_exact": {
+        "ADDRESS": {
+          "tp": 3,
+          "fp": 0,
+          "fn": 0,
+          "precision": 1.0,
+          "recall": 1.0,
+          "f1": 1.0,
+          "has_zero_denominator": false
+        },
+        "EMAIL": {
+          "tp": 4,
+          "fp": 0,
+          "fn": 0,
+          "precision": 1.0,
+          "recall": 1.0,
+          "f1": 1.0,
+          "has_zero_denominator": false
+        },
+        "ID_LIKE": {
+          "tp": 12,
+          "fp": 0,
+          "fn": 0,
+          "precision": 1.0,
+          "recall": 1.0,
+          "f1": 1.0,
+          "has_zero_denominator": false
+        },
+        "PERSON": {
+          "tp": 5,
+          "fp": 2,
+          "fn": 20,
+          "precision": 0.7143,
+          "recall": 0.2,
+          "f1": 0.3125,
+          "has_zero_denominator": false
+        },
+        "PHONE": {
+          "tp": 6,
+          "fp": 0,
+          "fn": 0,
+          "precision": 1.0,
+          "recall": 1.0,
+          "f1": 1.0,
+          "has_zero_denominator": false
+        }
+      },
+      "avg_latency_ms": 0.79
+    },
+    "ner_only": {
+      "exact_micro": {
+        "tp": 18,
+        "fp": 6,
+        "fn": 32,
+        "precision": 0.75,
+        "recall": 0.36,
+        "f1": 0.4865,
+        "has_zero_denominator": false
+      },
+      "exact_macro": {
+        "precision": 0.3478,
+        "recall": 0.2027,
+        "f1": 0.2561
+      },
+      "overlap_micro": {
+        "tp": 20,
+        "fp": 4,
+        "fn": 30,
+        "precision": 0.8333,
+        "recall": 0.4,
+        "f1": 0.5405,
+        "has_zero_denominator": false
+      },
+      "per_category_exact": {
+        "ADDRESS": {
+          "tp": 1,
+          "fp": 0,
+          "fn": 2,
+          "precision": 1.0,
+          "recall": 0.3333,
+          "f1": 0.5,
+          "has_zero_denominator": false
+        },
+        "EMAIL": {
+          "tp": 0,
+          "fp": 0,
+          "fn": 4,
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1": 0.0,
+          "has_zero_denominator": true
+        },
+        "ID_LIKE": {
+          "tp": 0,
+          "fp": 0,
+          "fn": 12,
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1": 0.0,
+          "has_zero_denominator": true
+        },
+        "PERSON": {
+          "tp": 17,
+          "fp": 6,
+          "fn": 8,
+          "precision": 0.7391,
+          "recall": 0.68,
+          "f1": 0.7083,
+          "has_zero_denominator": false
+        },
+        "PHONE": {
+          "tp": 0,
+          "fp": 0,
+          "fn": 6,
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1": 0.0,
+          "has_zero_denominator": true
+        }
+      },
+      "avg_latency_ms": 0.33
+    },
+    "hybrid_no_slm": {
+      "exact_micro": {
+        "tp": 45,
+        "fp": 6,
+        "fn": 5,
+        "precision": 0.8824,
+        "recall": 0.9,
+        "f1": 0.8911,
+        "has_zero_denominator": false
+      },
+      "exact_macro": {
+        "precision": 0.9538,
+        "recall": 0.96,
+        "f1": 0.9569
+      },
+      "overlap_micro": {
+        "tp": 48,
         "fp": 3,
-        "fn": 0,
-        "precision": 0.5,
-        "recall": 1.0,
-        "f1": 0.6667,
-        "has_zero_denominator": false
-      },
-      "PERSON": {
-        "tp": 8,
-        "fp": 23,
-        "fn": 8,
-        "precision": 0.2581,
-        "recall": 0.5,
-        "f1": 0.3405,
-        "has_zero_denominator": false
-      },
-      "PHONE": {
-        "tp": 7,
-        "fp": 0,
-        "fn": 0,
-        "precision": 1.0,
-        "recall": 1.0,
-        "f1": 1.0,
-        "has_zero_denominator": false
-      }
-    },
-    "entity_metrics": {
-      "pairwise_tp": 0,
-      "pairwise_fp": 27,
-      "pairwise_fn": 0,
-      "pairwise_tn": 324,
-      "precision": 0.0,
-      "recall": 0.0,
-      "f1": 0.0,
-      "false_merge_rate": 0.0769,
-      "missed_link_rate": 0.0
-    },
-    "redaction_metrics": {
-      "total_approved_spans": 0,
-      "approved_removed_count": 0,
-      "approved_removal_rate": 1.0,
-      "total_rejected_spans": 0,
-      "rejected_preserved_count": 0,
-      "preserved_rejected_rate": 1.0,
-      "verification_failure_detection_rate": 1.0
-    },
-    "summary_metrics": {
-      "total_summaries_evaluated": 0,
-      "direct_leakages_detected": 0,
-      "direct_leakage_rate": 0.0,
-      "pii_redetected_count": 0,
-      "quasi_identifier_flags": 0,
-      "suppression_correctness_rate": 1.0
-    },
-    "performance": {
-      "total_latency_seconds": 0.4323,
-      "avg_latency_per_doc_seconds": 0.0618,
-      "peak_memory_mb": 0.15,
-      "total_chars_processed": 1808,
-      "total_pages_processed": 7
-    },
-    "generated_at": "2026-11-23T10:55:40.569780+00:00"
-  },
-  {
-    "split_name": "test",
-    "matching_mode": "exact",
-    "document_count": 8,
-    "micro_detection": {
-      "tp": 33,
-      "fp": 32,
-      "fn": 12,
-      "precision": 0.5077,
-      "recall": 0.7333,
-      "f1": 0.6,
-      "has_zero_denominator": false
-    },
-    "macro_detection": {
-      "tp": 0,
-      "fp": 0,
-      "fn": 0,
-      "precision": 0.5923,
-      "recall": 0.7125,
-      "f1": 0.6469,
-      "has_zero_denominator": false
-    },
-    "category_metrics": {
-      "ADDRESS": {
-        "tp": 1,
-        "fp": 4,
-        "fn": 3,
-        "precision": 0.2,
-        "recall": 0.25,
-        "f1": 0.2222,
-        "has_zero_denominator": false
-      },
-      "EMAIL": {
-        "tp": 8,
-        "fp": 0,
-        "fn": 0,
-        "precision": 1.0,
-        "recall": 1.0,
-        "f1": 1.0,
-        "has_zero_denominator": false
-      },
-      "ID_LIKE": {
-        "tp": 6,
-        "fp": 7,
         "fn": 2,
-        "precision": 0.4615,
-        "recall": 0.75,
-        "f1": 0.5714,
+        "precision": 0.9412,
+        "recall": 0.96,
+        "f1": 0.9505,
         "has_zero_denominator": false
       },
-      "PERSON": {
-        "tp": 9,
-        "fp": 21,
+      "per_category_exact": {
+        "ADDRESS": {
+          "tp": 3,
+          "fp": 0,
+          "fn": 0,
+          "precision": 1.0,
+          "recall": 1.0,
+          "f1": 1.0,
+          "has_zero_denominator": false
+        },
+        "EMAIL": {
+          "tp": 4,
+          "fp": 0,
+          "fn": 0,
+          "precision": 1.0,
+          "recall": 1.0,
+          "f1": 1.0,
+          "has_zero_denominator": false
+        },
+        "ID_LIKE": {
+          "tp": 12,
+          "fp": 0,
+          "fn": 0,
+          "precision": 1.0,
+          "recall": 1.0,
+          "f1": 1.0,
+          "has_zero_denominator": false
+        },
+        "PERSON": {
+          "tp": 20,
+          "fp": 6,
+          "fn": 5,
+          "precision": 0.7692,
+          "recall": 0.8,
+          "f1": 0.7843,
+          "has_zero_denominator": false
+        },
+        "PHONE": {
+          "tp": 6,
+          "fp": 0,
+          "fn": 0,
+          "precision": 1.0,
+          "recall": 1.0,
+          "f1": 1.0,
+          "has_zero_denominator": false
+        }
+      },
+      "avg_latency_ms": 0.54
+    },
+    "hybrid_with_slm": {
+      "exact_micro": {
+        "tp": 45,
+        "fp": 6,
+        "fn": 5,
+        "precision": 0.8824,
+        "recall": 0.9,
+        "f1": 0.8911,
+        "has_zero_denominator": false
+      },
+      "exact_macro": {
+        "precision": 0.9538,
+        "recall": 0.96,
+        "f1": 0.9569
+      },
+      "overlap_micro": {
+        "tp": 48,
+        "fp": 3,
+        "fn": 2,
+        "precision": 0.9412,
+        "recall": 0.96,
+        "f1": 0.9505,
+        "has_zero_denominator": false
+      },
+      "per_category_exact": {
+        "ADDRESS": {
+          "tp": 3,
+          "fp": 0,
+          "fn": 0,
+          "precision": 1.0,
+          "recall": 1.0,
+          "f1": 1.0,
+          "has_zero_denominator": false
+        },
+        "EMAIL": {
+          "tp": 4,
+          "fp": 0,
+          "fn": 0,
+          "precision": 1.0,
+          "recall": 1.0,
+          "f1": 1.0,
+          "has_zero_denominator": false
+        },
+        "ID_LIKE": {
+          "tp": 12,
+          "fp": 0,
+          "fn": 0,
+          "precision": 1.0,
+          "recall": 1.0,
+          "f1": 1.0,
+          "has_zero_denominator": false
+        },
+        "PERSON": {
+          "tp": 20,
+          "fp": 6,
+          "fn": 5,
+          "precision": 0.7692,
+          "recall": 0.8,
+          "f1": 0.7843,
+          "has_zero_denominator": false
+        },
+        "PHONE": {
+          "tp": 6,
+          "fp": 0,
+          "fn": 0,
+          "precision": 1.0,
+          "recall": 1.0,
+          "f1": 1.0,
+          "has_zero_denominator": false
+        }
+      },
+      "avg_latency_ms": 359.45
+    }
+  },
+  "v2_test_strategies": {
+    "regex_only": {
+      "exact_micro": {
+        "tp": 37,
+        "fp": 1,
+        "fn": 19,
+        "precision": 0.9737,
+        "recall": 0.6607,
+        "f1": 0.7872,
+        "has_zero_denominator": false
+      },
+      "exact_macro": {
+        "precision": 0.95,
+        "recall": 0.8247,
+        "f1": 0.8829
+      },
+      "overlap_micro": {
+        "tp": 37,
+        "fp": 1,
+        "fn": 19,
+        "precision": 0.9737,
+        "recall": 0.6607,
+        "f1": 0.7872,
+        "has_zero_denominator": false
+      },
+      "per_category_exact": {
+        "ADDRESS": {
+          "tp": 3,
+          "fp": 1,
+          "fn": 0,
+          "precision": 0.75,
+          "recall": 1.0,
+          "f1": 0.8571,
+          "has_zero_denominator": false
+        },
+        "EMAIL": {
+          "tp": 6,
+          "fp": 0,
+          "fn": 0,
+          "precision": 1.0,
+          "recall": 1.0,
+          "f1": 1.0,
+          "has_zero_denominator": false
+        },
+        "ID_LIKE": {
+          "tp": 13,
+          "fp": 0,
+          "fn": 1,
+          "precision": 1.0,
+          "recall": 0.9286,
+          "f1": 0.963,
+          "has_zero_denominator": false
+        },
+        "PERSON": {
+          "tp": 8,
+          "fp": 0,
+          "fn": 17,
+          "precision": 1.0,
+          "recall": 0.32,
+          "f1": 0.4848,
+          "has_zero_denominator": false
+        },
+        "PHONE": {
+          "tp": 7,
+          "fp": 0,
+          "fn": 1,
+          "precision": 1.0,
+          "recall": 0.875,
+          "f1": 0.9333,
+          "has_zero_denominator": false
+        }
+      },
+      "avg_latency_ms": 0.67
+    },
+    "ner_only": {
+      "exact_micro": {
+        "tp": 16,
+        "fp": 2,
+        "fn": 40,
+        "precision": 0.8889,
+        "recall": 0.2857,
+        "f1": 0.4324,
+        "has_zero_denominator": false
+      },
+      "exact_macro": {
+        "precision": 0.3765,
+        "recall": 0.1867,
+        "f1": 0.2496
+      },
+      "overlap_micro": {
+        "tp": 17,
+        "fp": 1,
+        "fn": 39,
+        "precision": 0.9444,
+        "recall": 0.3036,
+        "f1": 0.4595,
+        "has_zero_denominator": false
+      },
+      "per_category_exact": {
+        "ADDRESS": {
+          "tp": 1,
+          "fp": 0,
+          "fn": 2,
+          "precision": 1.0,
+          "recall": 0.3333,
+          "f1": 0.5,
+          "has_zero_denominator": false
+        },
+        "EMAIL": {
+          "tp": 0,
+          "fp": 0,
+          "fn": 6,
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1": 0.0,
+          "has_zero_denominator": true
+        },
+        "ID_LIKE": {
+          "tp": 0,
+          "fp": 0,
+          "fn": 14,
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1": 0.0,
+          "has_zero_denominator": true
+        },
+        "PERSON": {
+          "tp": 15,
+          "fp": 2,
+          "fn": 10,
+          "precision": 0.8824,
+          "recall": 0.6,
+          "f1": 0.7143,
+          "has_zero_denominator": false
+        },
+        "PHONE": {
+          "tp": 0,
+          "fp": 0,
+          "fn": 8,
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1": 0.0,
+          "has_zero_denominator": true
+        }
+      },
+      "avg_latency_ms": 0.35
+    },
+    "hybrid_no_slm": {
+      "exact_micro": {
+        "tp": 49,
+        "fp": 3,
         "fn": 7,
-        "precision": 0.3,
-        "recall": 0.5625,
-        "f1": 0.3913,
+        "precision": 0.9423,
+        "recall": 0.875,
+        "f1": 0.9074,
         "has_zero_denominator": false
       },
-      "PHONE": {
-        "tp": 9,
-        "fp": 0,
-        "fn": 0,
-        "precision": 1.0,
-        "recall": 1.0,
-        "f1": 1.0,
+      "exact_macro": {
+        "precision": 0.9318,
+        "recall": 0.9207,
+        "f1": 0.9262
+      },
+      "overlap_micro": {
+        "tp": 50,
+        "fp": 2,
+        "fn": 6,
+        "precision": 0.9615,
+        "recall": 0.8929,
+        "f1": 0.9259,
         "has_zero_denominator": false
-      }
+      },
+      "per_category_exact": {
+        "ADDRESS": {
+          "tp": 3,
+          "fp": 1,
+          "fn": 0,
+          "precision": 0.75,
+          "recall": 1.0,
+          "f1": 0.8571,
+          "has_zero_denominator": false
+        },
+        "EMAIL": {
+          "tp": 6,
+          "fp": 0,
+          "fn": 0,
+          "precision": 1.0,
+          "recall": 1.0,
+          "f1": 1.0,
+          "has_zero_denominator": false
+        },
+        "ID_LIKE": {
+          "tp": 13,
+          "fp": 0,
+          "fn": 1,
+          "precision": 1.0,
+          "recall": 0.9286,
+          "f1": 0.963,
+          "has_zero_denominator": false
+        },
+        "PERSON": {
+          "tp": 20,
+          "fp": 2,
+          "fn": 5,
+          "precision": 0.9091,
+          "recall": 0.8,
+          "f1": 0.8511,
+          "has_zero_denominator": false
+        },
+        "PHONE": {
+          "tp": 7,
+          "fp": 0,
+          "fn": 1,
+          "precision": 1.0,
+          "recall": 0.875,
+          "f1": 0.9333,
+          "has_zero_denominator": false
+        }
+      },
+      "avg_latency_ms": 0.67
     },
-    "entity_metrics": {
-      "pairwise_tp": 2,
-      "pairwise_fp": 44,
-      "pairwise_fn": 0,
-      "pairwise_tn": 482,
-      "precision": 0.0435,
-      "recall": 1.0,
-      "f1": 0.0834,
-      "false_merge_rate": 0.0837,
-      "missed_link_rate": 0.0
+    "hybrid_with_slm": {
+      "exact_micro": {
+        "tp": 49,
+        "fp": 3,
+        "fn": 7,
+        "precision": 0.9423,
+        "recall": 0.875,
+        "f1": 0.9074,
+        "has_zero_denominator": false
+      },
+      "exact_macro": {
+        "precision": 0.9318,
+        "recall": 0.9207,
+        "f1": 0.9262
+      },
+      "overlap_micro": {
+        "tp": 50,
+        "fp": 2,
+        "fn": 6,
+        "precision": 0.9615,
+        "recall": 0.8929,
+        "f1": 0.9259,
+        "has_zero_denominator": false
+      },
+      "per_category_exact": {
+        "ADDRESS": {
+          "tp": 3,
+          "fp": 1,
+          "fn": 0,
+          "precision": 0.75,
+          "recall": 1.0,
+          "f1": 0.8571,
+          "has_zero_denominator": false
+        },
+        "EMAIL": {
+          "tp": 6,
+          "fp": 0,
+          "fn": 0,
+          "precision": 1.0,
+          "recall": 1.0,
+          "f1": 1.0,
+          "has_zero_denominator": false
+        },
+        "ID_LIKE": {
+          "tp": 13,
+          "fp": 0,
+          "fn": 1,
+          "precision": 1.0,
+          "recall": 0.9286,
+          "f1": 0.963,
+          "has_zero_denominator": false
+        },
+        "PERSON": {
+          "tp": 20,
+          "fp": 2,
+          "fn": 5,
+          "precision": 0.9091,
+          "recall": 0.8,
+          "f1": 0.8511,
+          "has_zero_denominator": false
+        },
+        "PHONE": {
+          "tp": 7,
+          "fp": 0,
+          "fn": 1,
+          "precision": 1.0,
+          "recall": 0.875,
+          "f1": 0.9333,
+          "has_zero_denominator": false
+        }
+      },
+      "avg_latency_ms": 392.78
+    }
+  },
+  "v1_test_errors": [
+    {
+      "document_id": "doc_20",
+      "false_positives": [
+        {
+          "start": 258,
+          "end": 282,
+          "type": "PERSON",
+          "text": "Customer Service Hotline"
+        }
+      ],
+      "false_negatives": [
+        {
+          "start": 61,
+          "end": 74,
+          "type": "PERSON",
+          "text": "Deepak Chopra"
+        },
+        {
+          "start": 245,
+          "end": 255,
+          "type": "ID_LIKE",
+          "text": "TRK-981023"
+        }
+      ]
     },
-    "redaction_metrics": {
-      "total_approved_spans": 0,
-      "approved_removed_count": 0,
-      "approved_removal_rate": 1.0,
-      "total_rejected_spans": 0,
-      "rejected_preserved_count": 0,
-      "preserved_rejected_rate": 1.0,
-      "verification_failure_detection_rate": 1.0
+    {
+      "document_id": "doc_21",
+      "false_positives": [],
+      "false_negatives": [
+        {
+          "start": 212,
+          "end": 222,
+          "type": "PERSON",
+          "text": "Fox Mulder"
+        }
+      ]
     },
-    "summary_metrics": {
-      "total_summaries_evaluated": 0,
-      "direct_leakages_detected": 0,
-      "direct_leakage_rate": 0.0,
-      "pii_redetected_count": 0,
-      "quasi_identifier_flags": 0,
-      "suppression_correctness_rate": 1.0
+    {
+      "document_id": "doc_25",
+      "false_positives": [
+        {
+          "start": 110,
+          "end": 119,
+          "type": "PERSON",
+          "text": "Asset Tag"
+        },
+        {
+          "start": 151,
+          "end": 165,
+          "type": "ADDRESS",
+          "text": "7, Cyber Tower"
+        },
+        {
+          "start": 169,
+          "end": 197,
+          "type": "ADDRESS",
+          "text": "Hitec City, Hyderabad 500081"
+        }
+      ],
+      "false_negatives": [
+        {
+          "start": 121,
+          "end": 132,
+          "type": "ID_LIKE",
+          "text": "ASSET-44109"
+        },
+        {
+          "start": 145,
+          "end": 197,
+          "type": "ADDRESS",
+          "text": "Floor 7, Cyber Tower A, Hitec City, Hyderabad 500081"
+        }
+      ]
+    }
+  ],
+  "v2_test_errors": [
+    {
+      "document_id": "s4_doc_27",
+      "false_positives": [
+        {
+          "start": 30,
+          "end": 50,
+          "type": "PERSON",
+          "text": "Presiding Arbitrator"
+        }
+      ],
+      "false_negatives": [
+        {
+          "start": 182,
+          "end": 187,
+          "type": "PERSON",
+          "text": "Rajan"
+        }
+      ]
     },
-    "performance": {
-      "total_latency_seconds": 0.2157,
-      "avg_latency_per_doc_seconds": 0.027,
-      "peak_memory_mb": 0.15,
-      "total_chars_processed": 2309,
-      "total_pages_processed": 8
+    {
+      "document_id": "s4_doc_29",
+      "false_positives": [],
+      "false_negatives": [
+        {
+          "start": 108,
+          "end": 130,
+          "type": "PERSON",
+          "text": "Arundhati Bhattacharya"
+        }
+      ]
     },
-    "generated_at": "2026-11-23T10:55:41.005799+00:00"
+    {
+      "document_id": "s4_doc_30",
+      "false_positives": [
+        {
+          "start": 120,
+          "end": 146,
+          "type": "PERSON",
+          "text": "Solicitor Alistair MacLeod"
+        }
+      ],
+      "false_negatives": [
+        {
+          "start": 130,
+          "end": 146,
+          "type": "PERSON",
+          "text": "Alistair MacLeod"
+        }
+      ]
+    },
+    {
+      "document_id": "s4_doc_32",
+      "false_positives": [],
+      "false_negatives": [
+        {
+          "start": 40,
+          "end": 51,
+          "type": "PERSON",
+          "text": "rohit verma"
+        },
+        {
+          "start": 82,
+          "end": 91,
+          "type": "ID_LIKE",
+          "text": "BDG-99201"
+        }
+      ]
+    },
+    {
+      "document_id": "s4_doc_33",
+      "false_positives": [],
+      "false_negatives": [
+        {
+          "start": 94,
+          "end": 106,
+          "type": "PERSON",
+          "text": "Ren\u00e9e M\u00fcller"
+        },
+        {
+          "start": 156,
+          "end": 170,
+          "type": "PHONE",
+          "text": "+46 8 559 2100"
+        }
+      ]
+    },
+    {
+      "document_id": "s4_doc_34",
+      "false_positives": [
+        {
+          "start": 155,
+          "end": 192,
+          "type": "ADDRESS",
+          "text": "14, 2024 following the briefing by Dr"
+        }
+      ],
+      "false_negatives": []
+    }
+  ],
+  "v2_dev_ent": {
+    "pairwise_tp": 9,
+    "pairwise_fp": 2,
+    "pairwise_fn": 0,
+    "pairwise_tn": 1214,
+    "gold_positive_pairs": 9,
+    "gold_negative_pairs": 1216,
+    "predicted_positive_links": 11,
+    "precision": 0.8182,
+    "recall": 1.0,
+    "f1": 0.9,
+    "false_merge_rate": 0.0016,
+    "false_discovery_rate": 0.1818,
+    "missed_link_rate": 0.0,
+    "ambiguous_safeguard_rate": 1.0
+  },
+  "v2_val_ent": {
+    "pairwise_tp": 6,
+    "pairwise_fp": 0,
+    "pairwise_fn": 0,
+    "pairwise_tn": 984,
+    "gold_positive_pairs": 6,
+    "gold_negative_pairs": 984,
+    "predicted_positive_links": 6,
+    "precision": 1.0,
+    "recall": 1.0,
+    "f1": 1.0,
+    "false_merge_rate": 0.0,
+    "false_discovery_rate": 0.0,
+    "missed_link_rate": 0.0,
+    "ambiguous_safeguard_rate": 1.0
+  },
+  "v2_test_ent": {
+    "pairwise_tp": 8,
+    "pairwise_fp": 0,
+    "pairwise_fn": 0,
+    "pairwise_tn": 1168,
+    "gold_positive_pairs": 8,
+    "gold_negative_pairs": 1168,
+    "predicted_positive_links": 8,
+    "precision": 1.0,
+    "recall": 1.0,
+    "f1": 1.0,
+    "false_merge_rate": 0.0,
+    "false_discovery_rate": 0.0,
+    "missed_link_rate": 0.0,
+    "ambiguous_safeguard_rate": 1.0
   }
-]
+}

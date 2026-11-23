@@ -22,7 +22,7 @@ export default function TextViewer({
   const segments = useMemo(() => {
     if (!rawText) return [];
     if (!candidates || candidates.length === 0) {
-      return [{ text: rawText, candidate: null, key: 'plain_all' }];
+      return [{ text: rawText, candidate: null, start: 0, end: rawText.length, key: 'plain_all' }];
     }
 
     // Sort candidates by start offset ascending
@@ -41,6 +41,8 @@ export default function TextViewer({
         segs.push({
           text: rawText.slice(curr, cand.start),
           candidate: null,
+          start: curr,
+          end: cand.start,
           key: `plain_${curr}_${cand.start}`,
         });
       }
@@ -49,6 +51,8 @@ export default function TextViewer({
       segs.push({
         text: rawText.slice(cand.start, cand.end),
         candidate: cand,
+        start: cand.start,
+        end: cand.end,
         key: `cand_${cand.candidate_id}`,
       });
 
@@ -60,6 +64,8 @@ export default function TextViewer({
       segs.push({
         text: rawText.slice(curr),
         candidate: null,
+        start: curr,
+        end: rawText.length,
         key: `plain_${curr}_end`,
       });
     }
@@ -69,20 +75,61 @@ export default function TextViewer({
 
   /**
    * Handle mouse selection inside text container to propose manual redaction span.
+   * Uses DOM Range offset relative to the segment's canonical data-char-start attribute
+   * so selecting repeated words in a document resolves the exact selected occurrence.
    */
   const handleMouseUp = () => {
     const selection = window.getSelection();
     if (!selection || selection.isCollapsed) return;
 
-    const selectedText = selection.toString().trim();
+    const rawSelected = selection.toString();
+    const selectedText = rawSelected.trim();
     if (!selectedText || selectedText.length < 2) return;
 
-    // Find first occurrence of selected text within canonical text near selection focus
-    const index = rawText.indexOf(selectedText);
-    if (index !== -1) {
+    let resolvedStart = -1;
+
+    try {
+      if (selection.rangeCount > 0) {
+        const range = selection.getRangeAt(0);
+        const findCharStart = (node) => {
+          let el = node?.nodeType === 3 ? node.parentElement : node;
+          while (el && el !== containerRef.current) {
+            if (el.dataset?.charStart !== undefined) {
+              return parseInt(el.dataset.charStart, 10);
+            }
+            el = el.parentElement;
+          }
+          return null;
+        };
+
+        const segStart = findCharStart(range.startContainer);
+        if (segStart !== null && !Number.isNaN(segStart)) {
+          const leadingWhitespace = rawSelected.length - rawSelected.trimStart().length;
+          const exactCandidateIdx = segStart + range.startOffset + leadingWhitespace;
+
+          if (rawText.slice(exactCandidateIdx, exactCandidateIdx + selectedText.length) === selectedText) {
+            resolvedStart = exactCandidateIdx;
+          } else {
+            const winStart = Math.max(0, exactCandidateIdx - 15);
+            const localIdx = rawText.indexOf(selectedText, winStart);
+            if (localIdx !== -1 && localIdx <= exactCandidateIdx + 25) {
+              resolvedStart = localIdx;
+            }
+          }
+        }
+      }
+    } catch {
+      // Fallback to indexOf below if synthetic test selection lacks DOM range
+    }
+
+    if (resolvedStart === -1) {
+      resolvedStart = rawText.indexOf(selectedText);
+    }
+
+    if (resolvedStart !== -1) {
       notifySelect?.({
-        start: index,
-        end: index + selectedText.length,
+        start: resolvedStart,
+        end: resolvedStart + selectedText.length,
         text: selectedText,
       });
     }
@@ -115,7 +162,11 @@ export default function TextViewer({
         ) : (
           segments.map((seg) => {
             if (!seg.candidate) {
-              return <span key={seg.key}>{seg.text}</span>;
+              return (
+                <span key={seg.key} data-char-start={seg.start} data-char-end={seg.end}>
+                  {seg.text}
+                </span>
+              );
             }
 
             const cand = seg.candidate;
@@ -127,6 +178,8 @@ export default function TextViewer({
             return (
               <mark
                 key={seg.key}
+                data-char-start={seg.start}
+                data-char-end={seg.end}
                 onClick={(e) => {
                   e.stopPropagation();
                   onSelectCandidate?.(cand.candidate_id);
@@ -142,7 +195,9 @@ export default function TextViewer({
                 }`}
                 title={`${cand.type} (${cand.confidence_band} Confidence) — Status: ${cand.review_status}`}
               >
-                {seg.text}
+                <span data-char-start={seg.start} data-char-end={seg.end}>
+                  {seg.text}
+                </span>
                 <span className="ml-1 text-[10px] font-sans uppercase font-bold opacity-75 select-none">
                   [{theme.label}]
                 </span>

@@ -8,7 +8,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.api.endpoints import router as api_router
 from app.core.config import settings
-from app.core.security import validate_local_host
+from app.core.security import cleanup_expired_sessions, validate_local_host
 from app.database.session import init_db
 from app.schemas.health import HealthResponse
 from app.database.session import check_db_health
@@ -21,6 +21,8 @@ async def lifespan(app: FastAPI):
     validate_local_host(settings.HOST)
     # Initialize SQLite database and directory structures
     init_db()
+    # Purge expired sessions and expired encrypted aliases on startup
+    cleanup_expired_sessions(settings.SESSION_TTL_HOURS)
     yield
 
 

@@ -1,0 +1,52 @@
+{
+  "document_id": "s4_doc_03",
+  "split": "dev",
+  "difficulty_class": "transitive_coreference_chain",
+  "is_synthetic": true,
+  "text_length": 252,
+  "total_annotations": 6,
+  "annotations": [
+    {
+      "start": 51,
+      "end": 70,
+      "text": "Dr. Richa K. Sharma",
+      "type": "PERSON",
+      "entity_id": "e_rsharma"
+    },
+    {
+      "start": 92,
+      "end": 107,
+      "text": "Richa K. Sharma",
+      "type": "PERSON",
+      "entity_id": "e_rsharma"
+    },
+    {
+      "start": 138,
+      "end": 150,
+      "text": "R. K. Sharma",
+      "type": "PERSON",
+      "entity_id": "e_rsharma"
+    },
+    {
+      "start": 155,
+      "end": 165,
+      "text": "Ms. Sharma",
+      "type": "PERSON",
+      "entity_id": "e_rsharma"
+    },
+    {
+      "start": 210,
+      "end": 216,
+      "text": "Sharma",
+      "type": "PERSON",
+      "entity_id": "e_rsharma"
+    },
+    {
+      "start": 220,
+      "end": 250,
+      "text": "richa.sharma@ethics-board.test",
+      "type": "EMAIL",
+      "entity_id": "e_rsharma_m"
+    }
+  ]
+}

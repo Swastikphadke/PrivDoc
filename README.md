@@ -257,15 +257,15 @@ PrivyDoc includes a local-first, privacy-minimized continuous improvement mechan
   # Regenerate synthetic evaluation corpus (seed=42)
   python scripts/generate_synthetic_corpus.py
 
-  # Run evaluation harness on quarantined test split
-  python scripts/evaluate.py --split test --matching exact --output-md Docs/EVALUATION_REPORT.md --output-json Docs/EVALUATION_METRICS.json
+  # Run evaluation harness on quarantined test split (Suite V1 - 25 docs)
+  python scripts/evaluate.py --dataset-dir datasets/evaluation --split test --matching exact
 
-  # Run full evaluation across all splits
-  python scripts/evaluate.py --split all --matching overlap
+  # Run evaluation harness on Stage 4 expanded multi-difficulty benchmark (Suite V2 - 36 docs)
+  python scripts/evaluate.py --dataset-dir datasets/evaluation_stage4 --split all --matching exact
   ```
 - **Evaluation Integrity Disclaimer**:
   > [!NOTE]
-  > All reported benchmark metrics reflect controlled evaluation on the synthetic test corpus and do not constitute an unconditional guarantee of 100% accuracy on arbitrary, unstructured real-world documents.
+  > All reported benchmark metrics reflect controlled evaluation on synthetic corpora (61 documents / 122 TXT+PDF files across Suite V1 and Suite V2) and do not constitute an unconditional guarantee of accuracy on arbitrary real-world documents. Pseudonymization placeholders (`[PERSON_1]`, `[PERSON_2]`) preserve coreference readability but do not guarantee mathematical anonymity.
 
 ---
 
@@ -290,10 +290,10 @@ Phase P8 enforces rigorous integration, end-to-end reliability, security boundar
   - `DELETE /api/documents/{id}` and session cleanup purges ephemeral session folders, canonical text, SQLite document records, candidates, decisions, feedback events, and opt-in AES-256-GCM encrypted aliases.
 - **Performance Profiling on Local Hardware**:
   - Automated benchmark harness (`scripts/profile_pipeline.py`) profiled on Windows 11 (Intel 4-core / 8-thread, 7.85 GB RAM):
-    - Cold Startup: **1094.8 ms** | Warm Startup: **0.7 ms**
-    - Complete TXT Pipeline: **969.2 ms** (< 1.0 s)
-    - Complete PDF Pipeline: **1024.5 ms** (~1.0 s)
-    - Peak Memory Consumption: **1.55 MB** (via `tracemalloc`)
+    - Cold Startup: **1630.2 ms** | Warm Startup: **1.08 ms**
+    - Complete TXT Pipeline: **1290.7 ms** (~1.3 s)
+    - Complete PDF Pipeline: **1387.9 ms** (~1.4 s)
+    - Peak Python Heap Allocation (`tracemalloc`): **1.58 MB** | Actual OS Process Memory (`psutil` RSS): **87.33 MB**
 
 ---
 

@@ -1,0 +1,31 @@
+{
+  "document_id": "s4_doc_23",
+  "split": "val",
+  "difficulty_class": "val_escrow_address",
+  "is_synthetic": true,
+  "text_length": 210,
+  "total_annotations": 3,
+  "annotations": [
+    {
+      "start": 114,
+      "end": 132,
+      "text": "Eleanor Wellington",
+      "type": "PERSON",
+      "entity_id": "v_eleanor"
+    },
+    {
+      "start": 150,
+      "end": 169,
+      "text": "Nathaniel Hawthorne",
+      "type": "PERSON",
+      "entity_id": "v_nathaniel"
+    },
+    {
+      "start": 173,
+      "end": 208,
+      "text": "550 Park Avenue, New York, NY 10022",
+      "type": "ADDRESS",
+      "entity_id": "v_ny_addr"
+    }
+  ]
+}

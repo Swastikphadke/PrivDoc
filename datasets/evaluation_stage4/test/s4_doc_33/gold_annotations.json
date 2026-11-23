@@ -1,0 +1,45 @@
+{
+  "document_id": "s4_doc_33",
+  "split": "test",
+  "difficulty_class": "test_hard_unicode_diacritics",
+  "is_synthetic": true,
+  "text_length": 190,
+  "total_annotations": 5,
+  "annotations": [
+    {
+      "start": 59,
+      "end": 78,
+      "text": "Sebastian Lindqvist",
+      "type": "PERSON",
+      "entity_id": "t_seb"
+    },
+    {
+      "start": 94,
+      "end": 106,
+      "text": "Ren\u00e9e M\u00fcller",
+      "type": "PERSON",
+      "entity_id": "t_renee"
+    },
+    {
+      "start": 117,
+      "end": 146,
+      "text": "s.lindqvist@nordic-audit.test",
+      "type": "EMAIL",
+      "entity_id": "t_seb_m"
+    },
+    {
+      "start": 156,
+      "end": 170,
+      "text": "+46 8 559 2100",
+      "type": "PHONE",
+      "entity_id": "t_seb_p"
+    },
+    {
+      "start": 177,
+      "end": 188,
+      "text": "CUST-883012",
+      "type": "ID_LIKE",
+      "entity_id": "t_cust883"
+    }
+  ]
+}

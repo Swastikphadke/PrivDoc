@@ -1,0 +1,38 @@
+{
+  "document_id": "s4_doc_09",
+  "split": "dev",
+  "difficulty_class": "chat_log_landline_and_ref_id",
+  "is_synthetic": true,
+  "text_length": 159,
+  "total_annotations": 4,
+  "annotations": [
+    {
+      "start": 45,
+      "end": 59,
+      "text": "REF-2026-99481",
+      "type": "ID_LIKE",
+      "entity_id": "e_ref_gt"
+    },
+    {
+      "start": 73,
+      "end": 85,
+      "text": "Grant Taylor",
+      "type": "PERSON",
+      "entity_id": "e_gtaylor"
+    },
+    {
+      "start": 104,
+      "end": 133,
+      "text": "grant.taylor@sec-ops.internal",
+      "type": "EMAIL",
+      "entity_id": "e_gt_mail"
+    },
+    {
+      "start": 142,
+      "end": 157,
+      "text": "(080) 4455-6677",
+      "type": "PHONE",
+      "entity_id": "e_gt_land"
+    }
+  ]
+}

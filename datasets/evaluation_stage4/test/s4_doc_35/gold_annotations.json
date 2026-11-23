@@ -1,0 +1,45 @@
+{
+  "document_id": "s4_doc_35",
+  "split": "test",
+  "difficulty_class": "test_indian_warehouse_lease",
+  "is_synthetic": true,
+  "text_length": 202,
+  "total_annotations": 5,
+  "annotations": [
+    {
+      "start": 37,
+      "end": 51,
+      "text": "Savitri Jindal",
+      "type": "PERSON",
+      "entity_id": "t_savitri"
+    },
+    {
+      "start": 62,
+      "end": 76,
+      "text": "Shashi Tharoor",
+      "type": "PERSON",
+      "entity_id": "t_shashi"
+    },
+    {
+      "start": 78,
+      "end": 110,
+      "text": "shashi.t@parliament-liaison.test",
+      "type": "EMAIL",
+      "entity_id": "t_shashi_m"
+    },
+    {
+      "start": 134,
+      "end": 173,
+      "text": "Plot 77, Whitefield, Bengaluru - 560066",
+      "type": "ADDRESS",
+      "entity_id": "t_wf_addr"
+    },
+    {
+      "start": 186,
+      "end": 200,
+      "text": "REF-2026-11802",
+      "type": "ID_LIKE",
+      "entity_id": "t_ref118"
+    }
+  ]
+}

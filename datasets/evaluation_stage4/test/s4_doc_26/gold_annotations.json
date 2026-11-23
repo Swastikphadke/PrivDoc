@@ -1,0 +1,45 @@
+{
+  "document_id": "s4_doc_26",
+  "split": "test",
+  "difficulty_class": "test_medical_discharge",
+  "is_synthetic": true,
+  "text_length": 177,
+  "total_annotations": 5,
+  "annotations": [
+    {
+      "start": 39,
+      "end": 54,
+      "text": "Liam O'Sullivan",
+      "type": "PERSON",
+      "entity_id": "t_liam_os"
+    },
+    {
+      "start": 62,
+      "end": 72,
+      "text": "MRN-884120",
+      "type": "ID_LIKE",
+      "entity_id": "t_mrn884"
+    },
+    {
+      "start": 80,
+      "end": 91,
+      "text": "521-44-9012",
+      "type": "ID_LIKE",
+      "entity_id": "t_ssn521"
+    },
+    {
+      "start": 105,
+      "end": 130,
+      "text": "Dr. Genevieve Saint-Clair",
+      "type": "PERSON",
+      "entity_id": "t_genevieve"
+    },
+    {
+      "start": 134,
+      "end": 175,
+      "text": "900 Commonwealth Avenue, Boston, MA 02215",
+      "type": "ADDRESS",
+      "entity_id": "t_boston26"
+    }
+  ]
+}

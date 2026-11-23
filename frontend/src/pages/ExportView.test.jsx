@@ -121,12 +121,21 @@ describe('ExportView Page', () => {
     expect(screen.getByText('Rejected (Preserved)')).toBeDefined();
   });
 
-  it('allows changing placeholder options', async () => {
+  it('allows changing placeholder options including ENTITY_INDEXED and displays pseudonymization disclosure', async () => {
     renderComponent();
 
     await waitFor(() => {
       expect(screen.getByText(/\[CATEGORY\]/i)).toBeDefined();
     });
+
+    // Verify pseudonymization vs. anonymization disclosure banner is rendered
+    const disclosure = screen.getByTestId('pseudonymization-disclosure-banner');
+    expect(disclosure.textContent).toMatch(/not guaranteed anonymization/i);
+
+    // Select ENTITY_INDEXED ([CATEGORY_#]) option
+    const entityIndexedRadio = screen.getByDisplayValue('ENTITY_INDEXED');
+    fireEvent.click(entityIndexedRadio);
+    expect(entityIndexedRadio.checked).toBe(true);
 
     const genericRadio = screen.getByDisplayValue('GENERIC');
     fireEvent.click(genericRadio);
@@ -176,6 +185,31 @@ describe('ExportView Page', () => {
 
     await waitFor(() => {
       expect(api.downloadExport).toHaveBeenCalledWith('doc_exp_123');
+    });
+  });
+
+  it('passes selected txt format when downloading a PDF session as Plain Text (.txt)', async () => {
+    window.URL.createObjectURL = vi.fn().mockReturnValue('blob:http://localhost/mock-blob');
+    window.URL.revokeObjectURL = vi.fn();
+
+    renderComponent();
+
+    await waitFor(() => {
+      expect(screen.getByText(/Execute Redaction & Verify Output/i)).toBeDefined();
+    });
+
+    // Switch export format to Plain Text (.txt)
+    fireEvent.click(screen.getByText(/Plain Text \(\.txt\)/i));
+    fireEvent.click(screen.getByText(/Execute Redaction & Verify Output/i));
+
+    await waitFor(() => {
+      expect(screen.getByText(/Download sanitized_executive_memo\.pdf/i)).toBeDefined();
+    });
+
+    fireEvent.click(screen.getByText(/Download sanitized_executive_memo\.pdf/i));
+
+    await waitFor(() => {
+      expect(api.downloadExport).toHaveBeenCalledWith('doc_exp_123', 'txt');
     });
   });
 

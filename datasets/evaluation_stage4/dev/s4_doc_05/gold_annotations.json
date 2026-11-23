@@ -1,0 +1,52 @@
+{
+  "document_id": "s4_doc_05",
+  "split": "dev",
+  "difficulty_class": "multi_column_table_masked_ids",
+  "is_synthetic": true,
+  "text_length": 247,
+  "total_annotations": 6,
+  "annotations": [
+    {
+      "start": 100,
+      "end": 113,
+      "text": "Kwame Nkrumah",
+      "type": "PERSON",
+      "entity_id": "e_kwame"
+    },
+    {
+      "start": 142,
+      "end": 151,
+      "text": "EMP-40928",
+      "type": "ID_LIKE",
+      "entity_id": "e_id_kwame"
+    },
+    {
+      "start": 160,
+      "end": 174,
+      "text": "XXXX-XXXX-4829",
+      "type": "ID_LIKE",
+      "entity_id": "e_mask_kwame"
+    },
+    {
+      "start": 175,
+      "end": 190,
+      "text": "Siobhan MacLeod",
+      "type": "PERSON",
+      "entity_id": "e_siobhan"
+    },
+    {
+      "start": 217,
+      "end": 229,
+      "text": "STU-2025-771",
+      "type": "ID_LIKE",
+      "entity_id": "e_id_siobhan"
+    },
+    {
+      "start": 235,
+      "end": 246,
+      "text": "XXX-XX-6789",
+      "type": "ID_LIKE",
+      "entity_id": "e_mask_siobhan"
+    }
+  ]
+}

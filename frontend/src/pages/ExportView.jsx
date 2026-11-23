@@ -27,6 +27,11 @@ import {
 
 const PLACEHOLDER_OPTIONS = [
   { id: 'CATEGORY', label: '[CATEGORY]', desc: 'Preserves semantic type: [PERSON], [EMAIL]' },
+  {
+    id: 'ENTITY_INDEXED',
+    label: '[CATEGORY_#]',
+    desc: 'Coreference-preserving tokens: [PERSON_1], [PERSON_2], [EMAIL_1]',
+  },
   { id: 'GENERIC', label: '[REDACTED]', desc: 'Standard uniform privacy mask' },
   { id: 'BLOCK', label: '████████', desc: 'Visual Unicode block characters' },
 ];
@@ -122,14 +127,23 @@ export default function ExportView() {
     if (!redactionResult || redactionResult.export_state !== 'VERIFIED') return;
     setIsDownloading(true);
     try {
-      const res = await downloadExport(documentId);
+      const targetFmt = exportFormat || document.file_type;
+      const res =
+        targetFmt !== document.file_type
+          ? await downloadExport(documentId, targetFmt)
+          : await downloadExport(documentId);
       const blob = new Blob([res.data], {
-        type: document.file_type === 'pdf' ? 'application/pdf' : 'text/plain;charset=utf-8',
+        type: targetFmt === 'pdf' ? 'application/pdf' : 'text/plain;charset=utf-8',
       });
       const url = window.URL.createObjectURL(blob);
       const link = window.document.createElement('a');
       link.href = url;
-      link.setAttribute('download', redactionResult.export_filename || `sanitized_${document.filename}`);
+      const baseFilename = redactionResult.export_filename || `sanitized_${document.filename}`;
+      const downloadFilename =
+        targetFmt === 'txt' && baseFilename.endsWith('.pdf')
+          ? baseFilename.replace(/\.pdf$/i, '.txt')
+          : baseFilename;
+      link.setAttribute('download', downloadFilename);
       window.document.body.appendChild(link);
       link.click();
       link.remove();
@@ -307,7 +321,7 @@ export default function ExportView() {
         {/* Placeholder Mask Configuration */}
         <div className="space-y-2">
           <label className="block text-xs font-semibold text-slate-300">Redaction Mask Pattern</label>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
             {PLACEHOLDER_OPTIONS.map((opt) => (
               <label
                 key={opt.id}
@@ -331,6 +345,19 @@ export default function ExportView() {
                 </div>
               </label>
             ))}
+          </div>
+          <div
+            data-testid="pseudonymization-disclosure-banner"
+            className="p-2.5 rounded-lg bg-slate-950 border border-slate-800 text-[11px] text-slate-400 flex items-start gap-2"
+          >
+            <Info className="w-3.5 h-3.5 text-sky-400 shrink-0 mt-0.5" />
+            <span>
+              <strong className="text-slate-300">Pseudonymization vs. Anonymization:</strong> Placeholder tokens (such as{' '}
+              <code className="text-sky-300">[PERSON_1]</code> or <code className="text-sky-300">[PERSON]</code>) preserve
+              document coreference and readability after removing direct identifiers, but pseudonymization is{' '}
+              <strong className="text-slate-300">not guaranteed anonymization</strong>—contextual linkability and
+              quasi-identifiers may still allow statistical inference.
+            </span>
           </div>
         </div>
 

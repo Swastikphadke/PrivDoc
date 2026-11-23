@@ -201,6 +201,8 @@ export default function CandidateSidebar({
           <EntityGroupList
             entities={entities}
             candidates={candidates}
+            selectedCandidateId={selectedCandidateId}
+            onSelectCandidate={onSelectCandidate}
             onApproveEntity={onApproveEntity}
             onRejectEntity={onRejectEntity}
             onUnlinkCandidate={onUnlinkCandidate}

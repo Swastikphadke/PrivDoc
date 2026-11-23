@@ -1,0 +1,4 @@
+GRANT DISBURSEMENT RECORD
+
+Recipient: Aarav Choudhary (Account: ACC-8849201, Customer Ref: CUST-774829).
+Signed receipt matched to Aarav Chaudhary at aarav.c@scholarship-fund.test.

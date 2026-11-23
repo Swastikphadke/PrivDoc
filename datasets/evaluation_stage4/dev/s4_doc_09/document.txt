@@ -1,0 +1,4 @@
+INCIDENT CHAT TRANSCRIPT
+
+operator_1: ticket REF-2026-99481 escalated to Grant Taylor.
+operator_2: ping grant.taylor@sec-ops.internal or call (080) 4455-6677.

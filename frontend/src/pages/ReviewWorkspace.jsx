@@ -25,6 +25,7 @@ import RedactSimilarModal from '../components/Modals/RedactSimilarModal';
 import { useKeyboardShortcuts } from '../hooks/useKeyboardShortcuts';
 import {
   getDocumentMetadata,
+  getDocumentCoordinates,
   getCandidates,
   getEntities,
   getReviewSummary,
@@ -42,12 +43,14 @@ export default function ReviewWorkspace() {
   const [document, setDocument] = useState(null);
   const [candidates, setCandidates] = useState([]);
   const [entities, setEntities] = useState([]);
+  const [coordinates, setCoordinates] = useState([]);
   const [summary, setSummary] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  // View mode for PDFs ('text' or 'pdf')
+  // View mode for PDFs ('text' or 'pdf') & current page
   const [viewMode, setViewMode] = useState('text');
+  const [currentPage, setCurrentPage] = useState(1);
 
   // Selected candidate and text selection
   const [selectedCandidateId, setSelectedCandidateId] = useState(null);
@@ -76,6 +79,15 @@ export default function ReviewWorkspace() {
       setEntities(entitiesData?.entities || []);
       setSummary(summaryData);
 
+      if (docMeta?.file_type === 'pdf') {
+        try {
+          const coordsRes = await getDocumentCoordinates(documentId);
+          setCoordinates(coordsRes?.coordinates || []);
+        } catch {
+          setCoordinates([]);
+        }
+      }
+
       // Default selected candidate to first pending if none selected
       if (candsData && candsData.length > 0) {
         setSelectedCandidateId((prev) => {
@@ -100,6 +112,13 @@ export default function ReviewWorkspace() {
   const selectedCandidate = useMemo(() => {
     return candidates.find((c) => c.candidate_id === selectedCandidateId) || null;
   }, [candidates, selectedCandidateId]);
+
+  // Sync PDF page when selected candidate has a page_number
+  useEffect(() => {
+    if (selectedCandidate?.page_number && selectedCandidate.page_number >= 1) {
+      setCurrentPage(selectedCandidate.page_number);
+    }
+  }, [selectedCandidate]);
 
   // Handle Review Decisions (Approve, Reject, Pending/Undo)
   const handleReviewAction = useCallback(
@@ -222,8 +241,8 @@ export default function ReviewWorkspace() {
   // Compute matching candidates for "redact all similar" modal
   const similarCandidates = useMemo(() => {
     if (!similarTargetCandidate) return [];
-    const norm = similarTargetCandidate.text.trim().casefold();
-    return candidates.filter((c) => c.text.trim().casefold() === norm);
+    const norm = similarTargetCandidate.text.trim().toLowerCase();
+    return candidates.filter((c) => c.text.trim().toLowerCase() === norm);
   }, [similarTargetCandidate, candidates]);
 
   // Loading state
@@ -387,6 +406,9 @@ export default function ReviewWorkspace() {
             <PdfViewer
               documentId={documentId}
               pageCount={document.page_count}
+              currentPage={currentPage}
+              onPageChange={setCurrentPage}
+              coordinates={coordinates}
               candidates={candidates}
               selectedCandidateId={selectedCandidateId}
               onSelectCandidate={(id) => setSelectedCandidateId(id)}
@@ -428,18 +450,29 @@ export default function ReviewWorkspace() {
             onUndo={(id) => handleReviewAction(id, 'PENDING')}
             onChangeCategory={(id, newType) => handleReviewAction(id, 'APPROVE', { newType })}
             onApproveLinked={(id) => handleReviewAction(id, 'APPROVE', { applyToLinked: true })}
-            onRedactSimilar={(id) => {
-              const target = candidates.find((c) => c.candidate_id === id);
+            onRedactSimilar={(idOrCand) => {
+              const target =
+                typeof idOrCand === 'object' && idOrCand !== null
+                  ? idOrCand
+                  : candidates.find((c) => c.candidate_id === idOrCand);
               if (target) setSimilarTargetCandidate(target);
             }}
-            onApproveEntity={(entityId) => {
-              const entity = entities.find((e) => e.entity_id === entityId);
+            onApproveEntity={(entityIdOrCandIds) => {
+              if (Array.isArray(entityIdOrCandIds) && entityIdOrCandIds.length > 0) {
+                handleReviewAction(entityIdOrCandIds[0], 'APPROVE', { applyToLinked: true });
+                return;
+              }
+              const entity = entities.find((e) => e.entity_id === entityIdOrCandIds);
               if (entity && entity.candidate_ids.length > 0) {
                 handleReviewAction(entity.candidate_ids[0], 'APPROVE', { applyToLinked: true });
               }
             }}
-            onRejectEntity={(entityId) => {
-              const entity = entities.find((e) => e.entity_id === entityId);
+            onRejectEntity={(entityIdOrCandIds) => {
+              if (Array.isArray(entityIdOrCandIds) && entityIdOrCandIds.length > 0) {
+                handleReviewAction(entityIdOrCandIds[0], 'REJECT', { applyToLinked: true });
+                return;
+              }
+              const entity = entities.find((e) => e.entity_id === entityIdOrCandIds);
               if (entity && entity.candidate_ids.length > 0) {
                 handleReviewAction(entity.candidate_ids[0], 'REJECT', { applyToLinked: true });
               }

@@ -16,10 +16,15 @@ class BoundingBox(BaseModel):
 class CoordinateSpan(BaseModel):
     """Mapping between canonical text character offsets and PDF page coordinates."""
     page_number: int = Field(..., description="1-indexed PDF page number")
-    bbox: List[float] = Field(..., description="[x0, y0, x1, y1] coordinates")
+    bbox: List[float] = Field(..., description="[x0, y0, x1, y1] coordinates in page.rect space")
     char_start: int = Field(..., description="Inclusive start offset in canonical text")
     char_end: int = Field(..., description="Exclusive end offset in canonical text")
     text: str = Field(..., description="The word or span text")
+    page_x0: float = Field(default=0.0, description="Page visible rect x0 origin")
+    page_y0: float = Field(default=0.0, description="Page visible rect y0 origin")
+    page_width: float = Field(default=595.0, description="Page visible rect width in points")
+    page_height: float = Field(default=842.0, description="Page visible rect height in points")
+    page_rotation: int = Field(default=0, description="Page rotation angle in degrees")
 
 
 class DocumentResponse(BaseModel):

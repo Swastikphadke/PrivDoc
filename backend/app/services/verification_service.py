@@ -43,6 +43,22 @@ PDF_STRUCTURAL_LIMITATIONS_NOTICE = (
 class VerificationService:
     """Independent verification engine enforcing zero-leakage guarantees on exported artifacts."""
 
+    @staticmethod
+    def _count_occurrences(text_lower: str, target_lower: str) -> int:
+        """Count occurrences of target_lower in text_lower using word-boundary protection for short tokens."""
+        if not text_lower or not target_lower:
+            return 0
+        # For short tokens (<= 4 chars) or tokens starting/ending with alphanumeric characters,
+        # enforce non-alphanumeric boundaries so 'al' does not falsely match inside 'also' or 'medical'.
+        starts_alnum = target_lower[0].isalnum()
+        ends_alnum = target_lower[-1].isalnum()
+        if starts_alnum or ends_alnum:
+            prefix = r"(?<![a-z0-9])" if starts_alnum else ""
+            suffix = r"(?![a-z0-9])" if ends_alnum else ""
+            pattern = re.compile(f"{prefix}{re.escape(target_lower)}{suffix}")
+            return len(pattern.findall(text_lower))
+        return text_lower.count(target_lower)
+
     @classmethod
     def verify_txt_export(
         cls,
@@ -125,7 +141,7 @@ class VerificationService:
                 continue
             verified_texts.add(clean_lower)
 
-            count_in_export = exported_lower.count(clean_lower)
+            count_in_export = cls._count_occurrences(exported_lower, clean_lower)
             allowed_preserved_count = preserved_text_counts.get(clean_lower, 0)
 
             if count_in_export > allowed_preserved_count:
@@ -161,7 +177,7 @@ class VerificationService:
                 if not v_clean or len(v_clean) < 2:
                     continue
 
-                count_var = exported_lower.count(v_lower)
+                count_var = cls._count_occurrences(exported_lower, v_lower)
                 # If no candidate of this entity was preserved, count must be 0
                 if not entity_has_preserved and count_var > 0:
                     issues.append(
@@ -377,7 +393,7 @@ class VerificationService:
                         continue
                     checked_on_page.add(clean_lower)
 
-                    count_on_page = page_lower.count(clean_lower)
+                    count_on_page = cls._count_occurrences(page_lower, clean_lower)
                     allowed_on_page = page_preserved_counts.get(clean_lower, 0)
 
                     if count_on_page > allowed_on_page:
@@ -414,7 +430,7 @@ class VerificationService:
                         v_lower = v_clean.casefold()
                         if not v_clean or len(v_clean) < 2:
                             continue
-                        if not entity_has_preserved and v_lower in page_lower:
+                        if not entity_has_preserved and cls._count_occurrences(page_lower, v_lower) > 0:
                             issues.append(
                                 VerificationIssue(
                                     check_name="KNOWN_ENTITY_VARIANTS",
@@ -429,19 +445,25 @@ class VerificationService:
                             )
                             break
 
-            # 4. Metadata Inspection Check
+            # 4. Metadata Inspection Check (Classic Info Dict + XMP XML Stream + Bookmarks TOC)
             meta = doc.metadata or {}
-            combined_metadata_str = " ".join(
-                str(v) for k, v in meta.items() if v and isinstance(v, str)
+            try:
+                xml_metadata_str = doc.get_xml_metadata() or ""
+            except Exception:
+                xml_metadata_str = ""
+            combined_metadata_str = (
+                " ".join(str(v) for k, v in meta.items() if v and isinstance(v, str))
+                + " "
+                + xml_metadata_str
             ).casefold()
 
             for cand in approved_candidates:
                 clean_text = cand.text.strip()
-                if len(clean_text) >= 3 and clean_text.casefold() in combined_metadata_str:
+                if len(clean_text) >= 3 and cls._count_occurrences(combined_metadata_str, clean_text.casefold()) > 0:
                     issues.append(
                         VerificationIssue(
                             check_name="METADATA_INSPECTION",
-                            description=f"Document metadata contains approved {cand.type} candidate content.",
+                            description=f"Document metadata or XMP stream contains approved {cand.type} candidate content.",
                             severity="ERROR",
                             diagnostic_code="METADATA_PII_LEAK_PDF",
                             candidate_id=cand.candidate_id,
@@ -451,16 +473,38 @@ class VerificationService:
             for ent in relevant_entities:
                 for variant in ent.variants:
                     v_clean = variant.strip()
-                    if len(v_clean) >= 3 and v_clean.casefold() in combined_metadata_str:
+                    if len(v_clean) >= 3 and cls._count_occurrences(combined_metadata_str, v_clean.casefold()) > 0:
                         issues.append(
                             VerificationIssue(
                                 check_name="METADATA_INSPECTION",
-                                description=f"Document metadata contains known variant for entity {ent.entity_id}.",
+                                description=f"Document metadata or XMP stream contains known variant for entity {ent.entity_id}.",
                                 severity="ERROR",
                                 diagnostic_code="METADATA_VARIANT_LEAK_PDF",
                             )
                         )
                         break
+
+            # Inspect PDF Document Outlines / Table of Contents (Bookmarks)
+            try:
+                toc_items = doc.get_toc() or []
+                combined_toc_str = " ".join(
+                    str(item[1]) for item in toc_items if len(item) >= 2 and item[1]
+                ).casefold()
+                if combined_toc_str:
+                    for cand in approved_candidates:
+                        clean_text = cand.text.strip()
+                        if len(clean_text) >= 2 and cls._count_occurrences(combined_toc_str, clean_text.casefold()) > 0:
+                            issues.append(
+                                VerificationIssue(
+                                    check_name="HIDDEN_STRUCTURES",
+                                    description=f"PDF bookmark outline (TOC) contains approved {cand.type} candidate content.",
+                                    severity="ERROR",
+                                    diagnostic_code="TOC_BOOKMARK_PII_LEAK_PDF",
+                                    candidate_id=cand.candidate_id,
+                                )
+                            )
+            except Exception:
+                pass
 
             # 5. Hidden Structures & Unsupported Objects Check
             if doc.embfile_count() > 0:

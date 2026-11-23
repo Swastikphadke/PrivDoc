@@ -727,12 +727,13 @@ def get_export_status(document_id: str) -> RedactionResponse:
     "/documents/{document_id}/export",
     tags=["Redaction & Export"],
 )
-def download_exported_document(document_id: str):
+def download_exported_document(document_id: str, format: Optional[str] = None):
     """Download verified sanitized output document.
     
     Security Guarantee (FR-019, FR-020, NFR-012):
     Only documents that successfully passed 100% of export verification checks
     (status == VERIFIED) can be downloaded. Unverified or failed outputs are strictly blocked.
+    Supports optional `format` query parameter ('txt' or 'pdf').
     """
     if not re.match(r"^[a-zA-Z0-9_\-]+$", document_id):
         raise HTTPException(
@@ -769,12 +770,27 @@ def download_exported_document(document_id: str):
         )
 
     file_type = meta["file_type"]
-    if file_type == "pdf":
+    requested_format = (format or file_type).lower().strip()
+    if requested_format not in ("txt", "pdf"):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Unsupported export format '{requested_format}'. Allowed: 'txt', 'pdf'."
+        )
+    if requested_format == "pdf" and file_type != "pdf":
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="PDF export is only supported for PDF source documents."
+        )
+
+    if requested_format == "pdf":
         export_file_path = session_dir / "sanitized.pdf"
         media_type = "application/pdf"
+        download_name = f"sanitized_{meta['original_filename']}"
     else:
         export_file_path = session_dir / "sanitized.txt"
         media_type = "text/plain; charset=utf-8"
+        base_stem = meta["original_filename"].rsplit(".", 1)[0]
+        download_name = f"sanitized_{base_stem}.txt"
 
     if not export_file_path.exists():
         raise HTTPException(
@@ -789,7 +805,6 @@ def download_exported_document(document_id: str):
             detail="Access denied: path traversal attempt detected."
         )
 
-    download_name = f"sanitized_{meta['original_filename']}"
     headers = {
         "X-Content-Type-Options": "nosniff",
         "Cache-Control": "no-store, no-cache, must-revalidate",

@@ -1,0 +1,24 @@
+{
+  "document_id": "s4_doc_34",
+  "split": "test",
+  "difficulty_class": "test_quasi_identifier_cooccurrence",
+  "is_synthetic": true,
+  "text_length": 238,
+  "total_annotations": 2,
+  "annotations": [
+    {
+      "start": 190,
+      "end": 207,
+      "text": "Dr. Leonard McCoy",
+      "type": "PERSON",
+      "entity_id": "t_mccoy"
+    },
+    {
+      "start": 209,
+      "end": 235,
+      "text": "l.mccoy@starfleet-med.test",
+      "type": "EMAIL",
+      "entity_id": "t_mccoy_m"
+    }
+  ]
+}

@@ -1,0 +1,38 @@
+{
+  "document_id": "s4_doc_10",
+  "split": "dev",
+  "difficulty_class": "conflicting_country_code_phones",
+  "is_synthetic": true,
+  "text_length": 171,
+  "total_annotations": 4,
+  "annotations": [
+    {
+      "start": 44,
+      "end": 58,
+      "text": "+1 98112 23344",
+      "type": "PHONE",
+      "entity_id": "e_ph_us10"
+    },
+    {
+      "start": 79,
+      "end": 94,
+      "text": "+91 98112 23344",
+      "type": "PHONE",
+      "entity_id": "e_ph_in10"
+    },
+    {
+      "start": 119,
+      "end": 130,
+      "text": "98112-23344",
+      "type": "PHONE",
+      "entity_id": "e_ph_ambig10"
+    },
+    {
+      "start": 155,
+      "end": 169,
+      "text": "Farah Siddiqui",
+      "type": "PERSON",
+      "entity_id": "e_farah"
+    }
+  ]
+}

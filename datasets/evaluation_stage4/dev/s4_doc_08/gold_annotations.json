@@ -1,0 +1,45 @@
+{
+  "document_id": "s4_doc_08",
+  "split": "dev",
+  "difficulty_class": "phonetic_transliteration_pair",
+  "is_synthetic": true,
+  "text_length": 181,
+  "total_annotations": 5,
+  "annotations": [
+    {
+      "start": 38,
+      "end": 53,
+      "text": "Aarav Choudhary",
+      "type": "PERSON",
+      "entity_id": "e_aarav"
+    },
+    {
+      "start": 64,
+      "end": 75,
+      "text": "ACC-8849201",
+      "type": "ID_LIKE",
+      "entity_id": "e_acc_aa"
+    },
+    {
+      "start": 91,
+      "end": 102,
+      "text": "CUST-774829",
+      "type": "ID_LIKE",
+      "entity_id": "e_cust_aa"
+    },
+    {
+      "start": 131,
+      "end": 146,
+      "text": "Aarav Chaudhary",
+      "type": "PERSON",
+      "entity_id": "e_aarav"
+    },
+    {
+      "start": 150,
+      "end": 179,
+      "text": "aarav.c@scholarship-fund.test",
+      "type": "EMAIL",
+      "entity_id": "e_mail_aa"
+    }
+  ]
+}

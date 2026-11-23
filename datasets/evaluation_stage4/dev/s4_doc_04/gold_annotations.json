@@ -1,0 +1,9 @@
+{
+  "document_id": "s4_doc_04",
+  "split": "dev",
+  "difficulty_class": "negative_zero_pii_traps",
+  "is_synthetic": true,
+  "text_length": 316,
+  "total_annotations": 0,
+  "annotations": []
+}

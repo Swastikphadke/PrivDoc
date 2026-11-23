@@ -1,0 +1,4 @@
+DEVOPS INCIDENT NOTES
+
+on-call engineer rohit verma rotated credentials for badge BDG-99201 and EMP-44910.
+alert routed to rohit.verma@devops-core.test and landline (044) 2811-4090.

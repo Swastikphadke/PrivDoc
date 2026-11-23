@@ -1,0 +1,38 @@
+{
+  "document_id": "s4_doc_22",
+  "split": "val",
+  "difficulty_class": "val_hard_lowercase_person",
+  "is_synthetic": true,
+  "text_length": 167,
+  "total_annotations": 4,
+  "annotations": [
+    {
+      "start": 42,
+      "end": 53,
+      "text": "priya menon",
+      "type": "PERSON",
+      "entity_id": "v_pmenon"
+    },
+    {
+      "start": 65,
+      "end": 73,
+      "text": "EMP-8012",
+      "type": "ID_LIKE",
+      "entity_id": "v_emp8012"
+    },
+    {
+      "start": 112,
+      "end": 136,
+      "text": "p.menon@support-hub.test",
+      "type": "EMAIL",
+      "entity_id": "v_pm_mail"
+    },
+    {
+      "start": 150,
+      "end": 165,
+      "text": "(022) 6677-8899",
+      "type": "PHONE",
+      "entity_id": "v_pm_ph"
+    }
+  ]
+}

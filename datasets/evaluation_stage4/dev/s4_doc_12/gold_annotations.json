@@ -1,0 +1,52 @@
+{
+  "document_id": "s4_doc_12",
+  "split": "dev",
+  "difficulty_class": "similar_unrelated_names_guard",
+  "is_synthetic": true,
+  "text_length": 182,
+  "total_annotations": 6,
+  "annotations": [
+    {
+      "start": 49,
+      "end": 60,
+      "text": "Arjun Verma",
+      "type": "PERSON",
+      "entity_id": "e_arjun_v"
+    },
+    {
+      "start": 62,
+      "end": 70,
+      "text": "EMP-5501",
+      "type": "ID_LIKE",
+      "entity_id": "e_emp5501"
+    },
+    {
+      "start": 85,
+      "end": 95,
+      "text": "Arun Verma",
+      "type": "PERSON",
+      "entity_id": "e_arun_v"
+    },
+    {
+      "start": 97,
+      "end": 105,
+      "text": "EMP-5502",
+      "type": "ID_LIKE",
+      "entity_id": "e_emp5502"
+    },
+    {
+      "start": 138,
+      "end": 150,
+      "text": "Clara Oswald",
+      "type": "PERSON",
+      "entity_id": "e_clara"
+    },
+    {
+      "start": 152,
+      "end": 179,
+      "text": "clara.oswald@board-sec.test",
+      "type": "EMAIL",
+      "entity_id": "e_clara_m"
+    }
+  ]
+}

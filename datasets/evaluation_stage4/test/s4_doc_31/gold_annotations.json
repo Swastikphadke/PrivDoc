@@ -1,0 +1,52 @@
+{
+  "document_id": "s4_doc_31",
+  "split": "test",
+  "difficulty_class": "test_phonetic_and_phone_coref",
+  "is_synthetic": true,
+  "text_length": 200,
+  "total_annotations": 6,
+  "annotations": [
+    {
+      "start": 44,
+      "end": 57,
+      "text": "Nitin Gadkari",
+      "type": "PERSON",
+      "entity_id": "t_nitin"
+    },
+    {
+      "start": 64,
+      "end": 74,
+      "text": "BNMKL5566Q",
+      "type": "ID_LIKE",
+      "entity_id": "t_pan_n"
+    },
+    {
+      "start": 85,
+      "end": 97,
+      "text": "ACCT-3344550",
+      "type": "ID_LIKE",
+      "entity_id": "t_acc_n"
+    },
+    {
+      "start": 137,
+      "end": 151,
+      "text": "Nithin Gadkari",
+      "type": "PERSON",
+      "entity_id": "t_nitin"
+    },
+    {
+      "start": 162,
+      "end": 177,
+      "text": "+91 98230 11990",
+      "type": "PHONE",
+      "entity_id": "t_ph_n"
+    },
+    {
+      "start": 187,
+      "end": 198,
+      "text": "09823011990",
+      "type": "PHONE",
+      "entity_id": "t_ph_n"
+    }
+  ]
+}

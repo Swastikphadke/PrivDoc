@@ -1,0 +1,59 @@
+{
+  "document_id": "s4_doc_27",
+  "split": "test",
+  "difficulty_class": "test_five_mention_coreference",
+  "is_synthetic": true,
+  "text_length": 243,
+  "total_annotations": 7,
+  "annotations": [
+    {
+      "start": 52,
+      "end": 75,
+      "text": "Prof. Raghuram G. Rajan",
+      "type": "PERSON",
+      "entity_id": "t_rajan"
+    },
+    {
+      "start": 92,
+      "end": 109,
+      "text": "Raghuram G. Rajan",
+      "type": "PERSON",
+      "entity_id": "t_rajan"
+    },
+    {
+      "start": 114,
+      "end": 125,
+      "text": "R. G. Rajan",
+      "type": "PERSON",
+      "entity_id": "t_rajan"
+    },
+    {
+      "start": 162,
+      "end": 173,
+      "text": "Prof. Rajan",
+      "type": "PERSON",
+      "entity_id": "t_rajan"
+    },
+    {
+      "start": 182,
+      "end": 187,
+      "text": "Rajan",
+      "type": "PERSON",
+      "entity_id": "t_rajan"
+    },
+    {
+      "start": 191,
+      "end": 206,
+      "text": "+91 98119 00221",
+      "type": "PHONE",
+      "entity_id": "t_rajan_p"
+    },
+    {
+      "start": 208,
+      "end": 240,
+      "text": "r.rajan@arbitration-chamber.test",
+      "type": "EMAIL",
+      "entity_id": "t_rajan_m"
+    }
+  ]
+}

@@ -1,0 +1,38 @@
+{
+  "document_id": "s4_doc_18",
+  "split": "val",
+  "difficulty_class": "val_ambiguous_initial_r_green",
+  "is_synthetic": true,
+  "text_length": 193,
+  "total_annotations": 4,
+  "annotations": [
+    {
+      "start": 41,
+      "end": 53,
+      "text": "Rachel Green",
+      "type": "PERSON",
+      "entity_id": "v_rachel"
+    },
+    {
+      "start": 58,
+      "end": 68,
+      "text": "Ross Green",
+      "type": "PERSON",
+      "entity_id": "v_ross"
+    },
+    {
+      "start": 90,
+      "end": 98,
+      "text": "R. Green",
+      "type": "PERSON",
+      "entity_id": "v_rgreen_ambig"
+    },
+    {
+      "start": 177,
+      "end": 191,
+      "text": "Harvey Specter",
+      "type": "PERSON",
+      "entity_id": "v_harvey"
+    }
+  ]
+}

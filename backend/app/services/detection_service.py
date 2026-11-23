@@ -8,7 +8,7 @@ import json
 import time
 from pathlib import Path
 from typing import Dict, List, Optional
-from app.core.security import get_safe_session_dir
+from app.core.security import atomic_write_text, get_safe_session_dir
 from app.detectors.ner_detector import NERDetector
 from app.detectors.regex_detector import RegexDetector
 from app.schemas.candidate import Candidate, ConfidenceBand, DetectionResponse
@@ -48,6 +48,18 @@ class DetectionService:
         ner_cands = NERDetector.detect(text, document_id)
         raw_candidates.extend(ner_cands)
 
+        # Engine C: Selective Local SLM Contextual Assistance (if available)
+        try:
+            from app.detectors.slm_detector import SLMDetector
+            from app.services.model_service import ModelService
+            if ModelService.check_availability():
+                slm_cands, _ = SLMDetector.detect_and_suggest(document_id, text, raw_candidates)
+                if slm_cands:
+                    raw_candidates.extend(slm_cands)
+                detectors_run.append("slm")
+        except Exception:
+            pass
+
         # 2. Deterministic candidate merging & conflict handling
         merged_candidates = cls.merge_candidates(raw_candidates, text, document_id)
 
@@ -65,10 +77,10 @@ class DetectionService:
             use_slm=True,
         )
 
-        # 5. Save candidates to session cache (candidates now have entity_id attached)
+        # 5. Save candidates to session cache atomically (candidates now have entity_id attached)
         candidates_cache_path = session_dir / "candidates.json"
         cands_data = [c.model_dump() for c in merged_candidates]
-        candidates_cache_path.write_text(json.dumps(cands_data, indent=2), encoding="utf-8")
+        atomic_write_text(candidates_cache_path, json.dumps(cands_data, indent=2), encoding="utf-8")
 
         exec_ms = round((time.perf_counter() - start_time) * 1000, 2)
 
@@ -139,23 +151,87 @@ class DetectionService:
                         for s in cand.sources:
                             if s not in existing.sources:
                                 existing.sources.append(s)
+                        for exp in cand.explanation:
+                            if exp not in existing.explanation:
+                                existing.explanation.append(exp)
+                        for sig in cand.context_signals:
+                            if sig not in existing.context_signals:
+                                existing.context_signals.append(sig)
                         # Multi-detector agreement boost (+0.05, max 0.99)
                         max_c = max(existing.confidence, cand.confidence)
-                        boosted = min(0.99, max_c + 0.05) if len(existing.sources) > 1 else max_c
+                        if len(existing.sources) > 1:
+                            boosted = min(0.99, max_c + 0.05)
+                            existing.detector_agreement = "MULTI_DETECTOR_CONSENSUS"
+                            consensus_msg = f"Corroborated by multiple detectors ({', '.join(existing.sources)})"
+                            if consensus_msg not in existing.explanation:
+                                existing.explanation.append(consensus_msg)
+                        else:
+                            boosted = max_c
                         existing.confidence = round(boosted, 2)
                         existing.confidence_band = cls._get_confidence_band(existing.confidence)
                         matched_existing = True
                         break
-                    # If exact span has conflicting types, do NOT overwrite; keep both for human review
+                    else:
+                        # Conflicting types on exact span: retain both and mark TYPE_CONFLICT
+                        existing.detector_agreement = "TYPE_CONFLICT"
+                        cand.detector_agreement = "TYPE_CONFLICT"
 
-                # 2. Complete Subsumption of Same Category (e.g. "Richa" inside "Richa Sharma")
-                elif existing.start <= cand.start and existing.end >= cand.end:
+                # 2. Complete Subsumption or Partial Overlap of Same Category
+                elif max(existing.start, cand.start) < min(existing.end, cand.end):
                     if existing.type == cand.type:
+                        # Expand to union [min_start, max_end) on canonical text if text is provided
+                        new_start = min(existing.start, cand.start)
+                        new_end = max(existing.end, cand.end)
+                        if text and 0 <= new_start < new_end <= len(text):
+                            existing.start = new_start
+                            existing.end = new_end
+                            existing.text = text[new_start:new_end]
                         for s in cand.sources:
                             if s not in existing.sources:
                                 existing.sources.append(s)
+                        for exp in cand.explanation:
+                            if exp not in existing.explanation:
+                                existing.explanation.append(exp)
+                        for sig in cand.context_signals:
+                            if sig not in existing.context_signals:
+                                existing.context_signals.append(sig)
+                        max_c = max(existing.confidence, cand.confidence)
+                        if len(existing.sources) > 1:
+                            boosted = min(0.99, max_c + 0.05)
+                            existing.detector_agreement = "MULTI_DETECTOR_CONSENSUS"
+                            consensus_msg = f"Corroborated by multiple detectors ({', '.join(existing.sources)})"
+                            if consensus_msg not in existing.explanation:
+                                existing.explanation.append(consensus_msg)
+                        else:
+                            boosted = max_c
+                        existing.confidence = round(boosted, 2)
+                        existing.confidence_band = cls._get_confidence_band(existing.confidence)
                         matched_existing = True
                         break
+                    else:
+                        # Suppress untitled NER PERSON sub-spans strictly contained inside a longer ADDRESS span
+                        # (e.g., city/street tokens like "San Jose" or "Jubilee Hills" inside a full address)
+                        if (
+                            existing.type == "ADDRESS"
+                            and cand.type == "PERSON"
+                            and cand.start >= existing.start
+                            and cand.end <= existing.end
+                            and (cand.end - cand.start) < (existing.end - existing.start)
+                        ):
+                            matched_existing = True
+                            break
+                        if (
+                            cand.type == "ADDRESS"
+                            and existing.type == "PERSON"
+                            and existing.start >= cand.start
+                            and existing.end <= cand.end
+                            and (existing.end - existing.start) < (cand.end - cand.start)
+                        ):
+                            merged.remove(existing)
+                            break
+                        # Conflicting categories on overlapping span: retain both for human review
+                        existing.detector_agreement = "TYPE_CONFLICT"
+                        cand.detector_agreement = "TYPE_CONFLICT"
 
             if not matched_existing:
                 merged.append(cand)

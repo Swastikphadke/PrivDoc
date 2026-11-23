@@ -1,0 +1,52 @@
+{
+  "document_id": "s4_doc_17",
+  "split": "val",
+  "difficulty_class": "val_table_roster",
+  "is_synthetic": true,
+  "text_length": 244,
+  "total_annotations": 6,
+  "annotations": [
+    {
+      "start": 100,
+      "end": 111,
+      "text": "Zoya Akhtar",
+      "type": "PERSON",
+      "entity_id": "v_zoya"
+    },
+    {
+      "start": 142,
+      "end": 154,
+      "text": "STU-2024-512",
+      "type": "ID_LIKE",
+      "entity_id": "v_stu512"
+    },
+    {
+      "start": 160,
+      "end": 171,
+      "text": "ACCT-661209",
+      "type": "ID_LIKE",
+      "entity_id": "v_acc661"
+    },
+    {
+      "start": 172,
+      "end": 187,
+      "text": "Cormac McCarthy",
+      "type": "PERSON",
+      "entity_id": "v_cormac"
+    },
+    {
+      "start": 214,
+      "end": 223,
+      "text": "EMP-31098",
+      "type": "ID_LIKE",
+      "entity_id": "v_emp310"
+    },
+    {
+      "start": 232,
+      "end": 243,
+      "text": "CUST-551920",
+      "type": "ID_LIKE",
+      "entity_id": "v_cust551"
+    }
+  ]
+}

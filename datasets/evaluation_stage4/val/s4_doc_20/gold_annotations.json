@@ -1,0 +1,45 @@
+{
+  "document_id": "s4_doc_20",
+  "split": "val",
+  "difficulty_class": "val_phonetic_and_phone_link",
+  "is_synthetic": true,
+  "text_length": 185,
+  "total_annotations": 5,
+  "annotations": [
+    {
+      "start": 40,
+      "end": 56,
+      "text": "Swastik Kulkarni",
+      "type": "PERSON",
+      "entity_id": "v_swastik_k"
+    },
+    {
+      "start": 62,
+      "end": 70,
+      "text": "EMP-7120",
+      "type": "ID_LIKE",
+      "entity_id": "v_emp7120"
+    },
+    {
+      "start": 114,
+      "end": 131,
+      "text": "Swasthik Kulkarni",
+      "type": "PERSON",
+      "entity_id": "v_swastik_k"
+    },
+    {
+      "start": 143,
+      "end": 158,
+      "text": "+91 98201 44550",
+      "type": "PHONE",
+      "entity_id": "v_ph_sk"
+    },
+    {
+      "start": 172,
+      "end": 183,
+      "text": "09820144550",
+      "type": "PHONE",
+      "entity_id": "v_ph_sk"
+    }
+  ]
+}

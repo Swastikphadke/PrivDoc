@@ -1,0 +1,52 @@
+{
+  "document_id": "s4_doc_29",
+  "split": "test",
+  "difficulty_class": "test_tabular_clinical",
+  "is_synthetic": true,
+  "text_length": 255,
+  "total_annotations": 6,
+  "annotations": [
+    {
+      "start": 108,
+      "end": 130,
+      "text": "Arundhati Bhattacharya",
+      "type": "PERSON",
+      "entity_id": "t_arundhati"
+    },
+    {
+      "start": 150,
+      "end": 159,
+      "text": "PAT-90214",
+      "type": "ID_LIKE",
+      "entity_id": "t_pat902"
+    },
+    {
+      "start": 168,
+      "end": 182,
+      "text": "XXXX-XXXX-7731",
+      "type": "ID_LIKE",
+      "entity_id": "t_mask7731"
+    },
+    {
+      "start": 183,
+      "end": 202,
+      "text": "Desmond MacAllister",
+      "type": "PERSON",
+      "entity_id": "t_desmond"
+    },
+    {
+      "start": 225,
+      "end": 234,
+      "text": "EMP-60412",
+      "type": "ID_LIKE",
+      "entity_id": "t_emp604"
+    },
+    {
+      "start": 243,
+      "end": 254,
+      "text": "XXX-XX-4410",
+      "type": "ID_LIKE",
+      "entity_id": "t_mask4410"
+    }
+  ]
+}

@@ -4,26 +4,32 @@
     "cpu": "Intel64 Family 6 Model 142 Stepping 10, GenuineIntel",
     "physical_cores": 4,
     "logical_cores": 8,
-    "total_ram_gb": 7.85
+    "total_ram_gb": 7.85,
+    "python_version": "3.12.10",
+    "slm_configured_model": "qwen2.5:1.5b-instruct",
+    "slm_runtime_available": false
   },
   "latencies_ms": {
-    "cold_startup_ms": 1094.8,
-    "warm_startup_ms": 0.7,
-    "txt_ingestion_ms": 21.16,
-    "pdf_ingestion_ms": 30.7,
-    "hybrid_detection_ms": 747.84,
-    "entity_resolution_ms": 8.19,
-    "review_decision_action_ms": 110.32,
-    "manual_candidate_addition_ms": 38.97,
-    "txt_redaction_and_verification_ms": 44.28,
-    "native_pdf_redaction_and_verification_ms": 90.07,
-    "clean_text_pdf_reconstruction_ms": 77.26,
-    "summary_generation_fallback_ms": 8.77,
-    "summary_privacy_guard_verification_ms": 28.67,
-    "complete_e2e_txt_pipeline_ms": 969.23,
-    "complete_e2e_pdf_pipeline_ms": 1024.56
+    "cold_startup_ms": 1846.36,
+    "warm_startup_ms": 1.02,
+    "txt_ingestion_ms": 24.72,
+    "pdf_ingestion_ms": 40.62,
+    "hybrid_detection_ms": 1097.55,
+    "entity_resolution_ms": 16.54,
+    "review_decision_action_ms": 182.62,
+    "manual_candidate_addition_ms": 92.01,
+    "txt_redaction_and_verification_ms": 80.6,
+    "native_pdf_redaction_and_verification_ms": 138.98,
+    "clean_text_pdf_reconstruction_ms": 107.11,
+    "summary_generation_fallback_ms": 8.7,
+    "summary_privacy_guard_verification_ms": 48.68,
+    "complete_e2e_txt_pipeline_ms": 1459.41,
+    "complete_e2e_pdf_pipeline_ms": 1533.7
   },
   "memory_profile": {
-    "peak_ram_mb": 1.55
+    "python_heap_peak_tracemalloc_mb": 1.58,
+    "os_process_rss_mb": 88.78,
+    "host_cpu_percent": 34.7,
+    "peak_ram_mb": 1.58
   }
 }

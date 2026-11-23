@@ -1,0 +1,52 @@
+{
+  "document_id": "s4_doc_07",
+  "split": "dev",
+  "difficulty_class": "indian_kyc_and_country_phone_link",
+  "is_synthetic": true,
+  "text_length": 235,
+  "total_annotations": 6,
+  "annotations": [
+    {
+      "start": 37,
+      "end": 50,
+      "text": "Jose Martinez",
+      "type": "PERSON",
+      "entity_id": "e_jose"
+    },
+    {
+      "start": 58,
+      "end": 68,
+      "text": "QWERT9876P",
+      "type": "ID_LIKE",
+      "entity_id": "e_pan_j"
+    },
+    {
+      "start": 80,
+      "end": 94,
+      "text": "4567 8901 2345",
+      "type": "ID_LIKE",
+      "entity_id": "e_aadhaar_j"
+    },
+    {
+      "start": 107,
+      "end": 164,
+      "text": "Flat 4B, Ashoka Towers, Jubilee Hills, Hyderabad - 500033",
+      "type": "ADDRESS",
+      "entity_id": "e_hyd_j"
+    },
+    {
+      "start": 182,
+      "end": 197,
+      "text": "+91 98760 54321",
+      "type": "PHONE",
+      "entity_id": "e_ph_j"
+    },
+    {
+      "start": 222,
+      "end": 233,
+      "text": "09876054321",
+      "type": "PHONE",
+      "entity_id": "e_ph_j"
+    }
+  ]
+}

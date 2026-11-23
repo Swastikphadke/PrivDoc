@@ -17,10 +17,11 @@ Strict Security Invariants:
 import json
 import logging
 from pathlib import Path
+import re
 from typing import Any, Dict, List, Optional, Set, Tuple
 import pymupdf
 
-from app.core.security import get_safe_session_dir
+from app.core.security import atomic_write_text, get_safe_session_dir
 from app.database.session import get_document_metadata, update_document_status
 from app.detectors.entity_resolver import EntityResolver
 from app.schemas.candidate import Candidate
@@ -116,21 +117,24 @@ class RedactionService:
                         session_dir=session_dir,
                         output_pdf_path=sanitized_pdf_tmp,
                         approved_candidates=approved_cands,
+                        all_candidates=candidates,
                     )
                 except Exception as exc:
                     logger.warning("Native PyMuPDF redaction failed: %s", exc)
                     layout_warning = f"Native PDF redaction encountered an error: {str(exc)}"
 
         # 3. Post-Export Verification Audit on Temporary Files
+        txt_verif_result = VerificationService.verify_txt_export(
+            document_id=document_id,
+            sanitized_txt_path=sanitized_txt_tmp,
+            canonical_text=canonical_text,
+            approved_candidates=approved_cands,
+            all_candidates=candidates,
+            entities=entities,
+        )
+
         if file_type == "txt":
-            verif_result = VerificationService.verify_txt_export(
-                document_id=document_id,
-                sanitized_txt_path=sanitized_txt_tmp,
-                canonical_text=canonical_text,
-                approved_candidates=approved_cands,
-                all_candidates=candidates,
-                entities=entities,
-            )
+            verif_result = txt_verif_result
         else:
             if not sanitized_pdf_tmp.exists():
                 verif_result = VerificationResult(
@@ -148,6 +152,10 @@ class RedactionService:
                     all_candidates=candidates,
                     entities=entities,
                 )
+                # Also ensure companion TXT export passed verification
+                if txt_verif_result.status != "PASSED":
+                    verif_result.status = "FAILED"
+                    verif_result.issues.extend(txt_verif_result.issues)
 
             # Security Correction: If native verification fails, fail closed, do NOT auto-reconstruct.
             # Instead, offer clean-text reconstruction as an explicit, separate user-triggered action.
@@ -167,9 +175,17 @@ class RedactionService:
             reconstruction_offered = False
             # Promote temp files atomically to final export files
             if sanitized_txt_tmp.exists():
-                sanitized_txt_tmp.replace(sanitized_txt_final)
+                try:
+                    sanitized_txt_tmp.replace(sanitized_txt_final)
+                except PermissionError:
+                    sanitized_txt_final.write_bytes(sanitized_txt_tmp.read_bytes())
+                    sanitized_txt_tmp.unlink()
             if file_type == "pdf" and sanitized_pdf_tmp.exists():
-                sanitized_pdf_tmp.replace(sanitized_pdf_final)
+                try:
+                    sanitized_pdf_tmp.replace(sanitized_pdf_final)
+                except PermissionError:
+                    sanitized_pdf_final.write_bytes(sanitized_pdf_tmp.read_bytes())
+                    sanitized_pdf_tmp.unlink()
         else:
             export_state = ExportState.FAILED
             download_ready = False
@@ -206,7 +222,7 @@ class RedactionService:
         )
 
         export_meta_path = session_dir / "export_metadata.json"
-        export_meta_path.write_text(response.model_dump_json(indent=2), encoding="utf-8")
+        atomic_write_text(export_meta_path, response.model_dump_json(indent=2), encoding="utf-8")
 
         return response
 
@@ -245,21 +261,39 @@ class RedactionService:
                 "end": c.end,
                 "type": c.type,
                 "id": c.candidate_id,
+                "entity_id": c.entity_id,
+                "norm_text": c.text.strip().casefold(),
             })
 
         if not valid_intervals:
             return canonical_text
 
-        # Sort intervals by start ASC, then end DESC to merge overlaps
+        # Sort intervals by start ASC, then end DESC to merge overlaps and assign stable entity indices
         valid_intervals.sort(key=lambda x: (x["start"], -x["end"]))
+
+        # Build deterministic per-category entity index map in document appearance order
+        # Never persisted to telemetry or logs
+        category_counters: Dict[str, int] = {}
+        entity_index_map: Dict[str, str] = {}
+        if request.placeholder_style == PlaceholderStyle.ENTITY_INDEXED:
+            for item in valid_intervals:
+                cat = item["type"]
+                ent_key = f"{cat}::ent::{item['entity_id']}" if item.get("entity_id") else f"{cat}::txt::{item['norm_text']}"
+                if ent_key not in entity_index_map:
+                    category_counters[cat] = category_counters.get(cat, 0) + 1
+                    entity_index_map[ent_key] = f"{cat}_{category_counters[cat]}"
 
         merged_intervals: List[Dict[str, Any]] = []
         for item in valid_intervals:
+            cat = item["type"]
+            ent_key = f"{cat}::ent::{item['entity_id']}" if item.get("entity_id") else f"{cat}::txt::{item['norm_text']}"
+            indexed_label = entity_index_map.get(ent_key, cat)
             if not merged_intervals:
                 merged_intervals.append({
                     "start": item["start"],
                     "end": item["end"],
                     "types": [item["type"]],
+                    "indexed_labels": [indexed_label],
                     "ids": [item["id"]],
                 })
             else:
@@ -269,12 +303,15 @@ class RedactionService:
                     prev["end"] = max(prev["end"], item["end"])
                     if item["type"] not in prev["types"]:
                         prev["types"].append(item["type"])
+                    if indexed_label not in prev["indexed_labels"]:
+                        prev["indexed_labels"].append(indexed_label)
                     prev["ids"].append(item["id"])
                 else:
                     merged_intervals.append({
                         "start": item["start"],
                         "end": item["end"],
                         "types": [item["type"]],
+                        "indexed_labels": [indexed_label],
                         "ids": [item["id"]],
                     })
 
@@ -283,7 +320,12 @@ class RedactionService:
 
         sanitized_chars = list(canonical_text)
         for interval in merged_intervals:
-            placeholder = cls._resolve_placeholder(interval["types"], request)
+            labels = (
+                interval["indexed_labels"]
+                if request.placeholder_style == PlaceholderStyle.ENTITY_INDEXED
+                else interval["types"]
+            )
+            placeholder = cls._resolve_placeholder(labels, request)
             start = interval["start"]
             end = interval["end"]
             sanitized_chars[start:end] = list(placeholder)
@@ -296,8 +338,16 @@ class RedactionService:
         session_dir: Path,
         output_pdf_path: Optional[Path] = None,
         approved_candidates: Optional[List[Candidate]] = None,
+        all_candidates: Optional[List[Candidate]] = None,
     ) -> None:
-        """Physically redact approved text from original PDF using PyMuPDF."""
+        """Physically redact approved text from original PDF using PyMuPDF.
+
+        Occurrence-Safety Invariant:
+        - Never redact an occurrence solely because its text matches an approved candidate when
+          coordinate mappings exist or when rejected/pending occurrences share the text.
+        - Preserve rejected and pending occurrences, including identical strings on the same page.
+        - Fail closed (raise ValueError) if exact occurrence coordinates cannot be reliably established.
+        """
         if output_pdf_path is None:
             output_pdf_path = session_dir / "sanitized.pdf"
         if approved_candidates is None:
@@ -311,50 +361,138 @@ class RedactionService:
 
         # Load coordinate mappings if present
         coords_path = session_dir / "coordinates.json"
+        has_coord_file = coords_path.exists()
         coords_list: List[CoordinateSpan] = []
-        if coords_path.exists():
+        if has_coord_file:
             try:
                 raw_coords = json.loads(coords_path.read_text(encoding="utf-8"))
                 coords_list = [CoordinateSpan(**item) for item in raw_coords]
             except Exception as exc:
-                logger.warning("Failed to load coordinates.json: %s", exc)
+                doc.close()
+                raise ValueError(f"Corrupted coordinates.json; failing closed: {exc}") from exc
+
+        # Load all_candidates to identify rejected/pending spans that MUST be preserved
+        if all_candidates is None:
+            cands_path = session_dir / "candidates.json"
+            if cands_path.exists():
+                try:
+                    raw_cands = json.loads(cands_path.read_text(encoding="utf-8"))
+                    all_candidates = [Candidate(**c) for c in raw_cands]
+                except Exception:
+                    all_candidates = list(approved_candidates)
+            else:
+                all_candidates = list(approved_candidates)
+
+        preserved_candidates = [
+            c for c in all_candidates
+            if c.review_status in ("REJECTED", "PENDING")
+        ]
+
+        # Build per-page list of preserved bounding boxes that must NEVER be redacted
+        preserved_rects_by_page: Dict[int, List[pymupdf.Rect]] = {}
+        for p_cand in preserved_candidates:
+            p_page = getattr(p_cand, "page_number", None)
+            if coords_list:
+                for c in coords_list:
+                    if (p_page is None or c.page_number == p_page) and not (
+                        c.char_end <= p_cand.start or c.char_start >= p_cand.end
+                    ):
+                        preserved_rects_by_page.setdefault(c.page_number, []).append(
+                            pymupdf.Rect(c.bbox[0], c.bbox[1], c.bbox[2], c.bbox[3])
+                        )
+            if p_cand.bbox and len(p_cand.bbox) == 4 and p_page is not None:
+                preserved_rects_by_page.setdefault(p_page, []).append(
+                    pymupdf.Rect(p_cand.bbox[0], p_cand.bbox[1], p_cand.bbox[2], p_cand.bbox[3])
+                )
+
+        # Track which approved candidates were matched in stream, widgets, links, metadata, or TOC
+        matched_candidate_ids: Set[str] = set()
+
+        # Check metadata / XMP / TOC upfront so metadata-only candidates are recognized
+        meta_dict = doc.metadata or {}
+        combined_meta_lower = " ".join(str(v) for v in meta_dict.values() if v).casefold()
+        try:
+            xml_meta_lower = (doc.get_xml_metadata() or "").casefold()
+        except Exception:
+            xml_meta_lower = ""
+
+        for cand in approved_candidates:
+            clean_c = cand.text.strip().casefold()
+            if clean_c and (clean_c in combined_meta_lower or clean_c in xml_meta_lower):
+                matched_candidate_ids.add(cand.candidate_id)
 
         try:
             for page_idx in range(doc.page_count):
                 page = doc[page_idx]
                 page_num = page_idx + 1
+                page_preserved_rects = preserved_rects_by_page.get(page_num, [])
 
                 for cand in approved_candidates:
                     clean_text = cand.text.strip()
                     if not clean_text:
                         continue
 
-                    # Strategy A: Use pre-extracted coordinate spans matching this candidate on this page
                     matched_rects: List[pymupdf.Rect] = []
                     cand_page = getattr(cand, "page_number", None)
 
+                    # Strategy A: Authoritative offset-to-coordinate mapping
                     if cand_page is None or cand_page == page_num:
-                        overlapping_coords = [
-                            c for c in coords_list
-                            if c.page_number == page_num
-                            and not (c.char_end <= cand.start or c.char_start >= cand.end)
-                        ]
-                        for c in overlapping_coords:
-                            # Add 0.5pt padding to encompass font ascenders and descenders
-                            r = pymupdf.Rect(
-                                c.bbox[0] - 0.5,
-                                c.bbox[1] - 0.5,
-                                c.bbox[2] + 0.5,
-                                c.bbox[3] + 0.5,
-                            )
-                            matched_rects.append(r)
+                        if coords_list:
+                            overlapping_coords = [
+                                c for c in coords_list
+                                if c.page_number == page_num
+                                and not (c.char_end <= cand.start or c.char_start >= cand.end)
+                            ]
+                            for c in overlapping_coords:
+                                r = pymupdf.Rect(
+                                    c.bbox[0] - 0.5,
+                                    c.bbox[1] - 0.5,
+                                    c.bbox[2] + 0.5,
+                                    c.bbox[3] + 0.5,
+                                )
+                                matched_rects.append(r)
 
-                    # Strategy B: If no coordinate spans found (e.g. headers/footers), use text search
-                    if not matched_rects:
+                        if not matched_rects and cand.bbox and len(cand.bbox) == 4:
+                            if cand_page == page_num or (cand_page is None and doc.page_count == 1):
+                                r = pymupdf.Rect(
+                                    cand.bbox[0] - 0.5,
+                                    cand.bbox[1] - 0.5,
+                                    cand.bbox[2] + 0.5,
+                                    cand.bbox[3] + 0.5,
+                                )
+                                matched_rects.append(r)
+
+                    # Strategy B: Only permitted when no coordinates.json exists (synthetic unit tests),
+                    # and strictly blocked if any preserved candidate shares/overlaps the surface string
+                    # without disambiguating coordinates.
+                    if not matched_rects and not has_coord_file:
+                        if cand_page is not None and cand_page != page_num:
+                            continue
+
+                        clean_lower = clean_text.casefold()
+                        ambiguous_preserved = [
+                            p for p in preserved_candidates
+                            if (clean_lower in p.text.strip().casefold() or p.text.strip().casefold() in clean_lower)
+                            and not (p.bbox and len(p.bbox) == 4 and p.page_number is not None)
+                        ]
+                        if ambiguous_preserved:
+                            raise ValueError(
+                                f"Occurrence-safety violation: cannot disambiguate approved candidate "
+                                f"'{cand.candidate_id}' from preserved occurrence without coordinate mappings."
+                            )
+
                         search_rects = page.search_for(clean_text)
                         for sr in search_rects:
-                            r = pymupdf.Rect(sr.x0 - 0.5, sr.y0 - 0.5, sr.x1 + 0.5, sr.y1 + 0.5)
-                            matched_rects.append(r)
+                            # Never redact a rect that overlaps with a preserved candidate's rect
+                            overlaps_preserved = any(
+                                sr.intersects(pr) for pr in page_preserved_rects
+                            )
+                            if not overlaps_preserved:
+                                r = pymupdf.Rect(sr.x0 - 0.5, sr.y0 - 0.5, sr.x1 + 0.5, sr.y1 + 0.5)
+                                matched_rects.append(r)
+
+                    if matched_rects:
+                        matched_candidate_ids.add(cand.candidate_id)
 
                     # Add actual redaction annotations
                     for rect in matched_rects:
@@ -367,6 +505,7 @@ class RedactionService:
                         if cand.text.strip().casefold() in field_val.casefold():
                             widget.field_value = "[REDACTED]"
                             widget.update()
+                            matched_candidate_ids.add(cand.candidate_id)
 
                 # Sanitize links with URIs matching approved PII
                 links_to_delete = []
@@ -376,15 +515,50 @@ class RedactionService:
                         clean_c = cand.text.strip().casefold()
                         if len(clean_c) >= 3 and clean_c in uri:
                             links_to_delete.append(link)
+                            matched_candidate_ids.add(cand.candidate_id)
                             break
                 for lk in links_to_delete:
                     page.delete_link(lk)
 
-                # Physically delete text characters and image bytes from the content stream
+                # Physically delete text characters from the content stream
                 page.apply_redactions(images=pymupdf.PDF_REDACT_IMAGE_NONE)
 
-            # Scrub document metadata dictionaries
+            # Scrub document TOC / bookmark outlines containing approved PII
+            try:
+                toc = doc.get_toc()
+                if toc:
+                    toc_modified = False
+                    for item in toc:
+                        if len(item) >= 2 and isinstance(item[1], str):
+                            title_str = item[1]
+                            for cand in approved_candidates:
+                                clean_c = cand.text.strip()
+                                if len(clean_c) >= 2 and clean_c.casefold() in title_str.casefold():
+                                    pat = re.compile(re.escape(clean_c), re.IGNORECASE)
+                                    title_str = pat.sub("[REDACTED]", title_str)
+                                    toc_modified = True
+                                    matched_candidate_ids.add(cand.candidate_id)
+                            item[1] = title_str
+                    if toc_modified:
+                        doc.set_toc(toc)
+            except Exception as exc:
+                logger.warning("Failed to scrub PDF TOC bookmarks: %s", exc)
+
+            # Fail closed if coordinate mapping file existed and an approved candidate could not be located
+            if has_coord_file:
+                for cand in approved_candidates:
+                    if cand.text.strip() and cand.candidate_id not in matched_candidate_ids:
+                        raise ValueError(
+                            f"Exact PDF occurrence coordinates could not be established for approved candidate "
+                            f"'{cand.candidate_id}'; failing closed."
+                        )
+
+            # Scrub document metadata dictionaries and XMP XML metadata stream
             doc.set_metadata({})
+            try:
+                doc.del_xml_metadata()
+            except Exception:
+                pass
 
             # Delete embedded file attachments
             if doc.embfile_count() > 0:

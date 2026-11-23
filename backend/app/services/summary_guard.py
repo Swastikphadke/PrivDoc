@@ -188,8 +188,12 @@ class SummaryGuard:
         if not summary_text:
             return True, None
 
-        # Strip standard placeholders so they do not trigger false positive regex/NER
-        scrubbed = re.sub(r"\[(PERSON|EMAIL|PHONE|ADDRESS|ID_LIKE|REDACTED|CONFIDENTIAL)\]", " ", summary_text)
+        # Strip standard and entity-indexed placeholders (e.g. [PERSON], [PERSON_1], [EMAIL_2]) so they do not trigger false positive regex/NER
+        scrubbed = re.sub(
+            r"\[(?:PERSON|EMAIL|PHONE|ADDRESS|ID_LIKE|REDACTED|CONFIDENTIAL)(?:_\d+)?(?:/(?:PERSON|EMAIL|PHONE|ADDRESS|ID_LIKE)(?:_\d+)?)*\]",
+            " ",
+            summary_text,
+        )
 
         # 1. Deterministic Regex Detection
         regex_candidates = RegexDetector.detect(scrubbed)
@@ -355,7 +359,13 @@ class SummaryGuard:
                 return False, "Summary contains unsupported date or numerical figure not present in sanitized text."
 
         # 2. Extract numerical figures and monetary amounts from summary text and check source grounding
-        numbers_in_summary = re.findall(r"\b(?:\$|€|£|₹)?\d+(?:[.,]\d+)*(?:\s*(?:%|percent|million|billion|thousand|k|cr|lakh))?\b", combined_text, re.IGNORECASE)
+        # Strip entity-indexed placeholders first so the index in [PERSON_1] is not treated as a numerical figure
+        combined_without_placeholders = re.sub(
+            r"\[(?:PERSON|EMAIL|PHONE|ADDRESS|ID_LIKE|REDACTED|CONFIDENTIAL)(?:_\d+)?\]",
+            " ",
+            combined_text,
+        )
+        numbers_in_summary = re.findall(r"\b(?:\$|€|£|₹)?\d+(?:[.,]\d+)*(?:\s*(?:%|percent|million|billion|thousand|k|cr|lakh))?\b", combined_without_placeholders, re.IGNORECASE)
         for num in numbers_in_summary:
             num_clean = num.strip().lower()
             # Ignore standard single digit numbers 0-9
@@ -395,8 +405,14 @@ class SummaryGuard:
             return True, None
 
         suspicious_patterns = [
-            r"<\/?untrusted_document_content>",
-            r"\bignore\s+(?:all\s+)?previous\s+instructions\b",
+            r"<\/?\s*untrusted_document_content[^>]*>",
+            r"\[delimiter_neutralized\]",
+            r"\[role_marker_neutralized\]",
+            r"<\|im_start\|>|<\|im_end\|>|<<sys>>|\[inst\]",
+            r"\bignore\s+(?:all\s+)?previous\s+(?:safety\s+)?(?:instructions|directives)\b",
+            r"\boverride\s+previous\s+safety\s+directives\b",
+            r"\bdisregard\s+(?:all\s+)?(?:previous|prior)\s+(?:instructions|directives|rules)\b",
+            r"\b(?:reveal|output)\s+all\s+(?:redacted|personal)\s+(?:names|entities|pii)\b",
             r"\byou\s+are\s+now\s+a\s+helpful\b",
             r"\bsystem\s+prompt\b",
             r"\bpwned\b",
@@ -431,7 +447,15 @@ class SummaryGuard:
         checks: List[SummaryVerificationCheck] = []
         mandatory_checks_passed = True
 
-        combined_summary = f"{summary_content.summary_text} {' '.join(summary_content.key_points)} {' '.join(summary_content.important_findings)}"
+        combined_summary = " ".join(
+            [
+                summary_content.summary_text,
+                " ".join(summary_content.key_points),
+                " ".join(summary_content.important_findings),
+                " ".join(summary_content.relevant_dates_or_figures),
+                " ".join(summary_content.source_evidence),
+            ]
+        )
 
         # Extract sensitive references if provided
         approved_values: List[str] = []

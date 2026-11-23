@@ -275,11 +275,16 @@ def main():
     print(f"  Complete E2E (TXT):  {t_e2e_txt * 1000:.2f} ms ({t_e2e_txt:.3f} s)")
     print(f"  Complete E2E (PDF):  {t_e2e_pdf * 1000:.2f} ms ({t_e2e_pdf:.3f} s)")
 
-    # 10. Peak RAM
+    # 10. Memory Profile (Distinguishing Python Heap Allocation vs OS Process RSS)
     current_mem, peak_mem = tracemalloc.get_traced_memory()
     tracemalloc.stop()
     peak_ram_mb = round(peak_mem / (1024 * 1024), 2)
-    print(f"  Peak RAM (tracemalloc): {peak_ram_mb:.2f} MB")
+    proc = psutil.Process()
+    process_rss_mb = round(proc.memory_info().rss / (1024 * 1024), 2)
+    cpu_pct = psutil.cpu_percent(interval=0.1)
+    print(f"  Peak Python Heap (tracemalloc): {peak_ram_mb:.2f} MB")
+    print(f"  Actual OS Process Memory (RSS): {process_rss_mb:.2f} MB")
+    print(f"  Host CPU Utilization:           {cpu_pct:.1f} %")
 
     # Cleanup test sessions
     cleanup_session(doc_id_txt)
@@ -298,6 +303,9 @@ def main():
             "physical_cores": cores_phys,
             "logical_cores": cores_log,
             "total_ram_gb": ram_gb,
+            "python_version": sys.version.split()[0],
+            "slm_configured_model": getattr(settings, "SLM_MODEL_NAME", "qwen2.5:1.5b-instruct"),
+            "slm_runtime_available": ModelService.check_availability(),
         },
         "latencies_ms": {
             "cold_startup_ms": round(cold_startup_s * 1000, 2),
@@ -317,8 +325,11 @@ def main():
             "complete_e2e_pdf_pipeline_ms": round(t_e2e_pdf * 1000, 2),
         },
         "memory_profile": {
+            "python_heap_peak_tracemalloc_mb": peak_ram_mb,
+            "os_process_rss_mb": process_rss_mb,
+            "host_cpu_percent": cpu_pct,
             "peak_ram_mb": peak_ram_mb,
-        }
+        },
     }
 
     out_file = backend_dir / "performance_profile.json"

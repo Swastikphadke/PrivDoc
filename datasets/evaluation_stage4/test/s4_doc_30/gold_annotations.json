@@ -1,0 +1,45 @@
+{
+  "document_id": "s4_doc_30",
+  "split": "test",
+  "difficulty_class": "test_ambiguous_initial_kapoor",
+  "is_synthetic": true,
+  "text_length": 182,
+  "total_annotations": 5,
+  "annotations": [
+    {
+      "start": 40,
+      "end": 55,
+      "text": "Benjamin Kapoor",
+      "type": "PERSON",
+      "entity_id": "t_ben_k"
+    },
+    {
+      "start": 60,
+      "end": 74,
+      "text": "Bhavesh Kapoor",
+      "type": "PERSON",
+      "entity_id": "t_bhav_k"
+    },
+    {
+      "start": 96,
+      "end": 105,
+      "text": "B. Kapoor",
+      "type": "PERSON",
+      "entity_id": "t_bkapoor_ambig"
+    },
+    {
+      "start": 130,
+      "end": 146,
+      "text": "Alistair MacLeod",
+      "type": "PERSON",
+      "entity_id": "t_alistair"
+    },
+    {
+      "start": 150,
+      "end": 180,
+      "text": "Flat 9A, Bandra, Mumbai 400050",
+      "type": "ADDRESS",
+      "entity_id": "t_mumbai"
+    }
+  ]
+}

@@ -1,0 +1,45 @@
+{
+  "document_id": "s4_doc_32",
+  "split": "test",
+  "difficulty_class": "test_hard_lowercase_and_custom_id",
+  "is_synthetic": true,
+  "text_length": 182,
+  "total_annotations": 5,
+  "annotations": [
+    {
+      "start": 40,
+      "end": 51,
+      "text": "rohit verma",
+      "type": "PERSON",
+      "entity_id": "t_rverma_lc"
+    },
+    {
+      "start": 82,
+      "end": 91,
+      "text": "BDG-99201",
+      "type": "ID_LIKE",
+      "entity_id": "t_bdg992"
+    },
+    {
+      "start": 96,
+      "end": 105,
+      "text": "EMP-44910",
+      "type": "ID_LIKE",
+      "entity_id": "t_emp449"
+    },
+    {
+      "start": 123,
+      "end": 151,
+      "text": "rohit.verma@devops-core.test",
+      "type": "EMAIL",
+      "entity_id": "t_rv_mail"
+    },
+    {
+      "start": 165,
+      "end": 180,
+      "text": "(044) 2811-4090",
+      "type": "PHONE",
+      "entity_id": "t_rv_ph"
+    }
+  ]
+}

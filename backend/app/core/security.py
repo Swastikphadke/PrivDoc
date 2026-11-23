@@ -3,6 +3,7 @@
 import os
 import shutil
 import time
+import uuid
 from pathlib import Path
 from typing import Set
 from fastapi import HTTPException, status
@@ -11,6 +12,24 @@ from app.core.config import settings
 
 ALLOWED_EXTENSIONS: Set[str] = {".txt", ".pdf"}
 PDF_MAGIC_BYTES: bytes = b"%PDF-"
+
+
+def atomic_write_text(target_path: Path, content: str, encoding: str = "utf-8") -> None:
+    """Atomically write text content to target_path using a temporary file and os.replace."""
+    target_path.parent.mkdir(parents=True, exist_ok=True)
+    tmp_path = target_path.with_name(f".{target_path.name}.{uuid.uuid4().hex[:8]}.tmp")
+    try:
+        tmp_path.write_text(content, encoding=encoding)
+        try:
+            tmp_path.replace(target_path)
+        except PermissionError:
+            target_path.write_text(content, encoding=encoding)
+    finally:
+        if tmp_path.exists():
+            try:
+                tmp_path.unlink()
+            except Exception:
+                pass
 
 
 def validate_local_host(host: str) -> None:
@@ -117,11 +136,18 @@ def cleanup_session(document_id: str) -> bool:
 
 
 def cleanup_expired_sessions(max_age_hours: int = 24) -> int:
-    """Purge temporary session directories older than max_age_hours.
+    """Purge temporary session directories and associated DB records older than max_age_hours.
 
     Returns:
         Count of purged session directories.
     """
+    from app.database.session import delete_document_record, purge_expired_encrypted_aliases
+
+    try:
+        purge_expired_encrypted_aliases()
+    except Exception:
+        pass
+
     if not settings.SESSIONS_DIR.exists():
         return 0
 
@@ -134,7 +160,12 @@ def cleanup_expired_sessions(max_age_hours: int = 24) -> int:
             try:
                 mtime = item.stat().st_mtime
                 if (now - mtime) > max_age_seconds:
+                    doc_id = item.name
                     shutil.rmtree(item, ignore_errors=True)
+                    try:
+                        delete_document_record(doc_id)
+                    except Exception:
+                        pass
                     cleaned += 1
             except Exception:
                 continue

@@ -13,14 +13,17 @@ When denominators are zero (e.g. TP + FP == 0), metrics return 0.0 with explicit
 `has_zero_denominator=True` flags, never silently returning 1.0 or throwing ZeroDivisionError.
 """
 
+import hashlib
 import json
 import logging
+import statistics
 import time
 import tracemalloc
 from dataclasses import asdict, dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Set, Tuple
+import psutil
 
 logger = logging.getLogger(__name__)
 
@@ -65,15 +68,25 @@ class PairwiseEntityScore:
     pairwise_fp: int = 0
     pairwise_fn: int = 0
     pairwise_tn: int = 0
+    gold_positive_pairs: int = 0
+    gold_negative_pairs: int = 0
+    predicted_positive_links: int = 0
     precision: float = 0.0
     recall: float = 0.0
     f1: float = 0.0
     false_merge_rate: float = 0.0
+    false_discovery_rate: float = 0.0
     missed_link_rate: float = 0.0
+    ambiguous_safeguard_rate: float = 1.0
 
     def compute(self) -> None:
+        self.gold_positive_pairs = self.pairwise_tp + self.pairwise_fn
+        self.gold_negative_pairs = self.pairwise_fp + self.pairwise_tn
+        self.predicted_positive_links = self.pairwise_tp + self.pairwise_fp
+
         p_denom = self.pairwise_tp + self.pairwise_fp
         self.precision = round(self.pairwise_tp / p_denom, 4) if p_denom > 0 else 0.0
+        self.false_discovery_rate = round(self.pairwise_fp / p_denom, 4) if p_denom > 0 else 0.0
 
         r_denom = self.pairwise_tp + self.pairwise_fn
         self.recall = round(self.pairwise_tp / r_denom, 4) if r_denom > 0 else 0.0
@@ -96,26 +109,38 @@ class RedactionVerificationScore:
     total_rejected_spans: int = 0
     rejected_preserved_count: int = 0
     preserved_rejected_rate: float = 1.0
+    linked_entity_completeness_rate: float = 1.0
+    pdf_metadata_clean_rate: float = 1.0
     verification_failure_detection_rate: float = 1.0
 
 
 @dataclass
 class SummaryVerificationScore:
-    """Privacy guard and summarization evaluation metrics."""
+    """Privacy guard and summarization evaluation metrics (separating privacy safety from usefulness)."""
     total_summaries_evaluated: int = 0
+    benign_docs_evaluated: int = 0
+    adversarial_docs_evaluated: int = 0
     direct_leakages_detected: int = 0
     direct_leakage_rate: float = 0.0
+    alias_leakage_rate: float = 0.0
     pii_redetected_count: int = 0
     quasi_identifier_flags: int = 0
     suppression_correctness_rate: float = 1.0
+    useful_summaries_count: int = 0
+    summary_usefulness_rate: float = 1.0
+    evidence_traceability_rate: float = 1.0
 
 
 @dataclass
 class PerformanceProfile:
-    """Latency and peak RAM usage measurements."""
+    """Latency and memory measurements (distinguishing Python heap allocation from OS Process RSS)."""
     total_latency_seconds: float = 0.0
     avg_latency_per_doc_seconds: float = 0.0
-    peak_memory_mb: float = 0.0
+    p50_latency_ms: float = 0.0
+    p95_latency_ms: float = 0.0
+    p99_latency_ms: float = 0.0
+    peak_memory_mb: float = 0.0       # tracemalloc Python heap allocation delta
+    process_rss_mb: float = 0.0       # Actual OS process Resident Set Size (RSS)
     total_chars_processed: int = 0
     total_pages_processed: int = 0
 
@@ -284,14 +309,16 @@ class EvaluationService:
         all_pred: List[Dict[str, Any]] = []
         all_gold_entities: List[Dict[str, Any]] = []
         all_pred_entities: List[Dict[str, Any]] = []
+        doc_latencies_ms: List[float] = []
 
         total_chars = 0
         total_pages = 0
 
+        proc = psutil.Process()
         tracemalloc.start()
         start_time = time.perf_counter()
 
-        for doc_dir in doc_dirs:
+        for doc_dir in sorted(doc_dirs):
             input_txt = doc_dir / "document.txt"
             gold_json = doc_dir / "gold_annotations.json"
 
@@ -306,11 +333,13 @@ class EvaluationService:
             doc_id = doc_dir.name
 
             # Run detection engine
+            t_doc0 = time.perf_counter()
             detections = DetectionService.detect_from_text(
                 text=text,
                 document_id=doc_id,
                 resolve_entities=True,
             )
+            doc_latencies_ms.append((time.perf_counter() - t_doc0) * 1000.0)
 
             # Format predictions
             # Format predictions: both document-scoped (for proper within-document coreference)
@@ -376,6 +405,12 @@ class EvaluationService:
         elapsed = time.perf_counter() - start_time
         current_mem, peak_mem = tracemalloc.get_traced_memory()
         tracemalloc.stop()
+        rss_mb = round(proc.memory_info().rss / (1024 * 1024), 2)
+
+        sorted_lat = sorted(doc_latencies_ms) if doc_latencies_ms else [0.0]
+        p50 = sorted_lat[int(0.50 * (len(sorted_lat) - 1))]
+        p95 = sorted_lat[int(0.95 * (len(sorted_lat) - 1))]
+        p99 = sorted_lat[int(0.99 * (len(sorted_lat) - 1))]
 
         # Compute PII detection metrics
         micro, cats = cls.evaluate_detections(all_gold, all_pred, matching_mode=matching_mode)
@@ -408,12 +443,220 @@ class EvaluationService:
         report.performance = PerformanceProfile(
             total_latency_seconds=round(elapsed, 4),
             avg_latency_per_doc_seconds=round(elapsed / max(1, len(doc_dirs)), 4),
+            p50_latency_ms=round(p50, 2),
+            p95_latency_ms=round(p95, 2),
+            p99_latency_ms=round(p99, 2),
             peak_memory_mb=round(peak_mem / (1024 * 1024), 2),
+            process_rss_mb=rss_mb,
             total_chars_processed=total_chars,
             total_pages_processed=total_pages,
         )
 
         return report
+
+    @classmethod
+    def verify_dataset_integrity(cls, dataset_dir: Path) -> Dict[str, Any]:
+        """Verify split isolation, SHA-256 integrity, and zero cross-split template/entity leakage."""
+        splits_info: Dict[str, Any] = {}
+        split_entities: Dict[str, Set[str]] = {}
+        split_texts: Dict[str, Set[str]] = {}
+
+        for sp in ("dev", "val", "test"):
+            sp_dir = dataset_dir / sp
+            if not sp_dir.exists():
+                continue
+            h = hashlib.sha256()
+            for f in sorted(sp_dir.rglob("*.*")):
+                h.update(f.name.encode("utf-8"))
+                h.update(f.read_bytes())
+
+            doc_dirs = sorted([d for d in sp_dir.iterdir() if d.is_dir()])
+            total_anns = 0
+            neg_docs = 0
+            cat_counts: Dict[str, int] = {}
+            ents: Set[str] = set()
+            texts: Set[str] = set()
+
+            for d in doc_dirs:
+                txt = (d / "document.txt").read_text(encoding="utf-8")
+                texts.add(hashlib.sha256(txt.strip().encode("utf-8")).hexdigest())
+                gold = json.loads((d / "gold_annotations.json").read_text(encoding="utf-8"))
+                anns = gold.get("annotations", [])
+                if not anns:
+                    neg_docs += 1
+                total_anns += len(anns)
+                for a in anns:
+                    cat = a["type"]
+                    cat_counts[cat] = cat_counts.get(cat, 0) + 1
+                    ents.add(a["text"].strip().casefold())
+
+            split_entities[sp] = ents
+            split_texts[sp] = texts
+            splits_info[sp] = {
+                "document_count": len(doc_dirs),
+                "negative_document_count": neg_docs,
+                "total_annotations": total_anns,
+                "category_counts": cat_counts,
+                "sha256": h.hexdigest(),
+            }
+
+        cross_split_entity_overlaps: Dict[str, List[str]] = {}
+        cross_split_doc_overlaps: Dict[str, int] = {}
+        for a, b in (("dev", "val"), ("dev", "test"), ("val", "test")):
+            if a in split_entities and b in split_entities:
+                cross_split_entity_overlaps[f"{a}_vs_{b}"] = sorted(list(split_entities[a] & split_entities[b]))
+                cross_split_doc_overlaps[f"{a}_vs_{b}"] = len(split_texts[a] & split_texts[b])
+
+        return {
+            "dataset_dir": str(dataset_dir),
+            "splits": splits_info,
+            "cross_split_entity_overlaps": cross_split_entity_overlaps,
+            "cross_split_duplicate_docs": cross_split_doc_overlaps,
+        }
+
+    @classmethod
+    def compare_detection_strategies(
+        cls,
+        dataset_dir: Path,
+        split: str = "test",
+    ) -> Dict[str, Any]:
+        """Compare Regex-Only, NER-Only, Improved Hybrid (SLM Disabled), and Improved Hybrid (SLM Enabled)."""
+        from app.detectors.regex_detector import RegexDetector
+        from app.detectors.ner_detector import NERDetector
+        from app.detectors.slm_detector import SLMDetector
+        from app.services.detection_service import DetectionService
+
+        sp_dir = dataset_dir / split
+        doc_dirs = sorted([d for d in sp_dir.iterdir() if d.is_dir()])
+
+        strategies = ["regex_only", "ner_only", "hybrid_no_slm", "hybrid_with_slm"]
+        gold_all: List[Dict[str, Any]] = []
+        preds_by_strat: Dict[str, List[Dict[str, Any]]] = {s: [] for s in strategies}
+        latencies_by_strat: Dict[str, List[float]] = {s: [] for s in strategies}
+
+        for d in doc_dirs:
+            doc_id = d.name
+            text = (d / "document.txt").read_text(encoding="utf-8")
+            gold = json.loads((d / "gold_annotations.json").read_text(encoding="utf-8"))
+            for g in gold.get("annotations", []):
+                gold_all.append(
+                    {
+                        "start": g["start"],
+                        "end": g["end"],
+                        "type": f"{doc_id}::{g['type']}",
+                        "raw_type": g["type"],
+                        "text": g["text"],
+                        "doc_id": doc_id,
+                    }
+                )
+
+            # 1. Regex-Only
+            t0 = time.perf_counter()
+            reg_raw = RegexDetector.detect(text, doc_id)
+            reg_merged = DetectionService.merge_candidates(reg_raw, text, doc_id)
+            latencies_by_strat["regex_only"].append((time.perf_counter() - t0) * 1000.0)
+            for c in reg_merged:
+                preds_by_strat["regex_only"].append(
+                    {"start": c.start, "end": c.end, "type": f"{doc_id}::{c.type}", "raw_type": c.type, "text": c.text}
+                )
+
+            # 2. NER-Only
+            t0 = time.perf_counter()
+            ner_raw = NERDetector.detect(text, doc_id)
+            ner_merged = DetectionService.merge_candidates(ner_raw, text, doc_id)
+            latencies_by_strat["ner_only"].append((time.perf_counter() - t0) * 1000.0)
+            for c in ner_merged:
+                preds_by_strat["ner_only"].append(
+                    {"start": c.start, "end": c.end, "type": f"{doc_id}::{c.type}", "raw_type": c.type, "text": c.text}
+                )
+
+            # 3. Improved Hybrid (SLM Disabled)
+            t0 = time.perf_counter()
+            hyb_raw = RegexDetector.detect(text, doc_id) + NERDetector.detect(text, doc_id)
+            hyb_merged = DetectionService.merge_candidates(hyb_raw, text, doc_id)
+            latencies_by_strat["hybrid_no_slm"].append((time.perf_counter() - t0) * 1000.0)
+            for c in hyb_merged:
+                preds_by_strat["hybrid_no_slm"].append(
+                    {"start": c.start, "end": c.end, "type": f"{doc_id}::{c.type}", "raw_type": c.type, "text": c.text}
+                )
+
+            # 4. Improved Hybrid (SLM Enabled — calls live local SLM if available)
+            t0 = time.perf_counter()
+            slm_raw = RegexDetector.detect(text, doc_id) + NERDetector.detect(text, doc_id)
+            slm_extra, _ = SLMDetector.detect_and_suggest(doc_id, text, slm_raw)
+            slm_merged = DetectionService.merge_candidates(slm_raw + slm_extra, text, doc_id)
+            latencies_by_strat["hybrid_with_slm"].append((time.perf_counter() - t0) * 1000.0)
+            for c in slm_merged:
+                preds_by_strat["hybrid_with_slm"].append(
+                    {"start": c.start, "end": c.end, "type": f"{doc_id}::{c.type}", "raw_type": c.type, "text": c.text}
+                )
+
+        results: Dict[str, Any] = {}
+        for strat in strategies:
+            exact_micro, exact_doc_cats = cls.evaluate_detections(gold_all, preds_by_strat[strat], "exact")
+            overlap_micro, _ = cls.evaluate_detections(gold_all, preds_by_strat[strat], "overlap")
+
+            # Aggregate per-category scores across documents
+            cat_agg: Dict[str, DetectionScore] = {}
+            for doc_cat, sc in exact_doc_cats.items():
+                raw_cat = doc_cat.split("::", 1)[1]
+                if raw_cat not in cat_agg:
+                    cat_agg[raw_cat] = DetectionScore()
+                cat_agg[raw_cat].tp += sc.tp
+                cat_agg[raw_cat].fp += sc.fp
+                cat_agg[raw_cat].fn += sc.fn
+            for sc in cat_agg.values():
+                sc.compute()
+
+            macro_p = sum(c.precision for c in cat_agg.values()) / max(1, len(cat_agg))
+            macro_r = sum(c.recall for c in cat_agg.values()) / max(1, len(cat_agg))
+            macro_f1 = (2 * macro_p * macro_r / (macro_p + macro_r)) if (macro_p + macro_r) > 0 else 0.0
+
+            results[strat] = {
+                "exact_micro": asdict(exact_micro),
+                "exact_macro": {
+                    "precision": round(macro_p, 4),
+                    "recall": round(macro_r, 4),
+                    "f1": round(macro_f1, 4),
+                },
+                "overlap_micro": asdict(overlap_micro),
+                "per_category_exact": {k: asdict(v) for k, v in sorted(cat_agg.items())},
+                "avg_latency_ms": round(statistics.mean(latencies_by_strat[strat]), 2) if latencies_by_strat[strat] else 0.0,
+            }
+
+        return results
+
+    @classmethod
+    def collect_error_analysis(cls, dataset_dir: Path, split: str = "test") -> List[Dict[str, Any]]:
+        """Collect exact false-positive and false-negative spans per document for honest error analysis."""
+        from app.services.detection_service import DetectionService
+
+        sp_dir = dataset_dir / split
+        errors: List[Dict[str, Any]] = []
+        for d in sorted([p for p in sp_dir.iterdir() if p.is_dir()]):
+            doc_id = d.name
+            text = (d / "document.txt").read_text(encoding="utf-8")
+            gold = json.loads((d / "gold_annotations.json").read_text(encoding="utf-8")).get("annotations", [])
+            preds = DetectionService.detect_from_text(text, doc_id, resolve_entities=False)
+
+            gold_tuples = {(g["start"], g["end"], g["type"], g["text"]) for g in gold}
+            pred_tuples = {(c.start, c.end, c.type, c.text) for c in preds}
+
+            fps = sorted(list(pred_tuples - gold_tuples))
+            fns = sorted(list(gold_tuples - pred_tuples))
+            if fps or fns:
+                errors.append(
+                    {
+                        "document_id": doc_id,
+                        "false_positives": [
+                            {"start": s, "end": e, "type": t, "text": txt} for (s, e, t, txt) in fps
+                        ],
+                        "false_negatives": [
+                            {"start": s, "end": e, "type": t, "text": txt} for (s, e, t, txt) in fns
+                        ],
+                    }
+                )
+        return errors
 
     @staticmethod
     def format_markdown_report(report: EvaluationReport) -> str:

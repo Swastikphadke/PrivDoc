@@ -18,58 +18,58 @@ describe('SummaryView Component', () => {
   const mockVerifiedSummary = {
     document_id: 'doc_sum_123',
     state: 'VERIFIED',
-    engine_used: 'LOCAL_SLM',
-    model_name: 'qwen2.5:1.5b-instruct',
-    structured_content: {
+    engine_used: 'SLM',
+    content: {
       summary_text: 'The agreement outlines confidential terms between [PERSON] and [PERSON] regarding milestone payments.',
       key_points: ['Milestone payment terms protected', 'Mutual non-disclosure in force'],
       important_findings: ['Deliverables scheduled for Q4', 'Compliance verified'],
-      relevant_dates_and_figures: ['October 14, 2024', '$50,000'],
+      relevant_dates_or_figures: ['October 14, 2024', '$50,000'],
       source_evidence: ['Section 4 confidentiality obligations'],
     },
     verification_report: {
-      overall_passed: true,
+      status: 'PASSED',
       checks: [
-        { check_name: 'DIRECT_LEAKAGE', passed: true, details: 'No direct leakage found' },
-        { check_name: 'ALIAS_AND_VARIANTS', passed: true, details: 'No entity aliases found' },
-        { check_name: 'PII_REDETECTION', passed: true, details: 'Deterministic and NER scans clean' },
-        { check_name: 'QUASI_IDENTIFIERS', passed: true, details: 'Low risk' },
-        { check_name: 'SOURCE_CONSISTENCY', passed: true, details: 'Grounded in sanitized text' },
+        { check_name: 'DIRECT_LEAKAGE', status: 'PASSED', details: 'No direct leakage found' },
+        { check_name: 'ALIAS_VARIANT', status: 'PASSED', details: 'No entity aliases found' },
+        { check_name: 'PII_REDETECTION', status: 'PASSED', details: 'Deterministic and NER scans clean' },
+        { check_name: 'QUASI_IDENTIFIER', status: 'PASSED', details: 'Low risk' },
+        { check_name: 'SOURCE_CONSISTENCY', status: 'PASSED', details: 'Grounded in sanitized text' },
+        { check_name: 'PROMPT_INJECTION_DEFENSE', status: 'PASSED', details: 'Zero prompt injection directives detected' },
       ],
-      issues: [],
+      quasi_assessment: {
+        risk_level: 'LOW',
+        flagged_rules: [],
+        findings: [],
+        disclaimer: 'Quasi-identifier risk evaluation assesses statistical re-identification risk flags based on demographic or contextual co-occurrences; it does not constitute mathematical or legal proof of complete anonymity.',
+      },
       verified_at: '2024-10-14T12:00:00Z',
     },
-    quasi_identifier_assessment: {
-      risk_level: 'LOW',
-      findings: [],
-      disclaimer: 'Quasi-identifier risk evaluation assesses statistical re-identification risk flags based on demographic or contextual co-occurrences; it does not constitute mathematical or legal proof of complete anonymity.',
-    },
-    attempts: 1,
+    retry_count: 0,
+    warning_message: null,
   };
 
   const mockSuppressedSummary = {
     document_id: 'doc_sum_123',
     state: 'SUPPRESSED',
-    engine_used: 'LOCAL_SLM',
-    model_name: 'qwen2.5:1.5b-instruct',
-    suppression_reason: 'Residual PII detected in summary of category PERSON via contextual NER scan.',
-    structured_content: null,
+    engine_used: 'SLM',
+    content: null,
     verification_report: {
-      overall_passed: false,
+      status: 'FAILED',
       checks: [
-        { check_name: 'DIRECT_LEAKAGE', passed: true, details: 'No direct leakage found' },
-        { check_name: 'ALIAS_AND_VARIANTS', passed: true, details: 'No entity aliases found' },
-        { check_name: 'PII_REDETECTION', passed: false, details: 'NER detected category PERSON' },
+        { check_name: 'DIRECT_LEAKAGE', status: 'PASSED', details: 'No direct leakage found' },
+        { check_name: 'ALIAS_VARIANT', status: 'PASSED', details: 'No entity aliases found' },
+        { check_name: 'PII_REDETECTION', status: 'FAILED', details: 'NER detected category PERSON' },
       ],
-      issues: ['NER detected category PERSON'],
+      quasi_assessment: {
+        risk_level: 'MEDIUM',
+        flagged_rules: ['QI-001'],
+        findings: ['QI-001: Demographic co-occurrence detected'],
+        disclaimer: 'Quasi-identifier risk evaluation assesses statistical re-identification risk flags based on demographic or contextual co-occurrences; it does not constitute mathematical or legal proof of complete anonymity.',
+      },
       verified_at: '2024-10-14T12:00:00Z',
     },
-    quasi_identifier_assessment: {
-      risk_level: 'MEDIUM',
-      findings: ['QI-001: Demographic co-occurrence detected'],
-      disclaimer: 'Quasi-identifier risk evaluation assesses statistical re-identification risk flags based on demographic or contextual co-occurrences; it does not constitute mathematical or legal proof of complete anonymity.',
-    },
-    attempts: 3,
+    retry_count: 2,
+    warning_message: 'Residual PII detected in summary of category PERSON via contextual NER scan.',
   };
 
   beforeEach(() => {
@@ -169,5 +169,69 @@ describe('SummaryView Component', () => {
         'Extractive Fallback (SLM Unavailable)'
       );
     });
+  });
+
+  it('renders an actual backend SummaryResponse.model_dump() payload including REQUIRES_REVIEW quasi-identifier warnings', async () => {
+    // Exact JSON payload serialized by backend SummaryService.generate_summary().model_dump(mode="json")
+    const backendModelDumpPayload = {
+      document_id: 'doc_contract_001',
+      state: 'REQUIRES_REVIEW',
+      engine_used: 'EXTRACTIVE_FALLBACK',
+      content: {
+        summary_text: 'The Chief Security Officer in Cybersecurity Operations submitted the incident findings on November 18, 2024 regarding the $250,000 budget allocation.',
+        key_points: [
+          'The Chief Security Officer in Cybersecurity Operations submitted the incident findings on November 18, 2024 regarding the $250,000 budget allocation.',
+        ],
+        important_findings: [
+          'The Chief Security Officer in Cybersecurity Operations submitted the incident findings on November 18, 2024 regarding the $250,000 budget allocation.',
+        ],
+        relevant_dates_or_figures: ['November 18, 2024', '$250,000'],
+        source_evidence: [
+          'The Chief Security Officer in Cybersecurity Operations submitted the incident findings on November 18, 2024 regarding th...',
+        ],
+      },
+      verification_report: {
+        status: 'REQUIRES_REVIEW',
+        checks: [
+          { check_name: 'DIRECT_LEAKAGE', status: 'PASSED', details: 'Zero approved sensitive entity values detected in summary.' },
+          { check_name: 'ALIAS_VARIANT', status: 'PASSED', details: 'Zero known entity variants or initials detected in summary.' },
+          { check_name: 'PII_REDETECTION', status: 'PASSED', details: 'Zero unmasked PII entities detected across regex and contextual scans.' },
+          { check_name: 'QUASI_IDENTIFIER', status: 'WARNING', details: 'High quasi-identifier risk: 2 co-occurrence rule(s) flagged. Manual review required before distribution.' },
+          { check_name: 'SOURCE_CONSISTENCY', status: 'PASSED', details: 'All dates, figures, and facts strictly grounded in sanitized source text.' },
+          { check_name: 'PROMPT_INJECTION_DEFENSE', status: 'PASSED', details: 'Zero prompt injection directives or system boundary artifacts detected.' },
+        ],
+        quasi_assessment: {
+          risk_level: 'HIGH',
+          flagged_rules: ['QI-001', 'QI-004'],
+          findings: [
+            'Rule QI-001 triggered: Co-occurrence of executive role, department, and location or date',
+            'Rule QI-004 triggered: Executive role combined with specific department',
+          ],
+          disclaimer: 'Quasi-identifier risk evaluation assesses statistical re-identification risk flags based on demographic or contextual co-occurrences; it does not constitute mathematical or legal proof of complete anonymity.',
+        },
+        verified_at: '2026-11-23T14:20:00+00:00',
+      },
+      retry_count: 0,
+      warning_message: 'Summary flagged for human review: plausible quasi-identifier co-occurrences were detected. Quasi-identifier flags reflect potential statistical re-identification risk and do not guarantee anonymity.',
+    };
+
+    vi.spyOn(api, 'getDocumentMetadata').mockResolvedValue(mockDocMeta);
+    vi.spyOn(api, 'getSummary').mockResolvedValue(backendModelDumpPayload);
+
+    renderView('doc_contract_001');
+
+    await waitFor(() => {
+      expect(screen.getByTestId('summary-state-badge').textContent).toContain('REQUIRES REVIEW');
+    });
+
+    expect(screen.getByTestId('summary-narrative-text').textContent).toContain('$250,000 budget allocation');
+    expect(screen.getByText('November 18, 2024')).toBeDefined();
+    expect(screen.getByText('$250,000')).toBeDefined();
+    expect(screen.getByText('Risk Level: HIGH')).toBeDefined();
+    expect(screen.getByText(/Rule QI-001 triggered/i)).toBeDefined();
+    expect(screen.getByTestId('requires-review-warning-banner').textContent).toContain(
+      'Summary flagged for human review'
+    );
+    expect(screen.getByTestId('quasi-disclaimer').textContent).toContain('does not constitute mathematical or legal proof');
   });
 });

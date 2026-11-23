@@ -542,3 +542,35 @@ def test_missing_session_files_handled_gracefully(client):
     finally:
         from app.database.session import delete_document_record
         delete_document_record(ghost_doc_id)
+
+
+def test_stage1_p0_expired_session_cleanup_and_atomic_write(tmp_path):
+    """Priority 0 (#12): Verify cleanup_expired_sessions purges expired session dirs and DB records,
+    and atomic_write_text writes complete content without leftover .tmp files.
+    """
+    import os
+    import time
+    from app.core.security import atomic_write_text, cleanup_expired_sessions
+
+    # 1. Atomic write test
+    target_file = tmp_path / "atomic_test.json"
+    atomic_write_text(target_file, '{"status": "ok"}')
+    assert target_file.exists()
+    assert target_file.read_text(encoding="utf-8") == '{"status": "ok"}'
+    assert len(list(tmp_path.glob("*.tmp"))) == 0
+
+    # 2. Expired session cleanup test
+    exp_doc_id = "expired_session_p0_test"
+    save_document_metadata(exp_doc_id, "old.txt", "txt", "PROCESSED", 1, 50)
+    session_dir = get_safe_session_dir(exp_doc_id)
+    session_dir.mkdir(parents=True, exist_ok=True)
+    (session_dir / "canonical.txt").write_text("Old session text", encoding="utf-8")
+
+    # Backdate mtime by 30 hours
+    old_mtime = time.time() - (30 * 3600)
+    os.utime(session_dir, (old_mtime, old_mtime))
+
+    cleaned_count = cleanup_expired_sessions(max_age_hours=24)
+    assert cleaned_count >= 1
+    assert not session_dir.exists()
+    assert get_document_metadata(exp_doc_id) is None
