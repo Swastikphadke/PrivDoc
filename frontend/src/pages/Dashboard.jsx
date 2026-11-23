@@ -1,30 +1,156 @@
-import React from 'react';
+import React, { useState, useEffect, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
+import {
+  Shield,
+  CheckCircle,
+  AlertTriangle,
+  FileText,
+  Database,
+  Server,
+  RefreshCw,
+  ArrowRight,
+  Cpu,
+  Lock,
+} from 'lucide-react';
+import UploadDropzone from '../components/Upload/UploadDropzone';
+import ProcessingView from '../components/Processing/ProcessingView';
 import { useHealth } from '../hooks/useHealth';
-import { Shield, CheckCircle, AlertTriangle, FileText, Database, Server, RefreshCw } from 'lucide-react';
+import { uploadDocument, detectPii, resolveEntities } from '../services/api';
 
 export default function Dashboard() {
-  const { health, loading, error, refetch } = useHealth(15000);
+  const navigate = useNavigate();
+  const { health, loading: healthLoading, error: healthError, refetch } = useHealth(15000);
+
+  // Upload and processing state
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [processingStage, setProcessingStage] = useState('ingesting'); // 'ingesting' | 'detecting' | 'resolving' | 'complete' | 'error'
+  const [elapsedSeconds, setElapsedSeconds] = useState(0);
+  const [uploadError, setUploadError] = useState(null);
+  const [degradedMode, setDegradedMode] = useState(false);
+
+  const timerRef = useRef(null);
+
+  // Timer for processing elapsed seconds
+  useEffect(() => {
+    if (isProcessing) {
+      setElapsedSeconds(0);
+      timerRef.current = setInterval(() => {
+        setElapsedSeconds((prev) => prev + 0.1);
+      }, 100);
+    } else {
+      if (timerRef.current) clearInterval(timerRef.current);
+    }
+    return () => {
+      if (timerRef.current) clearInterval(timerRef.current);
+    };
+  }, [isProcessing]);
+
+  const handleFileUpload = async (file) => {
+    try {
+      setUploadError(null);
+      setIsProcessing(true);
+      setProcessingStage('ingesting');
+      setDegradedMode(false);
+
+      // Step 1: Upload and extract text
+      const doc = await uploadDocument(file);
+
+      // Step 2: Trigger hybrid detection
+      setProcessingStage('detecting');
+      await detectPii(doc.document_id);
+
+      // Step 3: Trigger entity resolution
+      setProcessingStage('resolving');
+      const entitiesRes = await resolveEntities(doc.document_id).catch((err) => {
+        console.warn('Entity resolution warning (using degraded mode):', err);
+        setDegradedMode(true);
+        return { degraded_mode: true };
+      });
+
+      if (entitiesRes?.degraded_mode) {
+        setDegradedMode(true);
+      }
+
+      setProcessingStage('complete');
+
+      // Brief delay to show completion, then navigate to review workspace
+      setTimeout(() => {
+        setIsProcessing(false);
+        navigate(`/review/${doc.document_id}`);
+      }, 600);
+    } catch (err) {
+      console.error('Processing failed:', err);
+      setProcessingStage('error');
+      setUploadError(
+        err.response?.data?.detail || err.message || 'An error occurred during document ingestion.'
+      );
+      setIsProcessing(false);
+    }
+  };
+
+  const handleCancel = () => {
+    setIsProcessing(false);
+    setProcessingStage('ingesting');
+    setUploadError('Processing was cancelled by user.');
+  };
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
-      {/* Welcome Banner */}
+      {/* Welcome & Local Privacy Banner */}
       <div className="p-6 rounded-2xl bg-gradient-to-r from-slate-900 via-sky-950/40 to-slate-900 border border-slate-800 shadow-xl">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
-            <h2 className="text-2xl font-bold text-white tracking-tight">Phase P0 — Foundation Active</h2>
+            <div className="flex items-center gap-2 mb-1">
+              <span className="px-2 py-0.5 rounded text-[11px] font-semibold bg-sky-950 border border-sky-800 text-sky-400">
+                Phase P4 Review Interface Active
+              </span>
+              <span className="flex items-center gap-1 text-[11px] text-emerald-400 font-medium">
+                <Lock className="w-3 h-3" /> 100% Local Processing Guarantee
+              </span>
+            </div>
+            <h2 className="text-2xl font-bold text-white tracking-tight">PrivyDoc Document Security Workspace</h2>
             <p className="text-slate-400 text-sm mt-1 max-w-2xl">
-              Repository scaffolding, modular backend, local database foundation, and secure frontend shell are initialized.
+              Deterministic document ingestion, hybrid PII detection, entity clustering, and authoritative human-in-the-loop review.
             </p>
           </div>
           <button
             onClick={refetch}
-            disabled={loading}
-            className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-sky-600 hover:bg-sky-500 text-white text-sm font-medium transition shadow-lg shadow-sky-600/20 disabled:opacity-50"
+            disabled={healthLoading}
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-sky-600 hover:bg-sky-500 text-white text-xs font-semibold transition shadow-lg shadow-sky-600/20 disabled:opacity-50"
           >
-            <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
-            <span>Check Health</span>
+            <RefreshCw className={`w-3.5 h-3.5 ${healthLoading ? 'animate-spin' : ''}`} />
+            <span>Health Check</span>
           </button>
         </div>
+      </div>
+
+      {/* Upload Dropzone or Processing View */}
+      <div className="space-y-4">
+        {isProcessing ? (
+          <ProcessingView
+            stage={processingStage}
+            elapsedSeconds={elapsedSeconds}
+            degradedMode={degradedMode}
+            error={uploadError}
+            onCancel={handleCancel}
+          />
+        ) : (
+          <UploadDropzone
+            onUpload={handleFileUpload}
+            isUploading={isProcessing}
+            error={uploadError}
+          />
+        )}
+
+        {uploadError && !isProcessing && (
+          <div className="max-w-2xl mx-auto p-4 rounded-xl bg-rose-950/40 border border-rose-900/60 text-rose-300 text-xs flex items-start gap-2.5">
+            <AlertTriangle className="w-4 h-4 text-rose-400 shrink-0 mt-0.5" />
+            <div>
+              <strong className="font-semibold block">Ingestion or Validation Error:</strong>
+              <p className="mt-0.5">{uploadError}</p>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Backend Health Status Grid */}
@@ -36,9 +162,9 @@ export default function Dashboard() {
             <Server className="w-5 h-5 text-sky-400" />
           </div>
           <div className="flex items-center gap-2">
-            {loading ? (
+            {healthLoading ? (
               <span className="text-sm text-slate-400">Connecting...</span>
-            ) : error ? (
+            ) : healthError ? (
               <>
                 <AlertTriangle className="w-5 h-5 text-amber-400" />
                 <span className="text-sm font-semibold text-amber-400">Disconnected</span>
@@ -46,11 +172,13 @@ export default function Dashboard() {
             ) : (
               <>
                 <CheckCircle className="w-5 h-5 text-emerald-400" />
-                <span className="text-sm font-semibold text-emerald-400">Online ({health?.app_name} v{health?.version})</span>
+                <span className="text-sm font-semibold text-emerald-400">
+                  Online ({health?.app_name} v{health?.version})
+                </span>
               </>
             )}
           </div>
-          <p className="text-xs text-slate-400">Bound to 127.0.0.1:8000</p>
+          <p className="text-xs text-slate-400">Bound strictly to 127.0.0.1:8000</p>
         </div>
 
         {/* Card 2: SQLite Metadata Store */}
@@ -94,19 +222,19 @@ export default function Dashboard() {
         </h3>
         <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 text-xs">
           <div className="p-3 rounded-lg bg-emerald-950/40 border border-emerald-800 text-emerald-300 font-medium">
-            P0: Setup & Scaffolding (Active)
+            P0: Setup & Scaffolding (Done)
           </div>
-          <div className="p-3 rounded-lg bg-slate-800/40 border border-slate-700 text-slate-400">
-            P1: Ingestion (TXT & PDF)
+          <div className="p-3 rounded-lg bg-emerald-950/40 border border-emerald-800 text-emerald-300 font-medium">
+            P1: Ingestion (TXT & PDF) (Done)
           </div>
-          <div className="p-3 rounded-lg bg-slate-800/40 border border-slate-700 text-slate-400">
-            P2: Regex + NER Detection
+          <div className="p-3 rounded-lg bg-emerald-950/40 border border-emerald-800 text-emerald-300 font-medium">
+            P2: Regex + NER Detection (Done)
           </div>
-          <div className="p-3 rounded-lg bg-slate-800/40 border border-slate-700 text-slate-400">
-            P3: SLM & Entity Linking
+          <div className="p-3 rounded-lg bg-emerald-950/40 border border-emerald-800 text-emerald-300 font-medium">
+            P3: SLM & Entity Linking (Done)
           </div>
-          <div className="p-3 rounded-lg bg-slate-800/40 border border-slate-700 text-slate-400">
-            P4: Human Review UI
+          <div className="p-3 rounded-lg bg-sky-950/80 border border-sky-600 text-sky-200 font-semibold shadow-sm">
+            P4: Human Review UI (Active)
           </div>
           <div className="p-3 rounded-lg bg-slate-800/40 border border-slate-700 text-slate-400">
             P5: Redaction & Verification

@@ -138,20 +138,45 @@ npm test
 
 ---
 
+## Human-in-the-Loop Review Workspace (Phase P4)
+
+PrivyDoc features a minimalist, dark charcoal cybersecurity SaaS review interface built with React, Vite, and Tailwind CSS:
+
+- **Canonical Text Viewer**: Interactive text viewer with exact half-open character offset highlights `[start, end)`. Supports mouse selection for arbitrary manual redactions.
+- **Authoritative PDF Viewer**: Renders crisp PyMuPDF page PNG streams with page navigation, zoom, and visual candidate overlays.
+- **Candidate Inspection Sidebar**:
+  - Detailed metadata cards showing matched text (with mask/reveal toggle), PII category, confidence band (`High`, `Medium`, `Low`—strictly separated from review status), detector sources, and character offsets.
+  - Review controls: **Approve**, **Reject**, **Undo**, and inline category reassignment.
+  - **Redact All Similar**: Modal providing an explicit, transparent preview of all matching candidate occurrences across the document before bulk approval.
+- **Entity Group Resolution**:
+  - Entity cluster view displaying canonical identities, observed surface variants, link confidence, and evidence logs.
+  - Ambiguity warning flags prevent automated merges between distinct individuals sharing surnames or ambiguous initials.
+  - Single-click **Approve Linked Group**, **Reject Linked Group**, and occurrence **Unlink** actions.
+- **Keyboard Shortcuts**:
+  - `A`: Approve selected candidate for redaction.
+  - `R`: Reject selected candidate (preserve text).
+  - `M`: Open manual redaction dialog for highlighted text span.
+  - *Shortcuts are automatically disabled when typing in text fields, inputs, or textareas.*
+- **Export & Summary Previews**:
+  - Export screen (Screen D): Format selection (.txt / .pdf), mask patterns (`[REDACTED]`, `[CATEGORY]`, `[ENTITY_N]`, Unicode black bars), approved vs pending verification status, and clean-text fallback options.
+  - Privacy Summary screen (Screen E): Sanitized-only input guarantee, extractive fallback status, and post-summary zero-leak audit indicators.
+
+---
+
 ## Development Roadmap (P0 - P9)
 
 | Phase | Description | Status |
 |---|---|---|
-| **P0** | Foundation: Repository, Backend/Frontend Scaffolding, Health Check | **Completed** |
-| **P1** | Document Ingestion: Text/PDF/DOCX Extraction & Session Handling | Pending |
-| **P2** | Hybrid PII Detection Engine (Regex, Presidio, Custom Pattern Bank) | Pending |
-| **P3** | Global Entity Resolution & Cross-Document Consistency | Pending |
-| **P4** | Interactive Human Review Interface (Review Queue, Overrides) | Pending |
-| **P5** | Redaction Engine & Verifiable PDF True-Redaction / Fallback | Pending |
-| **P6** | Privacy-Aware Summarization (Sanitized Only, Local SLM / Extractive) | Pending |
-| **P7** | Export System (PDF, DOCX, TXT, JSON Audit Certificate) | Pending |
-| **P8** | System Hardening, Local Security Audit, Privacy Guarantees | Pending |
-| **P9** | Evaluation, Benchmarking (Recall >= 95%), Release Documentation | Pending |
+| **P0** | Foundation: Repository Scaffolding, SQLite Foundation, Health Check | **Completed** |
+| **P1** | Document Ingestion: TXT & PyMuPDF Text/Bbox Extraction, Canonical Offsets | **Completed** |
+| **P2** | Hybrid PII Detection Engine (Deterministic Regex + Contextual NER) | **Completed** |
+| **P3** | Entity Resolution: Canonical Identity Clustering, Ambiguity Guard | **Completed** |
+| **P4** | Human-in-the-Loop Review UI: Workspace, Modals, Shortcuts, Audit Log | **Completed** |
+| **P5** | Redaction Engine & Verifiable PDF True-Redaction / Layout-Loss Fallback | In Progress |
+| **P6** | Privacy-Aware Summarization (Sanitized Only, Local SLM / Extractive Fallback) | Planned |
+| **P7** | Local Feedback System & Evaluation Metrics Framework | Planned |
+| **P8** | System Hardening, Local Security Audit, Privacy Boundary Verification | Planned |
+| **P9** | Final Benchmarking (Recall >= 95%), Demo & Production Release | Planned |
 
 ---
 

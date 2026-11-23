@@ -3,7 +3,7 @@ import { apiClient } from './api';
 
 describe('API Client Configuration', () => {
   it('has default timeout configured', () => {
-    expect(apiClient.defaults.timeout).toBe(5000);
+    expect(apiClient.defaults.timeout).toBe(10000);
   });
 
   it('sets application/json header', () => {

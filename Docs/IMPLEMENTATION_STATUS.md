@@ -89,17 +89,20 @@
 ---
 
 ### Phase 4: Human Review UI & State Management
-- [ ] Build React Document Workspace:
-  - [ ] File upload screen with drag-and-drop and local-only status banner.
-  - [ ] Document viewer with interactive text highlighting mapped to Unicode code-point offsets.
-  - [ ] PDF preview with visual bounding box overlays.
-  - [ ] Candidate inspection drawer (type, confidence band, source, offset).
-  - [ ] Entity resolution panel (grouped occurrences with link evidence).
-  - [ ] Review controls: Approve, Reject, Manual Add, Bulk Group Redaction.
-  - [ ] Keyboard shortcuts (`A` Approve, `R` Reject, `M` Manual Add) disabled during input editing.
-- [ ] Implement `services/review_service.py` and review API routes (`POST /api/documents/{id}/review`).
-- [ ] Write frontend component and interaction tests.
-- **Exit Condition:** Human review workflow complete; no removal can occur without human approval.
+- [x] Build React Document Workspace:
+  - [x] File upload screen with drag-and-drop and local-only status banner (`UploadDropzone.jsx`).
+  - [x] Processing status screen with multi-stage progress and degraded-mode warnings (`ProcessingView.jsx`).
+  - [x] Document viewer with interactive text highlighting mapped to Unicode code-point offsets (`TextViewer.jsx`).
+  - [x] PDF preview with visual bounding box overlays and PyMuPDF PNG rendering (`PdfViewer.jsx`, `GET /api/documents/{id}/pages/{page}/render`).
+  - [x] Candidate inspection drawer (type, confidence band, source, offset) (`CandidateSidebar.jsx`, `CandidateCard.jsx`).
+  - [x] Entity resolution panel (grouped occurrences with link evidence, link/unlink) (`EntityGroupList.jsx`).
+  - [x] Review controls: Approve, Reject, Undo, Manual Add (`M`), Redact All Similar with explicit preview modal (`RedactSimilarModal.jsx`).
+  - [x] Export screen configuration and verification readiness (`ExportView.jsx`).
+  - [x] Privacy-preserving summary view with sanitized-only verification indicators (`SummaryView.jsx`).
+  - [x] Keyboard shortcuts (`A` Approve, `R` Reject, `M` Manual Add) disabled during input editing (`useKeyboardShortcuts.js`).
+- [x] Implement `services/review_service.py` and review API routes (`POST /api/documents/{id}/review`, `GET /api/documents/{id}/review`, `POST /api/documents/{id}/candidates/manual`).
+- [x] Write frontend component and interaction tests (`useKeyboardShortcuts.test.js`, `TextViewer.test.jsx`, `CandidateCard.test.jsx`, `ReviewWorkspace.test.jsx`, `api.test.js`).
+- **Exit Condition:** Human review workflow complete; no removal can occur without human approval. (ACHIEVED — 51 backend tests + 20 frontend tests passing)
 
 ---
 

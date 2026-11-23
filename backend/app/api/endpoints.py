@@ -7,7 +7,7 @@ Strictly adheres to local-first privacy (NFR-001) and storage separation (TDR-00
 import json
 import uuid
 from typing import List
-from fastapi import APIRouter, File, HTTPException, UploadFile, status
+from fastapi import APIRouter, File, HTTPException, Response, UploadFile, status
 from app.core.config import settings
 from app.core.security import (
     cleanup_session,
@@ -27,6 +27,12 @@ from app.schemas.candidate import Candidate, DetectionResponse
 from app.schemas.entity import EntityGroupResponse, EntityLinkAction, EntityLinkRequest
 from app.detectors.entity_resolver import EntityResolver
 from app.services.detection_service import DetectionService
+from app.schemas.review import (
+    ManualCandidateRequest,
+    ReviewActionRequest,
+    ReviewSummaryResponse,
+)
+from app.services.review_service import ReviewService
 from app.schemas.document import (
     CoordinateSpan,
     DocumentCoordinatesResponse,
@@ -426,4 +432,145 @@ def link_entities(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Entity link operation failed: {str(exc)}"
         ) from exc
+
+
+# =========================================================================
+# Phase P4: Human Review & Document Workspace Endpoints
+# =========================================================================
+
+@router.post(
+    "/documents/{document_id}/review",
+    response_model=ReviewSummaryResponse,
+    tags=["Review"],
+)
+def submit_review_decision(
+    document_id: str,
+    payload: ReviewActionRequest,
+) -> ReviewSummaryResponse:
+    """Submit a human review decision (APPROVE, REJECT, PENDING/UNDO)."""
+    meta = get_document_metadata(document_id)
+    if not meta:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Document session '{document_id}' not found."
+        )
+
+    try:
+        return ReviewService.submit_review(document_id, payload)
+    except ValueError as ve:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(ve),
+        ) from ve
+    except Exception as exc:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Review decision submission failed: {str(exc)}"
+        ) from exc
+
+
+@router.get(
+    "/documents/{document_id}/review",
+    response_model=ReviewSummaryResponse,
+    tags=["Review"],
+)
+def get_review_summary(document_id: str) -> ReviewSummaryResponse:
+    """Retrieve current review summary statistics and candidate list."""
+    meta = get_document_metadata(document_id)
+    if not meta:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Document session '{document_id}' not found."
+        )
+
+    return ReviewService.get_review_summary(document_id)
+
+
+@router.post(
+    "/documents/{document_id}/candidates/manual",
+    response_model=Candidate,
+    status_code=status.HTTP_201_CREATED,
+    tags=["Review"],
+)
+def add_manual_candidate(
+    document_id: str,
+    payload: ManualCandidateRequest,
+) -> Candidate:
+    """Add a user-selected text span as a manual redaction candidate."""
+    meta = get_document_metadata(document_id)
+    if not meta:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Document session '{document_id}' not found."
+        )
+
+    try:
+        return ReviewService.add_manual_candidate(document_id, payload)
+    except ValueError as ve:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(ve),
+        ) from ve
+    except Exception as exc:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to add manual candidate: {str(exc)}"
+        ) from exc
+
+
+@router.get(
+    "/documents/{document_id}/pages/{page_number}/render",
+    tags=["Documents"],
+)
+def render_pdf_page(document_id: str, page_number: int) -> Response:
+    """Render a PDF page to a PNG image stream for UI visual overlay."""
+    meta = get_document_metadata(document_id)
+    if not meta:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Document session '{document_id}' not found."
+        )
+
+    if meta["file_type"] != "pdf":
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Page image rendering is only supported for PDF documents."
+        )
+
+    session_dir = get_safe_session_dir(document_id)
+    pdf_path = session_dir / "original.pdf"
+    if not pdf_path.exists():
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Original PDF file not found."
+        )
+
+    import fitz
+    doc = None
+    try:
+        doc = fitz.open(str(pdf_path))
+        page_count = doc.page_count
+        if page_number < 1 or page_number > page_count:
+            raise ValueError(f"Page number {page_number} out of range [1, {page_count}].")
+
+        page = doc[page_number - 1]
+        pix = page.get_pixmap(dpi=150)
+        png_bytes = pix.tobytes("png")
+        return Response(content=png_bytes, media_type="image/png")
+    except ValueError as ve:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(ve)
+        ) from ve
+    except HTTPException:
+        raise
+    except Exception as exc:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to render page {page_number}: {str(exc)}"
+        ) from exc
+    finally:
+        if doc is not None and not doc.is_closed:
+            doc.close()
+
 

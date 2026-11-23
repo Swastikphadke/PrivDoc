@@ -27,7 +27,7 @@ class ModelService:
         """Ping local SLM server to verify reachability. Returns False if offline or times out."""
         url = f"{settings.LOCAL_SLM_URL.rstrip('/')}/api/version"
         try:
-            with httpx.Client(timeout=1.0) as client:
+            with httpx.Client(timeout=httpx.Timeout(0.3, connect=0.2)) as client:
                 res = client.get(url)
                 return res.status_code == 200
         except Exception:
@@ -80,7 +80,7 @@ class ModelService:
         }
 
         try:
-            with httpx.Client(timeout=settings.SLM_TIMEOUT_SECONDS) as client:
+            with httpx.Client(timeout=httpx.Timeout(settings.SLM_TIMEOUT_SECONDS, connect=0.5)) as client:
                 response = client.post(url, json=payload)
                 if response.status_code != 200:
                     logger.warning(

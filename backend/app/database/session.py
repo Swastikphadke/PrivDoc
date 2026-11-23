@@ -120,3 +120,36 @@ def delete_document_record(doc_id: str) -> bool:
         cursor.execute("DELETE FROM documents WHERE id = ?", (doc_id,))
         conn.commit()
         return cursor.rowcount > 0
+
+
+def record_review_decision(
+    doc_id: str,
+    cand_id: str,
+    decision: str,
+    scope: str = "OCCURRENCE"
+) -> None:
+    """Record or update a human review decision in SQLite."""
+    import uuid
+    with get_db_connection() as conn:
+        cursor = conn.cursor()
+        # Delete prior decision for this candidate if any
+        cursor.execute(
+            "DELETE FROM review_decisions WHERE document_id = ? AND candidate_id = ?",
+            (doc_id, cand_id)
+        )
+        cursor.execute("""
+            INSERT INTO review_decisions (id, document_id, candidate_id, decision, scope)
+            VALUES (?, ?, ?, ?, ?)
+        """, (f"rev_{uuid.uuid4().hex[:12]}", doc_id, cand_id, decision, scope))
+        conn.commit()
+
+
+def get_document_review_decisions(doc_id: str) -> list[dict]:
+    """Retrieve all review decisions for a document session."""
+    with get_db_connection() as conn:
+        cursor = conn.cursor()
+        cursor.execute(
+            "SELECT * FROM review_decisions WHERE document_id = ? ORDER BY reviewed_at ASC",
+            (doc_id,)
+        )
+        return [dict(row) for row in cursor.fetchall()]
