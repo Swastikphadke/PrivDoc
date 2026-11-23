@@ -502,6 +502,14 @@ class EntityResolver:
         cands_path.write_text(json.dumps(cands_data, indent=2), encoding="utf-8")
 
     @classmethod
+    def save_entities(cls, document_id: str, entities: List[Entity]) -> None:
+        """Save resolved entity clusters to session storage."""
+        session_dir = get_safe_session_dir(document_id)
+        entities_path = session_dir / "entities.json"
+        ent_data = [e.model_dump() for e in entities]
+        entities_path.write_text(json.dumps(ent_data, indent=2), encoding="utf-8")
+
+    @classmethod
     def load_entities(cls, document_id: str) -> List[Entity]:
         """Load resolved entity clusters from session storage."""
         session_dir = get_safe_session_dir(document_id)
@@ -510,6 +518,14 @@ class EntityResolver:
             return []
         raw = json.loads(entities_path.read_text(encoding="utf-8"))
         return [Entity(**item) for item in raw]
+
+    @classmethod
+    def save_candidates(cls, document_id: str, candidates: List[Candidate]) -> None:
+        """Save candidates to session storage."""
+        session_dir = get_safe_session_dir(document_id)
+        cands_path = session_dir / "candidates.json"
+        cands_data = [c.model_dump() for c in candidates]
+        cands_path.write_text(json.dumps(cands_data, indent=2), encoding="utf-8")
 
     @classmethod
     def load_candidates(cls, document_id: str) -> List[Candidate]:

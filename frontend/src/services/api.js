@@ -136,3 +136,17 @@ export const downloadExport = async (documentId) => {
   return response;
 };
 
+// Summarization
+export const generateSummary = async (documentId, options = {}) => {
+  const response = await apiClient.post(`/api/documents/${documentId}/summary`, {
+    max_length: options.maxLength || 300,
+    force_extractive: !!options.forceExtractive,
+  });
+  return response.data;
+};
+
+export const getSummary = async (documentId) => {
+  const response = await apiClient.get(`/api/documents/${documentId}/summary`);
+  return response.data;
+};
+

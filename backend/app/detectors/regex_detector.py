@@ -104,7 +104,7 @@ class RegexDetector:
     # -------------------------------------------------------------------------
     # Header & signature patterns: Patient: John Doe, Regards,\nDr. Suresh Menon
     HEADER_PERSON_REGEX = re.compile(
-        r'(?i)(?:Patient|Client|Employee|Candidate|Applicant|Customer|Name|Subject|Regards|Sincerely|Signed by|Evaluated by|Doctor|Approved by)[:\s,]+([A-Z][a-z]+(?:\s+[A-Z][a-z]+){1,3})\b'
+        r'(?i:Patient|Client|Employee|Candidate|Applicant|Customer|Name|Subject|Regards|Sincerely|Signed by|Evaluated by|Doctor|Approved by)[:\s,]+([A-Z][a-z]+(?:\s+[A-Z][a-z]+){1,3})\b'
     )
     # Title-based names: Dr. Richa Sharma, Mr. John Doe, Prof. Alice Smith
     TITLE_PERSON_REGEX = re.compile(

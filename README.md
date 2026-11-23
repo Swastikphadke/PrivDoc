@@ -196,6 +196,34 @@ PrivyDoc's redaction pipeline guarantees that sensitive data approved for remova
 
 ---
 
+## Privacy-Preserving Summarization Engine (Phase P6)
+
+PrivyDoc's summarization pipeline is built with strict architectural boundaries ensuring zero raw data leakage:
+
+- **Strict Sanitized-Only Data Contract (`SanitizedDocument`)**:
+  - The summarization engine accepts exclusively a typed `SanitizedDocument` containing verified sanitized text (with `[CATEGORY]` placeholders) and an export verification reference (`P5-VERIFIED`).
+  - The summarizer has zero access to raw original documents, original extracted text, original PDF streams, candidate PII objects, or coordinate mappings.
+  - Non-verified P5 exports are rejected at the API boundary with HTTP 400.
+- **Privacy Guard Architecture (`SummaryGuard`)**:
+  - Approved redaction values and entity variants are passed strictly to `SummaryGuard` for post-generation leakage analysis and are never exposed to the summarizer model.
+  - Executes a multi-tier safety pipeline:
+    1. **Direct Leakage Check**: Scans for exact approved sensitive values and generates token-hashed audit logs (never logs raw PII).
+    2. **Alias and Entity Variants Check**: Scans for resolved entity variants and aliases.
+    3. **Residual PII Re-detection**: Runs both deterministic regex and contextual NER scans over the summary text to detect hallucinated or residual PII.
+    4. **Quasi-Identifier Risk Assessment**: Rule-based evaluation of demographic, departmental, and role-based co-occurrences (`config/quasi_identifiers.json`) with an explicit non-anonymity disclaimer.
+    5. **Source Evidence Consistency**: Verifies grounded dates and figures against sanitized text to eliminate hallucinated details.
+- **Structured Summary Schema**:
+  - Summaries are generated according to a strict JSON schema (`StructuredSummaryContent`) containing narrative summary text, key points, important findings, grounded dates/figures, and source evidence.
+- **Deterministic Extractive Fallback**:
+  - If the local SLM is unreachable, offline, or times out, the engine seamlessly falls back to a deterministic sentence-scoring algorithm operating strictly on sanitized text while preserving category placeholders.
+  - Extractive summaries undergo 100% of the identical privacy verification checks as SLM summaries.
+- **Fail-Safe State Machine & Suppression**:
+  - Supported lifecycle states: `PENDING`, `GENERATING`, `VERIFYING`, `VERIFIED`, `SUPPRESSED`, `FAILED`, `REQUIRES_REVIEW`.
+  - If verification checks fail after a bounded retry loop (max 2 retries = 3 attempts), the summary is transitioned to `SUPPRESSED`.
+  - Suppressed summaries are completely blocked from display in the UI, presenting a clear security alert without leaking sensitive text.
+
+---
+
 ## Development Roadmap (P0 - P9)
 
 | Phase | Description | Status |
@@ -206,7 +234,7 @@ PrivyDoc's redaction pipeline guarantees that sensitive data approved for remova
 | **P3** | Entity Resolution: Canonical Identity Clustering, Ambiguity Guard | **Completed** |
 | **P4** | Human-in-the-Loop Review UI: Workspace, Modals, Shortcuts, Audit Log | **Completed** |
 | **P5** | Redaction Engine & Verifiable PDF True-Redaction / Layout-Loss Fallback | **Completed** |
-| **P6** | Privacy-Aware Summarization (Sanitized Only, Local SLM / Extractive Fallback) | Planned |
+| **P6** | Privacy-Aware Summarization (Sanitized Only, Local SLM / Extractive Fallback) | **Completed** |
 | **P7** | Local Feedback System & Evaluation Metrics Framework | Planned |
 | **P8** | System Hardening, Local Security Audit, Privacy Boundary Verification | Planned |
 | **P9** | Final Benchmarking (Recall >= 95%), Demo & Production Release | Planned |

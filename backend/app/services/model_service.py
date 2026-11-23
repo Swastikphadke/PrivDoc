@@ -15,6 +15,7 @@ import httpx
 
 from app.core.config import settings
 from app.schemas.entity import SLMAnalysisResponse
+from app.schemas.summary import StructuredSummaryContent
 
 logger = logging.getLogger(__name__)
 
@@ -109,4 +110,90 @@ class ModelService:
             return None
         except Exception as exc:
             logger.warning("Local SLM invocation error: %s. Continuing in degraded mode.", str(exc))
+            return None
+
+    @classmethod
+    def generate_structured_summary(
+        cls,
+        sanitized_text: str,
+        max_length: int = 250,
+        retry_guidance: Optional[str] = None,
+    ) -> Optional[StructuredSummaryContent]:
+        """Request local SLM to summarize sanitized document text into structured format.
+        
+        Strict Privacy Invariant (TDR-010, FR-021):
+        Receives ONLY sanitized text containing category/generic placeholders.
+        Zero access to raw document text, original files, or unredacted candidate values.
+        
+        Returns parsed and schema-validated StructuredSummaryContent, or None if SLM is unavailable/fails.
+        """
+        if not sanitized_text or not sanitized_text.strip():
+            return None
+
+        guidance_section = ""
+        if retry_guidance:
+            guidance_section = f"\nCORRECTIVE INSTRUCTION: {retry_guidance}\n"
+
+        prompt = (
+            "You are a privacy-preserving summarizer. Summarize the provided sanitized document. "
+            "Sensitive information has been replaced with category placeholders (e.g., [PERSON], [EMAIL], [PHONE], [ID_LIKE]).\n\n"
+            "STRICT RULES:\n"
+            "1. Base your summary EXCLUSIVELY on facts directly stated in the sanitized text.\n"
+            "2. NEVER invent, infer, reconstruct, or guess redacted names, contacts, dates, or identities.\n"
+            "3. Retain category placeholders where referring to redacted entities (e.g. '[PERSON] communicated with [EMAIL]').\n"
+            "4. Do NOT introduce any external facts, dates, numbers, or names not present in the input text.\n"
+            f"5. Keep the primary summary concise (approx {max_length} words).\n"
+            f"{guidance_section}\n"
+            "Return ONLY a valid JSON object matching this schema:\n"
+            "{\n"
+            '  "summary_text": "Coherent paragraph summary of the sanitized document.",\n'
+            '  "key_points": ["Point 1", "Point 2"],\n'
+            '  "important_findings": ["Finding 1"],\n'
+            '  "relevant_dates_or_figures": ["Specific date or figure present in text"],\n'
+            '  "source_evidence": ["Brief quote or reference to sanitized text section"]\n'
+            "}\n\n"
+            f"Sanitized Document Text:\n\"\"\"\n{sanitized_text[:4000]}\n\"\"\"\n"
+        )
+
+        url = f"{settings.LOCAL_SLM_URL.rstrip('/')}/api/generate"
+        payload = {
+            "model": settings.SLM_MODEL_NAME,
+            "prompt": prompt,
+            "stream": False,
+            "format": "json",
+            "options": {
+                "temperature": 0.1,
+                "top_p": 0.9,
+            },
+        }
+
+        try:
+            with httpx.Client(timeout=httpx.Timeout(settings.SLM_TIMEOUT_SECONDS, connect=0.5)) as client:
+                response = client.post(url, json=payload)
+                if response.status_code != 200:
+                    logger.warning(
+                        "Local SLM summary call returned non-200 status code: %d", response.status_code
+                    )
+                    return None
+
+                data = response.json()
+                raw_response_text = data.get("response", "")
+                if not raw_response_text:
+                    return None
+
+                parsed_json = json.loads(raw_response_text)
+                validated = StructuredSummaryContent.model_validate(parsed_json)
+                return validated
+
+        except httpx.TimeoutException:
+            logger.warning("Local SLM summary call timed out after %.1fs.", settings.SLM_TIMEOUT_SECONDS)
+            return None
+        except httpx.ConnectError:
+            logger.info("Local SLM not running at %s for summarization.", settings.LOCAL_SLM_URL)
+            return None
+        except json.JSONDecodeError as jde:
+            logger.warning("Local SLM returned malformed JSON for summary: %s", str(jde))
+            return None
+        except Exception as exc:
+            logger.warning("Local SLM summary invocation error: %s", str(exc))
             return None

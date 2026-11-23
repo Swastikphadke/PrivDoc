@@ -19,7 +19,16 @@ STOP_WORDS_CAPITALIZED: Set[str] = {
     "November", "December", "Section", "Table", "Figure", "Chapter", "Page",
     "Total", "Status", "Report", "Overview", "Summary", "Result", "PrivyDoc",
     "Document", "File", "Date", "Time", "Note", "Important", "Notice", "Warning",
-    "Error", "Success", "Failed", "Pending", "Approved", "Rejected", "Version"
+    "Error", "Success", "Failed", "Pending", "Approved", "Rejected", "Version",
+    "Corp", "Corporation", "Inc", "Incorporated", "Ltd", "Limited", "LLC", "LLP",
+    "Co", "Company", "Bank", "Agency", "Department", "University", "Hospital",
+    "Institute", "Foundation", "Group", "Solutions", "Services", "Technologies",
+    "Tech", "Enterprises", "Ventures", "Holdings", "Partners", "Associates",
+    "Agreement", "Contract", "Policy", "Statement", "Act", "Plan", "Proposal",
+    "Memorandum", "Clause", "Addendum", "Exhibit", "Appendix", "Schedule",
+    "Resolution", "Certificate", "Treaty", "Protocol", "Pact", "Accord",
+    "License", "Terms", "Conditions", "Mutual", "Disclosure", "Confidentiality",
+    "Master", "Order", "Project", "Phase", "Stage", "Milestone"
 }
 
 # Contextual verbs that strongly suggest a preceding or succeeding person name

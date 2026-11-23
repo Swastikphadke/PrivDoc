@@ -1,0 +1,67 @@
+{
+  "rules": [
+    {
+      "id": "QI-001",
+      "name": "role_department_location",
+      "description": "Co-occurrence of executive or specialized role, department, and specific location or date",
+      "risk_level": "HIGH",
+      "required_categories": ["ROLE", "DEPARTMENT", "LOCATION_OR_DATE"]
+    },
+    {
+      "id": "QI-002",
+      "name": "demographic_tuple",
+      "description": "Co-occurrence of age or birth year, gender, and specific locality or postal reference",
+      "risk_level": "HIGH",
+      "required_categories": ["AGE_OR_DOB", "GENDER", "LOCATION_OR_ZIP"]
+    },
+    {
+      "id": "QI-003",
+      "name": "rare_condition_location",
+      "description": "Co-occurrence of specialized clinical condition and specific facility or ward",
+      "risk_level": "HIGH",
+      "required_categories": ["MEDICAL_CONDITION", "FACILITY_OR_LOCATION"]
+    },
+    {
+      "id": "QI-004",
+      "name": "role_department_alone",
+      "description": "Executive or rare organizational title combined with a specific department",
+      "risk_level": "MEDIUM",
+      "required_categories": ["ROLE", "DEPARTMENT"]
+    },
+    {
+      "id": "QI-005",
+      "name": "specific_date_incident",
+      "description": "Specific calendar date combined with disciplinary or investigative incident terms",
+      "risk_level": "MEDIUM",
+      "required_categories": ["EXACT_DATE", "INCIDENT_TERM"]
+    }
+  ],
+  "dictionaries": {
+    "roles": [
+      "director", "ceo", "cfo", "cto", "cso", "ciso", "dean", "principal",
+      "vice president", "vp", "head of", "lead architect", "chief", "chairperson",
+      "president", "provost", "ombudsperson", "treasurer", "superintendent",
+      "managing director", "general manager", "chief of oncology", "chief surgeon"
+    ],
+    "departments": [
+      "oncology", "pediatrics", "cardiology", "neurology", "radiology", "internal medicine",
+      "cybersecurity", "finance", "legal", "human resources", "hr", "r&d", "operations",
+      "audit", "intelligence", "compliance", "procurement", "forensics", "pathology",
+      "orthopedics", "emergency medicine", "anesthesiology", "taxation"
+    ],
+    "genders": [
+      "male", "female", "man", "woman", "boy", "girl"
+    ],
+    "medical_conditions": [
+      "glioblastoma", "huntington", "amyotrophic lateral sclerosis", "als", "cystic fibrosis",
+      "leukemia", "lymphoma", "sarcoma", "melanoma", "myeloma", "sickle cell",
+      "tay-sachs", "marfan syndrome", "mesothelioma"
+    ],
+    "incident_terms": [
+      "termination", "disciplinary", "whistleblower", "investigation", "embezzlement",
+      "harassment", "malpractice", "audit finding", "security breach", "lawsuit",
+      "fraud", "misconduct", "subpoena", "indictment", "suspension"
+    ]
+  },
+  "disclaimer": "Quasi-identifier risk evaluation assesses statistical re-identification risk flags based on demographic or contextual co-occurrences; it does not constitute mathematical or legal proof of complete anonymity."
+}

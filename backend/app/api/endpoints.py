@@ -797,4 +797,168 @@ def download_exported_document(document_id: str):
     )
 
 
+# =========================================================================
+# Phase P6: Privacy-Preserving Summarization Endpoints
+# =========================================================================
+
+from app.schemas.summary import (
+    SanitizedDocument,
+    SummaryRequest,
+    SummaryResponse,
+    SummaryState,
+)
+from app.services.summary_service import SummaryService
+
+
+@router.post(
+    "/documents/{document_id}/summary",
+    response_model=SummaryResponse,
+    tags=["Summarization"],
+)
+def generate_document_summary(
+    document_id: str,
+    request: Optional[SummaryRequest] = None,
+) -> SummaryResponse:
+    """Generate, verify, and store a privacy-preserving summary of a verified sanitized document.
+    
+    Security & Isolation Guarantees (TDR-010, FR-021, NFR-012):
+    1. Rejects any document whose export state is not P5 VERIFIED.
+    2. Enforces input boundary: summarizer receives ONLY typed SanitizedDocument containing
+       verified sanitized text (with category/generic placeholders).
+    3. The summarizer and SLM prompt have zero access to raw unredacted text, original files,
+       original coordinates, or candidate objects.
+    4. Approved sensitive strings are passed exclusively to SummaryGuard for leakage detection.
+    5. Fails closed: unsafe outputs are SUPPRESSED from normal display.
+    """
+    if not re.match(r"^[a-zA-Z0-9_\-]+$", document_id):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid document ID format.",
+        )
+
+    meta = get_document_metadata(document_id)
+    if not meta:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Document session '{document_id}' not found.",
+        )
+
+    session_dir = get_safe_session_dir(document_id)
+    export_meta_path = session_dir / "export_metadata.json"
+    if not export_meta_path.exists():
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Summarization requires a verified sanitized export. Please complete review and export verification first.",
+        )
+
+    try:
+        export_meta = json.loads(export_meta_path.read_text(encoding="utf-8"))
+    except Exception as exc:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Corrupted export metadata on server.",
+        )
+
+    # Gate: Only P5 VERIFIED exports may enter summarization
+    export_state = export_meta.get("export_state")
+    if export_state != ExportState.VERIFIED.value:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=(
+                f"Summarization blocked: document export state is '{export_state}'. "
+                "Only P5 VERIFIED sanitized exports may be summarized."
+            ),
+        )
+
+    sanitized_txt_path = session_dir / "sanitized.txt"
+    if not sanitized_txt_path.exists():
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Sanitized document text missing from session directory.",
+        )
+
+    sanitized_text = sanitized_txt_path.read_text(encoding="utf-8")
+    if not sanitized_text.strip():
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Sanitized text is empty; cannot generate summary.",
+        )
+
+    # Construct strict SanitizedDocument contract
+    verif_ref = export_meta.get("verification", {}).get("verified_at") or "P5-VERIFIED"
+    sanitized_doc = SanitizedDocument(
+        document_id=document_id,
+        sanitized_text=sanitized_text,
+        export_verification_ref=str(verif_ref),
+        document_format=meta["file_type"],
+        permitted_metadata={
+            "page_count": meta.get("page_count", 1),
+            "text_length": len(sanitized_text),
+        },
+    )
+
+    # Prepare reference data STRICTLY for SummaryGuard leakage detection
+    candidates = EntityResolver.load_candidates(document_id)
+    entities = EntityResolver.load_entities(document_id)
+    approved_vals = [c.text for c in candidates if c.review_status == "APPROVED"]
+    approved_cand_ids = {c.candidate_id for c in candidates if c.review_status == "APPROVED"}
+    entity_variants = [
+        v for ent in entities
+        if any(cid in approved_cand_ids for cid in ent.candidate_ids)
+        for v in ent.variants
+    ]
+    guard_references = {
+        "approved_values": approved_vals,
+        "entity_variants": entity_variants,
+    }
+
+    if request is None:
+        request = SummaryRequest()
+
+    try:
+        response = SummaryService.generate_summary(
+            sanitized_doc=sanitized_doc,
+            request=request,
+            guard_references=guard_references,
+        )
+        return response
+    except Exception as exc:
+        logger.error("Failed to generate summary for document %s: %s", document_id, exc)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="An error occurred while generating or verifying the document summary.",
+        )
+
+
+@router.get(
+    "/documents/{document_id}/summary",
+    response_model=SummaryResponse,
+    tags=["Summarization"],
+)
+def get_document_summary(document_id: str) -> SummaryResponse:
+    """Retrieve existing verified summary and verification audit report."""
+    if not re.match(r"^[a-zA-Z0-9_\-]+$", document_id):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid document ID format.",
+        )
+
+    meta = get_document_metadata(document_id)
+    if not meta:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Document session '{document_id}' not found.",
+        )
+
+    summary = SummaryService.get_existing_summary(document_id)
+    if not summary:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"No summary has been generated yet for document session '{document_id}'.",
+        )
+
+    return summary
+
+
+
 

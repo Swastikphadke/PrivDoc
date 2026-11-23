@@ -32,7 +32,7 @@ def sanitize_filename(filename: str) -> str:
 
 def get_safe_session_dir(document_id: str) -> Path:
     """Validate document_id and return resolved session directory."""
-    if not document_id or not document_id.replace("-", "").isalnum():
+    if not document_id or not document_id.replace("-", "").replace("_", "").isalnum():
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Invalid document identifier format."

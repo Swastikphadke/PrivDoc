@@ -1,7 +1,7 @@
 # PrivyDoc — Implementation Status & Phase Tracking
 
 **Project:** PrivyDoc (Privacy-Aware Document Redaction and Summary Tool)  
-**Status:** Phase P5 Complete / Ready for Phase P6  
+**Status:** Phase P6 Complete / Ready for Phase P7  
 **Last Updated:** 2026-11-23  
 **Baseline Specification Reference:** `07_Development_Phases.md`  
 
@@ -17,7 +17,7 @@
 | **P3** | Local SLM & Entity Linking | **COMPLETED** | P2 | None | ☑ Schema-validated JSON, no auto-merge without evidence, degraded mode, 12 tests passing |
 | **P4** | Human Review Interface (React) | **COMPLETED** | P2, P3 | None | ☑ User can approve/reject/add candidates & link entities, shortcuts, 20 frontend tests passing |
 | **P5** | Redaction & Export Verification | **COMPLETED** | P1, P4 | None | ☑ PyMuPDF stream purging, clean-text fallback, zero-leak verification, 10 tests passing |
-| **P6** | Sanitized-Only Safe Summary | **NOT STARTED** | P5 | Quasi-identifier combination heuristics | ⬜ Summary module has zero access to raw text |
+| **P6** | Sanitized-Only Safe Summary | **COMPLETED** | P5 | None | ☑ Strict SanitizedDocument contract, 5-tier guard, extractive fallback, 17 backend + 5 frontend tests passing |
 | **P7** | Feedback Store & Metrics Evaluation | **NOT STARTED** | P2, P5, P6 | Annotation corpus preparation | ⬜ Quantitative evaluation report generated |
 | **P8** | System Hardening & Integration | **NOT STARTED** | P0–P7 | Offline testing, memory profiling | ⬜ Regression tests pass offline on local hardware |
 | **P9** | Deliverables & Final Documentation | **NOT STARTED** | P8 | None | ⬜ Demonstration package & user manual complete |
@@ -148,19 +148,33 @@
 ---
 
 ### Phase 6: Sanitized-Only Summarization & Privacy Guard
-- [ ] Implement architectural boundary:
-  - [ ] Strict `SanitizedDocument` input schema; zero access to raw text or original filenames.
-- [ ] Implement `services/summary_service.py`:
-  - [ ] Prompt template using only sanitized text and placeholders.
-  - [ ] Local SLM generation with factual consistency constraints.
-  - [ ] Clearly labelled extractive fallback algorithm based exclusively on sanitized text when SLM is unavailable.
-- [ ] Implement `services/summary_guard.py`:
-  - [ ] Check 1: Exact approved-value and alias substring search.
-  - [ ] Check 2: PII detector scan across generated summary text (runs identically on extractive fallback).
-  - [ ] Check 3: Configurable quasi-identifier combination risk rules (`config/quasi_identifiers.json`), treating alerts as risk flags.
-  - [ ] Action: Suppress summary or flag for mandatory human review if privacy checks fail; never bypass verification.
-- [ ] Write summary privacy isolation tests (`tests/test_summary_guard.py`).
-- **Exit Condition:** Summaries generated strictly from sanitized text; unsafe summaries suppressed.
+- [x] Implement architectural boundary (TDR-010, FR-021):
+  - [x] Strict `SanitizedDocument` input schema; zero access to raw text, original PDF, candidates, or coordinates.
+  - [x] Gatekeeper: Only P5 `VERIFIED` exports may enter summarization; non-verified rejected with HTTP 400.
+- [x] Implement `services/summary_service.py`:
+  - [x] Structured JSON summary schema (`StructuredSummaryContent`) with 5 fields: `summary_text`, `key_points`, `important_findings`, `relevant_dates_and_figures`, `source_evidence`.
+  - [x] Local SLM generation with factual consistency constraints via local Ollama runtime (`127.0.0.1:11434`).
+  - [x] Clearly labelled deterministic extractive fallback algorithm based exclusively on sanitized text when SLM is unavailable or times out.
+  - [x] Bounded retry loop (max 2 retries, 3 attempts) enforcing fail-safe suppression if verification checks fail.
+- [x] Implement `services/summary_guard.py`:
+  - [x] Check 1: Direct approved-value substring search (with SHA-256 masked error detail).
+  - [x] Check 2: Name aliases and entity variants search across resolved entity clusters.
+  - [x] Check 3: PII re-detection scan across generated summary text (deterministic regex + contextual NER, runs identically on extractive fallback).
+  - [x] Check 4: Configurable quasi-identifier combination risk rules (`config/quasi_identifiers.json`), treating alerts as risk flags and including mandatory non-anonymity disclaimer.
+  - [x] Check 5: Source evidence consistency verification against sanitized text.
+  - [x] Fail-Safe Enforcement: State transition to `SUPPRESSED` if any safety check fails; unverified summary text is completely blocked from display.
+- [x] Implement frontend Summarization Workspace (`frontend/src/pages/SummaryView.jsx`):
+  - [x] State badges (`VERIFIED`, `GENERATING`, `VERIFYING`, `SUPPRESSED`, `FAILED`, `REQUIRES_REVIEW`).
+  - [x] Engine badge (`Local SLM` vs `Extractive Fallback (SLM Unavailable)`).
+  - [x] Structured summary cards (Narrative text, Key Points, Important Findings, Dates/Figures, Source Evidence).
+  - [x] Summary Privacy Verification Shield breakdown card with all 5 checks.
+  - [x] Quasi-Identifier Risk Assessment card with evaluated findings and mandatory non-anonymity disclaimer.
+  - [x] Fail-safe suppression banner with retry options.
+- [x] Adversarial Test Suite (`backend/tests/test_summary.py`):
+  - [x] All 16 mandatory adversarial scenarios + full API workflow test (17 tests total).
+- [x] Frontend Component Test Suite (`frontend/src/pages/SummaryView.test.jsx`):
+  - [x] 5 unit tests covering verified structured rendering, verification shield, quasi disclaimer, suppressed blocking, and extractive badge.
+- **Exit Condition:** Summaries generated strictly from sanitized text; unsafe summaries suppressed; 17 adversarial backend tests + 5 frontend tests passing. (ACHIEVED — 99 backend tests + 33 frontend tests passing across project)
 
 ---
 
