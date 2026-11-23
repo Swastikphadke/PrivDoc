@@ -245,9 +245,11 @@ PrivyDoc includes a local-first, privacy-minimized continuous improvement mechan
   - If actual alias values are required for cross-session matching, users must explicitly opt in (`POST /api/documents/{id}/aliases` with `opt_in_consent=true`).
   - Stored in `opt_in_encrypted_aliases` protected by machine-local **AES-256-GCM** authenticated encryption (`data/.alias_encryption.key`).
   - Supports configurable TTL retention (default 30 days), explicit deletion (`DELETE /api/documents/{id}/aliases`), and automatic cascade deletion when documents are deleted.
-- **Controlled Feedback Workflow (TDR-016)**:
-  - User feedback **never automatically mutates** active detection regex patterns, classifier weights, or SLM prompts in production.
-  - Aggregated feedback patterns produce structured `FeedbackProposal` records (`GET /api/feedback/analysis`) requiring explicit human inspection, code review, and promotion.
+- **Controlled Active-Learning Loop & Proposal Workflow (TDR-016)**:
+  - Reviewer corrections (`APPROVE`, `REJECT`, `MANUAL_ADD`) drive a privacy-preserving, quorum-gated active-learning loop (`FeedbackService.apply_active_learning`) without blindly mutating production code or storing raw PII:
+    1. **Quorum-Gated Structural Prefix Learning**: When reviewers manually add organization-specific `ID_LIKE` spans (`<ALPHA_PREFIX>-<DIGITS>`, e.g., `BDG-99201`), only the non-PII uppercase prefix (`BDG`) is recorded in `feedback_records` (verified against a strict non-PII blocklist excluding `ISO`, `RFC`, `IEEE`, `DOC`, `SEC`). Once a prefix reaches quorum ($\ge 2$ manual additions), subsequent detection runs automatically flag new occurrences (`sources=["active_learning"]`, `review_status="PENDING"`).
+    2. **Empirical Confidence Calibration**: Once a `(source, category)` pair accumulates $\ge 3$ review decisions, `FeedbackService` applies a bounded empirical confidence adjustment $\Delta \in [-0.15, +0.10]$ and attaches `active_learning:high_approval_prior` or `active_learning:high_rejection_caution` signals for reviewer prioritization.
+    3. **Structured Rule Proposals**: Aggregated feedback patterns also produce structured `FeedbackProposal` records (`GET /api/feedback/analysis`) for permanent rule promotion.
 - **Synthetic Evaluation Corpus & Quarantined Isolation (TDR-017)**:
   - 100% synthetic, locally generated dataset across 8 realistic difficulty classes (standard business, high-density contact, informal correspondence, multi-page legal agreements, structured invoices, mixed medical summaries, ambiguous initials, and edge formatting).
   - Split into three distinct subsets:

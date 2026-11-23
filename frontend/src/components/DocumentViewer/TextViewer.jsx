@@ -174,6 +174,12 @@ export default function TextViewer({
             const isSelected = cand.candidate_id === selectedCandidateId;
             const isApproved = cand.review_status === 'APPROVED';
             const isRejected = cand.review_status === 'REJECTED';
+            const confDotColor =
+              cand.confidence_band === 'HIGH'
+                ? 'bg-emerald-400'
+                : cand.confidence_band === 'LOW'
+                ? 'bg-rose-400'
+                : 'bg-amber-400';
 
             return (
               <mark
@@ -184,22 +190,26 @@ export default function TextViewer({
                   e.stopPropagation();
                   onSelectCandidate?.(cand.candidate_id);
                 }}
-                className={`cursor-pointer px-1 py-0.5 rounded transition-all inline-block ${
+                className={`cursor-pointer px-1.5 py-0.5 rounded transition-all inline-flex items-center gap-1 ${
                   theme.highlightClass
                 } ${
                   isSelected ? 'ring-2 ring-cyan-400 ring-offset-2 ring-offset-slate-950 shadow-md' : ''
                 } ${
-                  isApproved ? 'bg-emerald-950/80 border-b-2 border-emerald-500 text-emerald-200 font-medium' : ''
+                  isApproved ? 'bg-emerald-950/85 border-b-2 border-emerald-500 text-emerald-200 font-medium' : ''
                 } ${
                   isRejected ? 'opacity-40 line-through text-slate-400 border-b-0' : ''
                 }`}
                 title={`${cand.type} (${cand.confidence_band} Confidence) — Status: ${cand.review_status}`}
               >
+                <span
+                  className={`w-1.5 h-1.5 rounded-full shrink-0 ${confDotColor}`}
+                  aria-hidden="true"
+                />
                 <span data-char-start={seg.start} data-char-end={seg.end}>
                   {seg.text}
                 </span>
-                <span className="ml-1 text-[10px] font-sans uppercase font-bold opacity-75 select-none">
-                  [{theme.label}]
+                <span className="ml-0.5 text-[10px] font-sans uppercase font-bold opacity-80 select-none">
+                  [{theme.label}{isApproved ? ' • REDACT' : ''}]
                 </span>
               </mark>
             );

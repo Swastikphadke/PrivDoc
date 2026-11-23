@@ -131,7 +131,11 @@ xychart-beta
 
 ### 4.4 SLM Contribution Analysis
 - **Live Host Status:** On the evaluation machine, the local Ollama service (`127.0.0.1:11434`) is not running (`slm_runtime_available = False`). Consequently, `hybrid_with_slm` incurs an HTTP connection-refused timeout probe overhead of `~390–540 ms/doc` and gracefully degrades to `hybrid_no_slm` with identical accuracy (`0.8989` on V1 `test`, `0.9074` on V2 `test`).
-- **Controlled SLM Assistance Evaluation (`test_stage2_audit_slm_ablation_and_failure_safety`):** When the SLM returns structured `SLMAnalysisResponse` proposals on narrative documents containing untitled single-word aliases (e.g., operative alias `"Nightingale"`), recall increases from `0.5000` (`Regex+NER`) to `1.0000` (`Regex+NER+SLM`) while keeping all SLM-proposed candidates at `review_status="PENDING"` (`confidence=0.60`, never auto-approved).
+- **Controlled SLM Assistance Evaluation (`test_stage2_audit_slm_ablation_and_failure_safety`):** When the SLM returns structured `SLMAnalysisResponse` proposals on narrative documents containing untitled single-word aliases (e.g., operative alias `"Nightingale"`), recall increases from `0.5000` (`Regex+NER`) to `1.0000` (`Regex+NER+SLM`) while keeping all SLM-proposed candidates at `review_status="PENDING"` (`confidence=0.65`, never auto-approved), and corroborating SLM spans merge into `MULTI_DETECTOR_CONSENSUS`.
+
+### 4.5 Active-Learning Validation (`test_active_learning_quorum_prefix_and_confidence_calibration`)
+- **Quorum-Gated Structural Prefix Learning:** On documents containing unseen organization-specific identifier prefixes (`BDG-77510`, `TRK-981023`), baseline `ID_LIKE` recall is `0.0000` (missed intentionally to prevent false positives on arbitrary hyphenated codes). After a reviewer manually adds $\ge 2$ instances of the prefix (`BDG-99201`, `BDG-44102`), `FeedbackService.apply_active_learning` activates the structural prefix `BDG` (storing zero raw PII or digits in SQLite) while rejecting blocked standard prefixes (`ISO-27001`), increasing subsequent `ID_LIKE` recall on `BDG-*` documents from `0.0000` to `1.0000` (`sources=["active_learning"]`, `review_status="PENDING"`).
+- **Empirical Confidence Calibration:** After $\ge 3$ reviewer approvals or rejections for a `(source, category)` pair, candidate confidence is adjusted within $[-0.15, +0.10]$ with explicit `active_learning:high_approval_prior` or `active_learning:high_rejection_caution` signals.
 
 ---
 
@@ -270,7 +274,7 @@ python scripts/evaluate.py --dataset-dir datasets/evaluation_stage4 --split all 
 # 4. Run hardware latency and OS RSS / tracemalloc memory profiler
 python scripts/profile_pipeline.py
 
-# 5. Execute complete backend (147 tests) and frontend (41 tests) verification suites
+# 5. Execute complete backend (159 tests) and frontend (42 tests) verification suites
 python -m pytest backend/tests -v
 npm --prefix frontend run test -- --run
 ```

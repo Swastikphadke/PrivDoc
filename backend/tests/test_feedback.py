@@ -320,3 +320,112 @@ def test_feedback_api_endpoints():
     assert del_res.status_code == 200
 
     delete_document_record(doc_id)
+
+
+def test_active_learning_quorum_prefix_and_confidence_calibration():
+    """Validate the complete 6-step PS3 Active-Learning lifecycle:
+    1. Unseen custom ID prefix ('BDG-77510') is initially missed by baseline detection.
+    2. Reviewer manually adds 'BDG-99201' and 'BDG-44102' on training/review sessions.
+    3. Feedback is stored with zero raw PII (only structural prefix 'BDG', never '99201'/'44102').
+    4. Malicious/invalid prefixes ('ISO-27001' or single unconfirmed occurrence) are NOT learned.
+    5. Subsequent detection run on a new document automatically detects 'BDG-77510' as PENDING.
+    6. Historical rejections calibrate detector confidence downward on borderline sources.
+    """
+    client = TestClient(app)
+
+    # Step 1: Upload target document before active learning -> 'BDG-77510' is missed
+    target_txt = "Security Roster: Officer Priya Nair assigned badge BDG-77510 at Gate 4."
+    up_before = client.post(
+        "/api/documents/upload",
+        files={"file": ("roster_before.txt", target_txt.encode("utf-8"), "text/plain")},
+    )
+    assert up_before.status_code == 201
+    doc_before_id = up_before.json()["document_id"]
+
+    det_before = client.post(f"/api/documents/{doc_before_id}/detect").json()
+    before_texts = {c["text"] for c in det_before["candidates"]}
+    assert "BDG-77510" not in before_texts
+
+    # Step 2: Reviewer manually adds 'BDG-99201' on doc 1 (quorum = 1/2 -> not yet active)
+    train_txt = "Shift Log: Badge BDG-99201 and BDG-44102 under ISO-27001 compliance."
+    up_train = client.post(
+        "/api/documents/upload",
+        files={"file": ("shift_log.txt", train_txt.encode("utf-8"), "text/plain")},
+    )
+    doc_train_id = up_train.json()["document_id"]
+    client.post(f"/api/documents/{doc_train_id}/detect")
+
+    idx1 = train_txt.index("BDG-99201")
+    client.post(
+        f"/api/documents/{doc_train_id}/candidates/manual",
+        json={"start": idx1, "end": idx1 + len("BDG-99201"), "type": "ID_LIKE"},
+    )
+    # Single observation must not activate prefix learning yet (quorum=2)
+    assert "BDG" not in FeedbackService.get_active_learning_profile()["learned_id_prefixes"]
+
+    # Attempt to manually add blocked standard prefix 'ISO-27001' twice -> must NEVER be learned
+    idx_iso = train_txt.index("ISO-27001")
+    for _ in range(2):
+        FeedbackService.record_manual_add_feedback(
+            doc_train_id,
+            Candidate(
+                candidate_id="c_iso",
+                document_id=doc_train_id,
+                start=idx_iso,
+                end=idx_iso + len("ISO-27001"),
+                text="ISO-27001",
+                type="ID_LIKE",
+                confidence=1.0,
+                sources=["manual"],
+            ),
+        )
+    assert "ISO" not in FeedbackService.get_active_learning_profile()["learned_id_prefixes"]
+
+    # Add second legitimate manual observation 'BDG-44102' -> reaches quorum (2/2)
+    idx2 = train_txt.index("BDG-44102")
+    client.post(
+        f"/api/documents/{doc_train_id}/candidates/manual",
+        json={"start": idx2, "end": idx2 + len("BDG-44102"), "type": "ID_LIKE"},
+    )
+    profile = FeedbackService.get_active_learning_profile()
+    assert "BDG" in profile["learned_id_prefixes"]
+
+    # Step 3: Verify SQLite feedback_records contains ZERO raw PII strings ('99201' and '44102' absent)
+    all_fb_str = json.dumps(get_feedback_records())
+    assert "99201" not in all_fb_str
+    assert "44102" not in all_fb_str
+
+    # Also record 3 rejections for ('ner', 'PERSON') to test empirical confidence calibration
+    for i in range(3):
+        FeedbackService.record_review_feedback(
+            doc_train_id,
+            Candidate(
+                candidate_id=f"c_rej_{i}",
+                document_id=doc_train_id,
+                start=0,
+                end=5,
+                text="Noise",
+                type="PERSON",
+                confidence=0.80,
+                sources=["ner"],
+            ),
+            action="REJECTED",
+        )
+
+    # Step 4 & 5: Subsequent detection run on unseen badge 'BDG-77510' now detects it!
+    det_after = client.post(f"/api/documents/{doc_before_id}/detect").json()
+    assert "active_learning" in det_after["detectors_run"]
+    after_cands = det_after["candidates"]
+    bdg_cand = next((c for c in after_cands if c["text"] == "BDG-77510"), None)
+    assert bdg_cand is not None
+    assert "active_learning" in bdg_cand["sources"]
+    assert bdg_cand["review_status"] == "PENDING"  # Never auto-approved
+
+    # Verify confidence calibration was applied to NER PERSON candidate
+    person_cand = next((c for c in after_cands if c["type"] == "PERSON"), None)
+    assert person_cand is not None
+    assert "active_learning:high_rejection_caution" in person_cand["context_signals"]
+
+    # Cleanup test sessions
+    client.delete(f"/api/documents/{doc_before_id}")
+    client.delete(f"/api/documents/{doc_train_id}")

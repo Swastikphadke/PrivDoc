@@ -11,10 +11,11 @@ Strict Privacy Invariants:
 import json
 import logging
 import os
+import re
 import uuid
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Set, Tuple
 
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 
@@ -28,7 +29,7 @@ from app.database.session import (
     record_feedback_event,
     record_opt_in_encrypted_alias,
 )
-from app.schemas.candidate import Candidate
+from app.schemas.candidate import Candidate, ConfidenceBand, ReviewStatus
 from app.schemas.feedback import (
     FeedbackAction,
     FeedbackAnalysisReport,
@@ -40,6 +41,14 @@ from app.schemas.feedback import (
 logger = logging.getLogger(__name__)
 
 KEY_FILE_NAME = ".alias_encryption.key"
+
+# Non-PII standard/specification/document prefixes that must NEVER be learned as ID_LIKE prefixes
+BLOCKED_ID_PREFIXES: Set[str] = {
+    "ISO", "IEC", "IEEE", "RFC", "UTF", "ASCII", "PDF", "TXT", "DOC", "FIG",
+    "SEC", "PAGE", "VER", "HTTP", "HTTPS", "API", "URL", "SQL", "CPU", "RAM",
+    "JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC",
+}
+STRUCTURAL_ID_PATTERN = re.compile(r"^([A-Za-z]{2,8})[-_#][0-9][A-Za-z0-9_-]{2,14}$")
 
 
 def _get_or_create_encryption_key() -> bytes:
@@ -110,11 +119,22 @@ class FeedbackService:
         document_id: str,
         candidate: Candidate,
     ) -> str:
-        """Log manual candidate addition adhering strictly to data minimization."""
+        """Log manual candidate addition adhering strictly to data minimization.
+
+        For ID_LIKE candidates matching a structural prefix schema (<ALPHA_PREFIX>-<DIGITS>),
+        records only the non-PII uppercase alphabetic prefix (never the digits or raw value)
+        for quorum-gated active learning.
+        """
         details: Dict[str, Any] = {
             "page_number": candidate.page_number,
             "span_length": candidate.end - candidate.start,
         }
+        if candidate.type == "ID_LIKE" and candidate.text:
+            m = STRUCTURAL_ID_PATTERN.match(candidate.text.strip())
+            if m:
+                prefix = m.group(1).upper()
+                if prefix not in BLOCKED_ID_PREFIXES:
+                    details["structural_id_prefix"] = prefix
 
         return record_feedback_event(
             doc_id=document_id,
@@ -337,3 +357,163 @@ class FeedbackService:
             proposals=proposals,
             human_approval_required=True,
         )
+
+    # =========================================================================
+    # Controlled Active-Learning Loop (Quorum-Gated & Privacy-Preserving)
+    # =========================================================================
+
+    @classmethod
+    def get_active_learning_profile(cls, min_prefix_quorum: int = 2) -> Dict[str, Any]:
+        """Compute active-learning parameters from historical data-minimized feedback records.
+
+        Safeguards:
+        1. Zero raw PII is stored or read from `feedback_records`.
+        2. Structural ID prefixes require a quorum (`min_prefix_quorum >= 2`) of manual additions
+           and must not appear in `BLOCKED_ID_PREFIXES` (prevents learning ISO/RFC/date codes
+           or single-instance unverified inputs).
+        3. Empirical confidence adjustments per `(source, candidate_type)` require >= 3 review
+           decisions and are strictly bounded to [-0.15, +0.10].
+        """
+        records = get_feedback_records()
+        prefix_counts: Dict[str, int] = {}
+        pair_stats: Dict[Tuple[str, str], Dict[str, int]] = {}
+
+        for rec in records:
+            action = rec.get("action")
+            cat = rec.get("candidate_type") or "DEFAULT"
+            src = rec.get("source") or "unknown"
+
+            if action in (FeedbackAction.APPROVE.value, FeedbackAction.REJECT.value):
+                key = (src, cat)
+                if key not in pair_stats:
+                    pair_stats[key] = {"approvals": 0, "rejections": 0}
+                if action == FeedbackAction.APPROVE.value:
+                    pair_stats[key]["approvals"] += 1
+                else:
+                    pair_stats[key]["rejections"] += 1
+
+            if action == FeedbackAction.MANUAL_ADD.value and cat == "ID_LIKE":
+                raw_details = rec.get("details")
+                if raw_details:
+                    try:
+                        parsed = json.loads(raw_details) if isinstance(raw_details, str) else raw_details
+                        prefix = (parsed.get("structural_id_prefix") or "").upper()
+                        if (
+                            prefix
+                            and 2 <= len(prefix) <= 8
+                            and prefix.isalpha()
+                            and prefix not in BLOCKED_ID_PREFIXES
+                        ):
+                            prefix_counts[prefix] = prefix_counts.get(prefix, 0) + 1
+                    except Exception:
+                        pass
+
+        learned_prefixes = sorted(
+            [p for p, cnt in prefix_counts.items() if cnt >= max(1, min_prefix_quorum)]
+        )
+
+        confidence_deltas: Dict[str, float] = {}
+        for (src, cat), counts in pair_stats.items():
+            total = counts["approvals"] + counts["rejections"]
+            if total >= 3:
+                approval_rate = counts["approvals"] / total
+                rejection_rate = counts["rejections"] / total
+                if approval_rate >= 0.80:
+                    delta = round(min(0.08, (approval_rate - 0.75) * 0.32), 2)
+                    confidence_deltas[f"{src}::{cat}"] = delta
+                elif rejection_rate >= 0.60:
+                    delta = -round(min(0.15, (rejection_rate - 0.50) * 0.30), 2)
+                    confidence_deltas[f"{src}::{cat}"] = delta
+
+        return {
+            "learned_id_prefixes": learned_prefixes,
+            "prefix_observation_counts": prefix_counts,
+            "confidence_deltas": confidence_deltas,
+        }
+
+    @classmethod
+    def apply_active_learning(
+        cls,
+        document_id: str,
+        text: str,
+        existing_candidates: List[Candidate],
+        min_prefix_quorum: int = 2,
+    ) -> Tuple[List[Candidate], bool]:
+        """Apply quorum-gated active-learning rules and empirical confidence calibration.
+
+        Returns:
+            Tuple of (newly proposed Candidate spans, whether active learning contributed).
+        """
+        profile = cls.get_active_learning_profile(min_prefix_quorum=min_prefix_quorum)
+        learned_prefixes: List[str] = profile.get("learned_id_prefixes", [])
+        confidence_deltas: Dict[str, float] = profile.get("confidence_deltas", {})
+        contributed = False
+
+        # 1. Apply bounded empirical confidence calibration to existing candidates
+        if confidence_deltas:
+            for cand in existing_candidates:
+                primary_src = cand.sources[0] if cand.sources else "unknown"
+                key = f"{primary_src}::{cand.type}"
+                delta = confidence_deltas.get(key, 0.0)
+                if delta != 0.0:
+                    new_conf = round(max(0.35, min(0.99, cand.confidence + delta)), 2)
+                    if new_conf != cand.confidence:
+                        cand.confidence = new_conf
+                        cand.confidence_band = (
+                            ConfidenceBand.HIGH.value
+                            if new_conf >= 0.85
+                            else ConfidenceBand.MEDIUM.value
+                            if new_conf >= 0.60
+                            else ConfidenceBand.LOW.value
+                        )
+                        sig = (
+                            "active_learning:high_approval_prior"
+                            if delta > 0
+                            else "active_learning:high_rejection_caution"
+                        )
+                        if sig not in cand.context_signals:
+                            cand.context_signals.append(sig)
+                        exp_note = (
+                            f"Active-learning confidence calibration ({delta:+.2f}) from prior reviewer feedback"
+                        )
+                        if exp_note not in cand.explanation:
+                            cand.explanation.append(exp_note)
+                        contributed = True
+
+        # 2. Scan for quorum-verified structural ID_LIKE prefixes learned from manual additions
+        new_candidates: List[Candidate] = []
+        if learned_prefixes and text:
+            prefix_union = "|".join(re.escape(p) for p in learned_prefixes)
+            dyn_regex = re.compile(rf"\b(?:{prefix_union})[-_#][0-9][A-Za-z0-9_-]{{2,14}}\b", re.IGNORECASE)
+            existing_spans = [(c.start, c.end) for c in existing_candidates]
+            idx = 0
+            for match in dyn_regex.finditer(text):
+                s, e = match.span()
+                if any(max(s, es) < min(e, ee) for es, ee in existing_spans):
+                    continue
+                idx += 1
+                matched_str = text[s:e]
+                prefix_used = re.split(r"[-_#]", matched_str, maxsplit=1)[0].upper()
+                new_candidates.append(
+                    Candidate(
+                        candidate_id=f"c_al_{idx:04d}",
+                        document_id=document_id,
+                        start=s,
+                        end=e,
+                        text=matched_str,
+                        type="ID_LIKE",
+                        confidence=0.84,
+                        confidence_band=ConfidenceBand.MEDIUM.value,
+                        confidence_type="HEURISTIC_EVIDENCE",
+                        sources=["active_learning"],
+                        explanation=[
+                            f"Matched organization-specific ID prefix '{prefix_used}-' learned via quorum-gated reviewer feedback"
+                        ],
+                        context_signals=[f"active_learning_prefix:{prefix_used}"],
+                        review_status=ReviewStatus.PENDING.value,
+                    )
+                )
+                existing_spans.append((s, e))
+                contributed = True
+
+        return new_candidates, contributed

@@ -60,6 +60,21 @@ class DetectionService:
         except Exception:
             pass
 
+        # Engine D: Controlled Quorum-Gated Active-Learning Loop
+        try:
+            from app.services.feedback_service import FeedbackService
+            al_cands, al_contributed = FeedbackService.apply_active_learning(
+                document_id=document_id,
+                text=text,
+                existing_candidates=raw_candidates,
+            )
+            if al_cands:
+                raw_candidates.extend(al_cands)
+            if al_contributed:
+                detectors_run.append("active_learning")
+        except Exception:
+            pass
+
         # 2. Deterministic candidate merging & conflict handling
         merged_candidates = cls.merge_candidates(raw_candidates, text, document_id)
 

@@ -35,36 +35,43 @@ class SLMDetector:
             return [], SLMAnalysisResponse()
 
         suggested_candidates: List[Candidate] = []
-        existing_spans = {(c.start, c.end) for c in existing_candidates}
+        valid_categories = {"PERSON", "EMAIL", "PHONE", "ADDRESS", "ID_LIKE"}
 
         for suggestion in slm_result.suggested_candidates:
             target_text = suggestion.text.strip()
             if not target_text or len(target_text) < 2:
                 continue
 
-            # Find occurrences of target_text in canonical text
+            sug_type = suggestion.type.upper() if suggestion.type else "PERSON"
+            if sug_type not in valid_categories:
+                sug_type = "PERSON"
+            reason_str = (
+                f"SLM contextual assistance: {suggestion.reason.strip()}"
+                if suggestion.reason and suggestion.reason.strip()
+                else f"SLM contextual detection for {sug_type}"
+            )
+
+            # Find occurrences of target_text in canonical text and emit for merge_candidates
+            # (Overlapping same-type spans will be merged into MULTI_DETECTOR_CONSENSUS by DetectionService;
+            # conflicting types will be marked TYPE_CONFLICT; novel spans remain PENDING at confidence 0.65)
             pattern = re.escape(target_text)
             for match in re.finditer(pattern, canonical_text):
                 start, end = match.span()
-                # Check if already covered by an existing candidate
-                overlap = any(
-                    max(start, ex_start) < min(end, ex_end)
-                    for (ex_start, ex_end) in existing_spans
+                candidate = Candidate(
+                    candidate_id=f"cand_slm_{uuid.uuid4().hex[:8]}",
+                    document_id=document_id,
+                    start=start,
+                    end=end,
+                    text=canonical_text[start:end],
+                    type=sug_type,
+                    confidence=0.65,
+                    confidence_band=ConfidenceBand.MEDIUM.value,
+                    confidence_type="HEURISTIC_EVIDENCE",
+                    sources=["slm"],
+                    explanation=[reason_str],
+                    context_signals=["slm_contextual_assistance"],
+                    review_status=ReviewStatus.PENDING.value,
                 )
-                if not overlap:
-                    candidate = Candidate(
-                        candidate_id=f"cand_slm_{uuid.uuid4().hex[:8]}",
-                        document_id=document_id,
-                        start=start,
-                        end=end,
-                        text=canonical_text[start:end],
-                        type=suggestion.type.upper() if suggestion.type else "PERSON",
-                        confidence=0.60,
-                        confidence_band=ConfidenceBand.MEDIUM.value,
-                        sources=["slm"],
-                        review_status=ReviewStatus.PENDING.value,
-                    )
-                    suggested_candidates.append(candidate)
-                    existing_spans.add((start, end))
+                suggested_candidates.append(candidate)
 
         return suggested_candidates, slm_result
