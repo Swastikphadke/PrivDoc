@@ -67,3 +67,15 @@ This document details the genuine technical constraints, architectural boundarie
 
 ### 5.2 Network Boundary Invariant
 - **Limitation:** The system operates strictly offline on `127.0.0.1`. It does not support distributed multi-node clusters or third-party cloud LLM API integrations (e.g., OpenAI, Anthropic) by design, ensuring zero data egress.
+
+---
+
+## 6. Operational Security & Adversarial Boundaries
+
+### 6.1 Single-User Local Workstation Trust Model
+- **Limitation:** PrivyDoc is architected as a single-user local workstation application bound to `127.0.0.1`. It does not implement multi-tenant user authentication (OAuth/OIDC/RBAC) or per-user session access control lists. Any local process or user account running on the same host machine with access to `127.0.0.1:8000` or the local filesystem (`backend/data/`) can access active sessions.
+- **Mitigation:** Deploy strictly on single-user workstations with OS-level disk encryption (BitLocker/FileVault/LUKS) and purge sensitive sessions immediately after export (`DELETE /api/documents/{id}`).
+
+### 6.2 Novel Multi-Character & Semantic Obfuscation
+- **Limitation:** While PrivyDoc normalizes zero-width characters, bidirectional controls, exotic Unicode spaces, and single-codepoint Cyrillic/Greek/fullwidth homoglyphs (`SEC-01`), and scans for Base64/hex/URL-encoded approved strings in summaries, an adversary using arbitrary multi-character ASCII substitutions (e.g., `"M @ r c u s   V 4 n c 3"` with spaces between every letter or custom ciphers) or indirect semantic paraphrases may evade automated detection.
+- **Mitigation:** Human-in-the-loop review (`ReviewWorkspace`) with arbitrary manual text selection (`M` shortcut) remains the authoritative control before export.

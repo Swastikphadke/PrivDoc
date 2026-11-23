@@ -1,17 +1,114 @@
-"""Security controls, file validation, and path protections."""
+"""Security controls, file validation, Unicode adversarial normalization, and path protections."""
 
 import os
+import re
 import shutil
 import time
+import unicodedata
 import uuid
 from pathlib import Path
-from typing import Set
+from typing import Dict, Set
 from fastapi import HTTPException, status
 from app.core.config import settings
 
 
 ALLOWED_EXTENSIONS: Set[str] = {".txt", ".pdf"}
 PDF_MAGIC_BYTES: bytes = b"%PDF-"
+MAX_PDF_PAGES: int = 500
+MAX_EXTRACTED_CHARS: int = 2_000_000
+
+# Invisible zero-width, soft-hyphen, and bidirectional spoofing control characters
+INVISIBLE_CONTROL_REGEX = re.compile(
+    r"[\u00ad\u034f\u061c\u180e\u200b-\u200f\u202a-\u202e\u2060-\u2069\ufeff]"
+)
+# Exotic horizontal Unicode spaces (NBSP, En/Em/Thin/Ideographic spaces) -> standard ASCII space
+UNICODE_SPACE_REGEX = re.compile(
+    r"[\u00a0\u1680\u2000-\u200a\u202f\u205f\u3000]"
+)
+
+# 1-to-1 single-codepoint Cyrillic and Greek confusable homoglyphs -> Latin ASCII
+HOMOGLYPH_MAP: Dict[str, str] = {
+    "\u0430": "a",  # Cyrillic small a
+    "\u0435": "e",  # Cyrillic small ie
+    "\u043e": "o",  # Cyrillic small o
+    "\u0440": "p",  # Cyrillic small er
+    "\u0441": "c",  # Cyrillic small es
+    "\u0443": "y",  # Cyrillic small u
+    "\u0445": "x",  # Cyrillic small ha
+    "\u0456": "i",  # Cyrillic small byelorussian-ukrainian i
+    "\u0458": "j",  # Cyrillic small je
+    "\u0455": "s",  # Cyrillic small dze
+    "\u0501": "d",  # Cyrillic small komi de
+    "\u0410": "A",  # Cyrillic capital A
+    "\u0412": "B",  # Cyrillic capital VE
+    "\u0415": "E",  # Cyrillic capital IE
+    "\u041a": "K",  # Cyrillic capital KA
+    "\u041c": "M",  # Cyrillic capital EM
+    "\u041d": "H",  # Cyrillic capital EN
+    "\u041e": "O",  # Cyrillic capital O
+    "\u0420": "P",  # Cyrillic capital ER
+    "\u0421": "C",  # Cyrillic capital ES
+    "\u0422": "T",  # Cyrillic capital TE
+    "\u0425": "X",  # Cyrillic capital HA
+    "\u0406": "I",  # Cyrillic capital I
+    "\u0405": "S",  # Cyrillic capital DZE
+    "\u03b1": "a",  # Greek small alpha
+    "\u03b5": "e",  # Greek small epsilon
+    "\u03bf": "o",  # Greek small omicron
+    "\u03c1": "p",  # Greek small rho
+    "\u0391": "A",  # Greek capital Alpha
+    "\u0392": "B",  # Greek capital Beta
+    "\u0395": "E",  # Greek capital Epsilon
+    "\u0397": "H",  # Greek capital Eta
+    "\u0399": "I",  # Greek capital Iota
+    "\u039a": "K",  # Greek capital Kappa
+    "\u039c": "M",  # Greek capital Mu
+    "\u039d": "N",  # Greek capital Nu
+    "\u039f": "O",  # Greek capital Omicron
+    "\u03a1": "P",  # Greek capital Rho
+    "\u03a4": "T",  # Greek capital Tau
+    "\u03a7": "X",  # Greek capital Chi
+    "\u03a5": "Y",  # Greek capital Upsilon
+    "\u0396": "Z",  # Greek capital Zeta
+}
+HOMOGLYPH_TRANS = str.maketrans(HOMOGLYPH_MAP)
+
+
+def strip_invisible_and_normalize_whitespace(text: str) -> str:
+    """Remove zero-width/bidi spoofing characters and normalize exotic Unicode horizontal spaces to ASCII space."""
+    if not text:
+        return ""
+    cleaned = INVISIBLE_CONTROL_REGEX.sub("", text)
+    cleaned = UNICODE_SPACE_REGEX.sub(" ", cleaned)
+    return cleaned
+
+
+def fold_homoglyphs_1to1(text: str) -> str:
+    """Fold single-codepoint Cyrillic/Greek/fullwidth confusables 1-to-1 to ASCII without altering string length."""
+    if not text:
+        return ""
+    translated = text.translate(HOMOGLYPH_TRANS)
+    # Also fold fullwidth ASCII characters (U+FF01..U+FF5E -> U+0021..U+007E), which are strictly 1-to-1
+    out_chars = []
+    for ch in translated:
+        code = ord(ch)
+        if 0xFF01 <= code <= 0xFF5E:
+            out_chars.append(chr(code - 0xFEE0))
+        else:
+            out_chars.append(ch)
+    return "".join(out_chars)
+
+
+def normalize_for_security_comparison(text: str) -> str:
+    """Normalize untrusted text for leakage and prompt-injection checks (NFKC + strip zero-width + fold homoglyphs)."""
+    if not text:
+        return ""
+    stripped = strip_invisible_and_normalize_whitespace(text)
+    folded = fold_homoglyphs_1to1(stripped)
+    nfkc = unicodedata.normalize("NFKC", folded)
+    nfkc = INVISIBLE_CONTROL_REGEX.sub("", nfkc)
+    nfkc = UNICODE_SPACE_REGEX.sub(" ", nfkc)
+    return nfkc.casefold()
 
 
 def atomic_write_text(target_path: Path, content: str, encoding: str = "utf-8") -> None:

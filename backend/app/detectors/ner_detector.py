@@ -127,6 +127,9 @@ class NERDetector:
         """
         candidates: List[Candidate] = []
         cand_idx = 0
+        from app.core.security import fold_homoglyphs_1to1
+        orig_text = text
+        text = fold_homoglyphs_1to1(orig_text)
 
         def add_candidate(
             start: int,
@@ -140,6 +143,7 @@ class NERDetector:
         ):
             nonlocal cand_idx
             cand_idx += 1
+            surface_text = orig_text[start:end] if 0 <= start < end <= len(orig_text) else matched_text
             band = (
                 ConfidenceBand.HIGH.value
                 if confidence >= 0.85
@@ -153,7 +157,7 @@ class NERDetector:
                     document_id=document_id,
                     start=start,
                     end=end,
-                    text=matched_text,
+                    text=surface_text,
                     type=pii_type,
                     confidence=round(confidence, 2),
                     confidence_band=band,

@@ -5,6 +5,8 @@ Strictly adheres to local-first privacy (NFR-001) and storage separation (TDR-00
 """
 
 import json
+import logging
+import re
 import uuid
 from typing import Any, Dict, List, Optional
 from fastapi import APIRouter, File, HTTPException, Response, UploadFile, status
@@ -15,6 +17,18 @@ from app.core.security import (
     sanitize_filename,
     validate_file_upload,
 )
+
+logger = logging.getLogger(__name__)
+DOC_ID_PATTERN = re.compile(r"^[a-zA-Z0-9_\-]{1,64}$")
+
+
+def _validate_doc_id(document_id: str) -> None:
+    """Validate document_id at API boundary before any database or filesystem access."""
+    if not document_id or not DOC_ID_PATTERN.match(document_id):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid document ID format.",
+        )
 from app.database.session import (
     check_db_health,
     delete_document_record,
@@ -134,9 +148,10 @@ async def upload_document(file: UploadFile = File(...)) -> DocumentResponse:
         ) from val_err
     except Exception as exc:
         cleanup_session(document_id)
+        logger.error("Internal parser error while extracting '%s': %s", clean_name, exc)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Internal parser error while extracting '{clean_name}': {str(exc)}"
+            detail=f"Internal parser error while extracting '{clean_name}'."
         ) from exc
 
     # 5. Store session artifacts locally (ephemeral storage)
@@ -236,7 +251,12 @@ def get_documents_overview() -> Dict[str, Any]:
             exp_path = s_dir / "export_metadata.json"
             if exp_path.exists():
                 exp_meta = json.loads(exp_path.read_text(encoding="utf-8"))
-                export_state = exp_meta.get("export_state")
+                raw_exp_state = exp_meta.get("export_state")
+                has_export_file = (s_dir / "sanitized.pdf").exists() or (s_dir / "sanitized.txt").exists()
+                if raw_exp_state == "VERIFIED" and has_export_file:
+                    export_state = "VERIFIED"
+                elif raw_exp_state:
+                    export_state = raw_exp_state
 
             sum_path = s_dir / "summary.json"
             if sum_path.exists():
@@ -245,7 +265,7 @@ def get_documents_overview() -> Dict[str, Any]:
         except Exception:
             pass
 
-        if export_state == "VERIFIED" or status_val == "VERIFIED":
+        if export_state == "VERIFIED":
             verified_exports_count += 1
         if summary_state == "SUPPRESSED":
             suppressed_summaries_count += 1
@@ -290,6 +310,7 @@ def get_documents_overview() -> Dict[str, Any]:
 )
 def get_document(document_id: str) -> DocumentResponse:
     """Retrieve document metadata and canonical extracted text for an active session."""
+    _validate_doc_id(document_id)
     meta = get_document_metadata(document_id)
     if not meta:
         raise HTTPException(
@@ -327,6 +348,7 @@ def get_document(document_id: str) -> DocumentResponse:
 )
 def get_document_coordinates(document_id: str) -> DocumentCoordinatesResponse:
     """Retrieve PDF word/span coordinate mappings for UI synchronization."""
+    _validate_doc_id(document_id)
     meta = get_document_metadata(document_id)
     if not meta:
         raise HTTPException(
@@ -356,6 +378,9 @@ def get_document_coordinates(document_id: str) -> DocumentCoordinatesResponse:
 )
 def delete_document(document_id: str) -> dict:
     """Manually purge an active session, removing all local ephemeral files and metadata."""
+    _validate_doc_id(document_id)
+    # Always purge any ephemeral session directory on disk even if DB record was already removed
+    cleanup_session(document_id)
     meta = get_document_metadata(document_id)
     if not meta:
         raise HTTPException(
@@ -363,9 +388,7 @@ def delete_document(document_id: str) -> dict:
             detail=f"Document session '{document_id}' not found."
         )
 
-    # 1. Purge ephemeral files
-    cleanup_session(document_id)
-    # 2. Delete database record
+    # Delete database record and cascade feedback/decisions/aliases
     delete_document_record(document_id)
 
     return {
@@ -386,6 +409,7 @@ def delete_document(document_id: str) -> dict:
 )
 def detect_pii(document_id: str) -> DetectionResponse:
     """Execute hybrid detection (Regex + NER) over the canonical text of a document."""
+    _validate_doc_id(document_id)
     meta = get_document_metadata(document_id)
     if not meta:
         raise HTTPException(
@@ -402,9 +426,10 @@ def detect_pii(document_id: str) -> DetectionResponse:
             detail=str(fnf)
         ) from fnf
     except Exception as exc:
+        logger.error("Detection execution failed for %s: %s", document_id, exc)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Detection execution failed: {str(exc)}"
+            detail="Detection execution failed due to an internal processing error."
         ) from exc
 
 
@@ -415,6 +440,7 @@ def detect_pii(document_id: str) -> DetectionResponse:
 )
 def get_candidates(document_id: str) -> List[Candidate]:
     """Retrieve all detected PII candidate spans for human review."""
+    _validate_doc_id(document_id)
     meta = get_document_metadata(document_id)
     if not meta:
         raise HTTPException(
@@ -451,6 +477,7 @@ def get_candidates(document_id: str) -> List[Candidate]:
 )
 def resolve_entities(document_id: str) -> EntityGroupResponse:
     """Run multi-stage entity resolution over document candidates."""
+    _validate_doc_id(document_id)
     meta = get_document_metadata(document_id)
     if not meta:
         raise HTTPException(
@@ -487,6 +514,7 @@ def resolve_entities(document_id: str) -> EntityGroupResponse:
 )
 def get_entities(document_id: str) -> EntityGroupResponse:
     """Retrieve all resolved entity clusters for a document session."""
+    _validate_doc_id(document_id)
     meta = get_document_metadata(document_id)
     if not meta:
         raise HTTPException(
@@ -519,6 +547,7 @@ def link_entities(
     payload: EntityLinkRequest,
 ) -> EntityGroupResponse:
     """Manually link or unlink candidate occurrences to/from entity clusters."""
+    _validate_doc_id(document_id)
     meta = get_document_metadata(document_id)
     if not meta:
         raise HTTPException(
@@ -544,9 +573,10 @@ def link_entities(
             detail=str(ve),
         ) from ve
     except Exception as exc:
+        logger.error("Entity link operation failed for %s: %s", document_id, exc)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Entity link operation failed: {str(exc)}"
+            detail="Entity link operation failed due to an internal processing error."
         ) from exc
 
 
@@ -564,6 +594,7 @@ def submit_review_decision(
     payload: ReviewActionRequest,
 ) -> ReviewSummaryResponse:
     """Submit a human review decision (APPROVE, REJECT, PENDING/UNDO)."""
+    _validate_doc_id(document_id)
     meta = get_document_metadata(document_id)
     if not meta:
         raise HTTPException(
@@ -579,9 +610,10 @@ def submit_review_decision(
             detail=str(ve),
         ) from ve
     except Exception as exc:
+        logger.error("Review decision submission failed for %s: %s", document_id, exc)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Review decision submission failed: {str(exc)}"
+            detail="Review decision submission failed due to an internal processing error."
         ) from exc
 
 
@@ -592,6 +624,7 @@ def submit_review_decision(
 )
 def get_review_summary(document_id: str) -> ReviewSummaryResponse:
     """Retrieve current review summary statistics and candidate list."""
+    _validate_doc_id(document_id)
     meta = get_document_metadata(document_id)
     if not meta:
         raise HTTPException(
@@ -613,6 +646,7 @@ def add_manual_candidate(
     payload: ManualCandidateRequest,
 ) -> Candidate:
     """Add a user-selected text span as a manual redaction candidate."""
+    _validate_doc_id(document_id)
     meta = get_document_metadata(document_id)
     if not meta:
         raise HTTPException(
@@ -628,9 +662,10 @@ def add_manual_candidate(
             detail=str(ve),
         ) from ve
     except Exception as exc:
+        logger.error("Failed to add manual candidate for %s: %s", document_id, exc)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to add manual candidate: {str(exc)}"
+            detail="Failed to add manual candidate due to an internal processing error."
         ) from exc
 
 
@@ -640,6 +675,7 @@ def add_manual_candidate(
 )
 def render_pdf_page(document_id: str, page_number: int) -> Response:
     """Render a PDF page to a PNG image stream for UI visual overlay."""
+    _validate_doc_id(document_id)
     meta = get_document_metadata(document_id)
     if not meta:
         raise HTTPException(
@@ -681,9 +717,10 @@ def render_pdf_page(document_id: str, page_number: int) -> Response:
     except HTTPException:
         raise
     except Exception as exc:
+        logger.error("Failed to render page %d for %s: %s", page_number, document_id, exc)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to render page {page_number}: {str(exc)}"
+            detail=f"Failed to render page {page_number} due to an internal error."
         ) from exc
     finally:
         if doc is not None and not doc.is_closed:
@@ -737,9 +774,10 @@ def execute_redaction(
             detail=str(ve),
         ) from ve
     except Exception as exc:
+        logger.error("Redaction execution failed for %s: %s", document_id, exc)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Redaction execution failed: {str(exc)}"
+            detail="Redaction execution failed due to an internal processing error."
         ) from exc
 
 
@@ -759,11 +797,7 @@ def reconstruct_pdf_export(
     It must be an explicit, user-selected action. The reconstructed output is subjected to the full
     independent verification audit and only promoted to VERIFIED after passing all checks.
     """
-    if not re.match(r"^[a-zA-Z0-9_\-]+$", document_id):
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Invalid document ID format."
-        )
+    _validate_doc_id(document_id)
 
     meta = get_document_metadata(document_id)
     if not meta:
@@ -795,9 +829,10 @@ def reconstruct_pdf_export(
             detail=str(ve),
         ) from ve
     except Exception as exc:
+        logger.error("Clean-text PDF reconstruction failed for %s: %s", document_id, exc)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Clean-text PDF reconstruction failed: {str(exc)}"
+            detail="Clean-text PDF reconstruction failed due to an internal processing error."
         ) from exc
 
 
@@ -1116,6 +1151,8 @@ def get_feedback_analysis(document_id: Optional[str] = None) -> FeedbackAnalysis
     Does NOT mutate detection patterns or fine-tune models automatically.
     Produces proposals requiring explicit human developer review.
     """
+    if document_id is not None:
+        _validate_doc_id(document_id)
     return FeedbackService.analyze_feedback(document_id=document_id)
 
 
@@ -1131,11 +1168,7 @@ def get_document_feedback(document_id: str) -> List[Dict[str, Any]]:
     Returns only structural event records (category, action, source, confidence).
     Contains zero raw document text, snippets, or candidate PII.
     """
-    if not re.match(r"^[a-zA-Z0-9_\-]+$", document_id):
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Invalid document ID format.",
-        )
+    _validate_doc_id(document_id)
     return get_feedback_records(doc_id=document_id)
 
 
@@ -1153,11 +1186,7 @@ def store_opt_in_encrypted_alias(
     Fails with 400 if opt_in_consent is not explicitly True.
     Uses AES-256-GCM encryption with expiration retention.
     """
-    if not re.match(r"^[a-zA-Z0-9_\-]+$", document_id):
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Invalid document ID format.",
-        )
+    _validate_doc_id(document_id)
     if request.document_id != document_id:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -1186,11 +1215,7 @@ def store_opt_in_encrypted_alias(
 )
 def get_opt_in_aliases(document_id: str) -> List[Dict[str, Any]]:
     """Retrieve decrypted aliases for the active document session."""
-    if not re.match(r"^[a-zA-Z0-9_\-]+$", document_id):
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Invalid document ID format.",
-        )
+    _validate_doc_id(document_id)
     return FeedbackService.get_opt_in_aliases(document_id)
 
 
@@ -1200,11 +1225,7 @@ def get_opt_in_aliases(document_id: str) -> List[Dict[str, Any]]:
 )
 def delete_document_aliases(document_id: str) -> Dict[str, Any]:
     """Purge all encrypted aliases associated with a document session."""
-    if not re.match(r"^[a-zA-Z0-9_\-]+$", document_id):
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Invalid document ID format.",
-        )
+    _validate_doc_id(document_id)
     FeedbackService.clear_document_data(document_id)
     return {"status": "DELETED", "document_id": document_id}
 

@@ -56,8 +56,15 @@ class TXTProcessor:
                     f"File '{filename}' could not be decoded as UTF-8 or any standard fallback ({cls.FALLBACK_ENCODINGS})."
                 )
 
-        # 3. Canonical newline normalization (\r\n and \r to \n)
+        # 3. Canonical newline, invisible zero-width/bidi removal, and Unicode space normalization
+        from app.core.security import MAX_EXTRACTED_CHARS, strip_invisible_and_normalize_whitespace
         canonical_text = decoded_text.replace("\r\n", "\n").replace("\r", "\n")
+        canonical_text = strip_invisible_and_normalize_whitespace(canonical_text)
+
+        if len(canonical_text) > MAX_EXTRACTED_CHARS:
+            raise ValueError(
+                f"File '{filename}' exceeds maximum permitted extracted text length ({MAX_EXTRACTED_CHARS} characters)."
+            )
 
         # 4. Check for empty/whitespace-only content
         if not canonical_text.strip():

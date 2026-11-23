@@ -100,6 +100,11 @@ export default function ReviewWorkspace() {
       }
     } catch (err) {
       console.error('Error loading review workspace:', err);
+      setDocument(null);
+      setCandidates([]);
+      setEntities([]);
+      setCoordinates([]);
+      setSummary(null);
       setError(err.response?.data?.detail || err.message || 'Failed to load document session.');
     } finally {
       setLoading(false);

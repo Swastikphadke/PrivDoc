@@ -30,14 +30,16 @@ class ModelService:
         """Neutralize embedded XML/role delimiter breakout tags and adversarial control markers."""
         if not text:
             return ""
+        from app.core.security import strip_invisible_and_normalize_whitespace
+        sanitized = strip_invisible_and_normalize_whitespace(text)
         sanitized = re.sub(
-            r"<\/?\s*(?:untrusted_document_content|system|instruction|prompt|assistant|user)[^>]*>",
+            r"<\/?\s*(?:untrusted_document_content|system|instruction|prompt|assistant|user|developer|tool_call)[^>]*>",
             "[DELIMITER_NEUTRALIZED]",
-            text,
+            sanitized,
             flags=re.IGNORECASE,
         )
         sanitized = re.sub(
-            r"(?:<\|im_start\|>|<\|im_end\|>|<<SYS>>|<\/SYS>|\[INST\]|\[\/INST\])",
+            r"(?:<\|im_start\|>|<\|im_end\|>|<\|system\|>|<\|user\|>|<\|assistant\|>|<<SYS>>|<\/SYS>|\[INST\]|\[\/INST\]|###\s*(?:System|Instruction|Human|Assistant)\s*:)",
             "[ROLE_MARKER_NEUTRALIZED]",
             sanitized,
             flags=re.IGNORECASE,

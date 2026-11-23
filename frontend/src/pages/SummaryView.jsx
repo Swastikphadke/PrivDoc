@@ -37,6 +37,8 @@ export default function SummaryView() {
     try {
       setLoading(true);
       setError(null);
+      setDocument(null);
+      setSummaryData(null);
       const docMeta = await getDocumentMetadata(documentId);
       setDocument(docMeta);
 

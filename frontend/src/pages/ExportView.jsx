@@ -61,6 +61,12 @@ export default function ExportView() {
     async function load() {
       try {
         setLoading(true);
+        setError(null);
+        setRedactionError(null);
+        setDocument(null);
+        setCandidates([]);
+        setSummary(null);
+        setRedactionResult(null);
         const [docMeta, cands, sum] = await Promise.all([
           getDocumentMetadata(documentId),
           getCandidates(documentId),

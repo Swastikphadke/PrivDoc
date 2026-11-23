@@ -114,6 +114,8 @@ class VerificationService:
             return cls._build_result("FAILED", checks_run, issues, warnings)
 
         exported_lower = exported_text.casefold()
+        from app.core.security import normalize_for_security_comparison
+        exported_sec_norm = normalize_for_security_comparison(exported_text)
         canonical_lower = canonical_text.casefold()
 
         # Build occurrence counts for preserved (rejected/pending) vs approved candidates
@@ -122,26 +124,29 @@ class VerificationService:
         # Group counts by normalized surface text
         approved_text_counts: Dict[str, int] = {}
         for c in approved_candidates:
-            clean = c.text.strip().casefold()
+            clean = normalize_for_security_comparison(c.text.strip())
             if clean and len(clean) >= 2:
                 approved_text_counts[clean] = approved_text_counts.get(clean, 0) + 1
 
         preserved_text_counts: Dict[str, int] = {}
         for c in preserved_candidates:
-            clean = c.text.strip().casefold()
+            clean = normalize_for_security_comparison(c.text.strip())
             if clean and len(clean) >= 2:
                 preserved_text_counts[clean] = preserved_text_counts.get(clean, 0) + 1
 
-        # 2. Exact Approved Strings Check (Occurrence-Aware)
+        # 2. Exact Approved Strings Check (Occurrence-Aware + Zero-Width/Homoglyph Normalized)
         verified_texts: Set[str] = set()
         for cand in approved_candidates:
             clean_text = cand.text.strip()
-            clean_lower = clean_text.casefold()
-            if not clean_text or len(clean_text) < 2 or clean_lower in verified_texts:
+            clean_lower = normalize_for_security_comparison(clean_text)
+            if not clean_text or len(clean_lower) < 2 or clean_lower in verified_texts:
                 continue
             verified_texts.add(clean_lower)
 
-            count_in_export = cls._count_occurrences(exported_lower, clean_lower)
+            count_in_export = max(
+                cls._count_occurrences(exported_lower, clean_text.casefold()),
+                cls._count_occurrences(exported_sec_norm, clean_lower),
+            )
             allowed_preserved_count = preserved_text_counts.get(clean_lower, 0)
 
             if count_in_export > allowed_preserved_count:
@@ -370,9 +375,11 @@ class VerificationService:
                                     )
                                 )
 
-            # Verify approved candidates across all extracted page texts (Occurrence-Aware)
+            # Verify approved candidates across all extracted page texts (Occurrence-Aware + Security Normalized)
+            from app.core.security import normalize_for_security_comparison
             for page_num, page_text in all_page_texts:
                 page_lower = page_text.casefold()
+                page_sec_norm = normalize_for_security_comparison(page_text)
 
                 # Count preserved candidates on this page
                 page_preserved = [
@@ -381,19 +388,22 @@ class VerificationService:
                 ]
                 page_preserved_counts: Dict[str, int] = {}
                 for c in page_preserved:
-                    clean = c.text.strip().casefold()
+                    clean = normalize_for_security_comparison(c.text.strip())
                     if clean and len(clean) >= 2:
                         page_preserved_counts[clean] = page_preserved_counts.get(clean, 0) + 1
 
                 checked_on_page: Set[str] = set()
                 for cand in approved_candidates:
                     clean_text = cand.text.strip()
-                    clean_lower = clean_text.casefold()
-                    if not clean_text or len(clean_text) < 2 or clean_lower in checked_on_page:
+                    clean_lower = normalize_for_security_comparison(clean_text)
+                    if not clean_text or len(clean_lower) < 2 or clean_lower in checked_on_page:
                         continue
                     checked_on_page.add(clean_lower)
 
-                    count_on_page = cls._count_occurrences(page_lower, clean_lower)
+                    count_on_page = max(
+                        cls._count_occurrences(page_lower, clean_text.casefold()),
+                        cls._count_occurrences(page_sec_norm, clean_lower),
+                    )
                     allowed_on_page = page_preserved_counts.get(clean_lower, 0)
 
                     if count_on_page > allowed_on_page:

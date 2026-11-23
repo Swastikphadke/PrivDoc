@@ -115,7 +115,8 @@ class SummaryGuard:
         summary_text: str,
         approved_values: List[str],
     ) -> Tuple[bool, Optional[str]]:
-        """A. Direct leakage detection: Check if any approved PII values appear in summary.
+        """A. Direct leakage detection: Check if any approved PII values (including zero-width,
+        homoglyph, or Base64/hex encoded forms) appear in summary.
 
         Returns (passed, error_detail).
         NEVER includes raw PII values in error_detail or log messages.
@@ -123,15 +124,20 @@ class SummaryGuard:
         if not approved_values or not summary_text:
             return True, None
 
-        normalized_summary = summary_text.lower()
+        import base64
+        from urllib.parse import quote
+        from app.core.security import normalize_for_security_comparison
+
+        normalized_summary = normalize_for_security_comparison(summary_text)
+        raw_summary_lower = summary_text.lower()
 
         for val in approved_values:
-            cleaned_val = val.strip().lower()
+            cleaned_val = normalize_for_security_comparison(val.strip())
             # Ignore short 1-2 character tokens or common whitespace
             if len(cleaned_val) < 3:
                 continue
 
-            # Substring and word-boundary check
+            # 1. Substring and word-boundary check on security-normalized text (catches zero-width, NBSP, homoglyphs)
             pattern = re.compile(rf"(?:\b|\s|^){re.escape(cleaned_val)}(?:\b|\s|$|[.,;:!?'\"])", re.IGNORECASE)
             if pattern.search(normalized_summary) or cleaned_val in normalized_summary:
                 val_hash = hashlib.sha256(val.encode("utf-8")).hexdigest()[:8]
@@ -140,6 +146,24 @@ class SummaryGuard:
                     val_hash,
                 )
                 return False, f"Approved sensitive entity detected in summary (token hash: {val_hash})."
+
+            # 2. Encoded sensitive string check (Base64, hex, URL-encoded) for tokens >= 5 chars
+            raw_stripped = val.strip()
+            if len(raw_stripped) >= 5:
+                b64_full = base64.b64encode(raw_stripped.encode("utf-8")).decode("ascii").rstrip("=").lower()
+                hex_full = raw_stripped.encode("utf-8").hex().lower()
+                url_enc = quote(raw_stripped).lower()
+                if (
+                    (len(b64_full) >= 6 and b64_full in raw_summary_lower)
+                    or (len(hex_full) >= 10 and hex_full in raw_summary_lower)
+                    or (url_enc != raw_stripped.lower() and len(url_enc) >= 6 and url_enc in raw_summary_lower)
+                ):
+                    val_hash = hashlib.sha256(val.encode("utf-8")).hexdigest()[:8]
+                    logger.warning(
+                        "Encoded sensitive leakage detected in summary: [token_hash=%s].",
+                        val_hash,
+                    )
+                    return False, f"Encoded form of approved sensitive entity detected in summary (token hash: {val_hash})."
 
         return True, None
 
@@ -157,10 +181,11 @@ class SummaryGuard:
         if not entity_variants or not summary_text:
             return True, None
 
-        normalized_summary = summary_text.lower()
+        from app.core.security import normalize_for_security_comparison
+        normalized_summary = normalize_for_security_comparison(summary_text)
 
         for variant in entity_variants:
-            cleaned_var = variant.strip().lower()
+            cleaned_var = normalize_for_security_comparison(variant.strip())
             if len(cleaned_var) < 3:
                 continue
 
@@ -404,21 +429,25 @@ class SummaryGuard:
         if not summary_text:
             return True, None
 
+        from app.core.security import normalize_for_security_comparison
+        norm = normalize_for_security_comparison(summary_text)
+
         suspicious_patterns = [
             r"<\/?\s*untrusted_document_content[^>]*>",
             r"\[delimiter_neutralized\]",
             r"\[role_marker_neutralized\]",
-            r"<\|im_start\|>|<\|im_end\|>|<<sys>>|\[inst\]",
-            r"\bignore\s+(?:all\s+)?previous\s+(?:safety\s+)?(?:instructions|directives)\b",
-            r"\boverride\s+previous\s+safety\s+directives\b",
-            r"\bdisregard\s+(?:all\s+)?(?:previous|prior)\s+(?:instructions|directives|rules)\b",
-            r"\b(?:reveal|output)\s+all\s+(?:redacted|personal)\s+(?:names|entities|pii)\b",
-            r"\byou\s+are\s+now\s+a\s+helpful\b",
+            r"<\|im_start\|>|<\|im_end\|>|<\|system\|>|<\|user\|>|<\|assistant\|>|<<sys>>|\[inst\]|\[\/inst\]",
+            r"###\s*(?:system|instruction|override|developer)\b",
+            r"\[(?:system|developer)\s*(?:instruction|override|directive|prompt)s?\s*[:\]]",
+            r"\bignore\s+(?:all\s+)?(?:previous|prior|above|preceding)\s+(?:safety\s+|privacy\s+)?(?:instructions|directives|rules|constraints|guidelines)\b",
+            r"\boverride\s+(?:all\s+)?(?:previous|prior)\s+(?:safety\s+|privacy\s+)?(?:directives|instructions|rules)\b",
+            r"\bdisregard\s+(?:all\s+)?(?:previous|prior|above)\s+(?:instructions|directives|rules|constraints)\b",
+            r"\b(?:reveal|output|expose|print|dump)\s+all\s+(?:redacted|personal|unredacted|confidential)\s+(?:names|entities|pii|records|tokens)\b",
+            r"\byou\s+are\s+now\s+(?:a\s+helpful|in\s+developer\s+mode|unrestricted)\b",
             r"\bsystem\s+prompt\b",
             r"\bpwned\b",
             r"\bjailbreak(?:ed)?\b",
         ]
-        norm = summary_text.lower()
         for pat in suspicious_patterns:
             if re.search(pat, norm):
                 logger.warning("Prompt injection artifact detected in summary output: pattern '%s'", pat)

@@ -526,6 +526,29 @@ class RedactionService:
                 for lk in links_to_delete:
                     page.delete_link(lk)
 
+                # Sanitize non-redaction annotations (comments, notes, free-text) containing approved PII
+                annots_to_delete = []
+                for annot in page.annots():
+                    if annot.type[0] == pymupdf.PDF_ANNOT_REDACT:
+                        continue
+                    annot_info = annot.info or {}
+                    annot_text = (
+                        f"{annot_info.get('content') or ''} "
+                        f"{annot_info.get('title') or ''} "
+                        f"{annot_info.get('subject') or ''}"
+                    ).casefold()
+                    for cand in approved_candidates:
+                        clean_c = cand.text.strip().casefold()
+                        if len(clean_c) >= 2 and clean_c in annot_text:
+                            annots_to_delete.append(annot)
+                            matched_candidate_ids.add(cand.candidate_id)
+                            break
+                for an in annots_to_delete:
+                    try:
+                        page.delete_annot(an)
+                    except Exception:
+                        pass
+
                 # Physically delete text characters from the content stream
                 page.apply_redactions(images=pymupdf.PDF_REDACT_IMAGE_NONE)
 

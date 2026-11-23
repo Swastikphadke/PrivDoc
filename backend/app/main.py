@@ -31,6 +31,8 @@ app = FastAPI(
     version=settings.APP_VERSION,
     description="Privacy-Aware Document Redaction and Summary Tool (Local-first)",
     lifespan=lifespan,
+    docs_url="/docs" if settings.DEBUG else None,
+    redoc_url="/redoc" if settings.DEBUG else None,
 )
 
 # Enforce strict local-only CORS
@@ -41,6 +43,16 @@ app.add_middleware(
     allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allow_headers=["*"],
 )
+
+
+@app.middleware("http")
+async def add_security_headers(request, call_next):
+    """Attach defensive HTTP security headers to all local API responses."""
+    response = await call_next(request)
+    response.headers.setdefault("X-Content-Type-Options", "nosniff")
+    response.headers.setdefault("X-Frame-Options", "DENY")
+    response.headers.setdefault("Referrer-Policy", "no-referrer")
+    return response
 
 # Mount API endpoints
 app.include_router(api_router, prefix="/api")

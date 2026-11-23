@@ -51,11 +51,21 @@ class PDFProcessor:
                 f"File '{filename}' is password-protected or encrypted. Encrypted PDFs are not supported."
             )
 
-        # 3. Check page count
+        # 3. Check page count and resource exhaustion bounds
+        from app.core.security import (
+            MAX_EXTRACTED_CHARS,
+            MAX_PDF_PAGES,
+            strip_invisible_and_normalize_whitespace,
+        )
         page_count = doc.page_count
         if page_count == 0:
             doc.close()
             raise ValueError(f"PDF file '{filename}' contains no pages.")
+        if page_count > MAX_PDF_PAGES:
+            doc.close()
+            raise ValueError(
+                f"PDF file '{filename}' contains {page_count} pages, exceeding maximum limit of {MAX_PDF_PAGES} pages."
+            )
 
         canonical_text_parts: List[str] = []
         coordinates: List[CoordinateSpan] = []
@@ -74,9 +84,11 @@ class PDFProcessor:
             image_list = page.get_images()
             total_image_count += len(image_list)
 
-            # Extract page text and normalize line breaks
+            # Extract page text, strip invisible control chars, and normalize line breaks
             raw_page_text = page.get_text("text") or ""
-            normalized_page_text = raw_page_text.replace("\r\n", "\n").replace("\r", "\n")
+            normalized_page_text = strip_invisible_and_normalize_whitespace(
+                raw_page_text.replace("\r\n", "\n").replace("\r", "\n")
+            )
 
             # Page delimiter in canonical text
             if page_idx > 0:
@@ -87,6 +99,11 @@ class PDFProcessor:
             page_start_offset = current_offset
             canonical_text_parts.append(normalized_page_text)
             current_offset += len(normalized_page_text)
+            if current_offset > MAX_EXTRACTED_CHARS:
+                doc.close()
+                raise ValueError(
+                    f"PDF file '{filename}' exceeds maximum extracted text length ({MAX_EXTRACTED_CHARS} characters)."
+                )
 
             # Extract word bounding boxes: (x0, y0, x1, y1, word, block_no, line_no, word_no)
             words = page.get_text("words")
@@ -107,7 +124,8 @@ class PDFProcessor:
             search_idx = 0
             claimed_intervals: List[Tuple[int, int]] = []
             for w in words:
-                x0, y0, x1, y1, word_str = float(w[0]), float(w[1]), float(w[2]), float(w[3]), str(w[4])
+                x0, y0, x1, y1 = float(w[0]), float(w[1]), float(w[2]), float(w[3])
+                word_str = strip_invisible_and_normalize_whitespace(str(w[4])).strip()
                 if not word_str:
                     continue
 

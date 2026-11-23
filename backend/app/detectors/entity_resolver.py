@@ -115,7 +115,8 @@ def parse_phone_country_and_subscriber(raw_text: str) -> Tuple[Optional[str], st
 
 def normalize_by_category(cand_type: str, raw_text: str) -> str:
     """Compute a category-aware normalized key for Stage 1 clustering."""
-    s = raw_text.strip()
+    from app.core.security import fold_homoglyphs_1to1, strip_invisible_and_normalize_whitespace
+    s = fold_homoglyphs_1to1(strip_invisible_and_normalize_whitespace(raw_text)).strip()
     cat = (cand_type or "").upper()
 
     if cat == "EMAIL":
@@ -1005,7 +1006,7 @@ class EntityResolver:
             ent.entity_id = f"ent_{idx}"
 
         cls._persist_resolution(document_id, entities, candidates)
-        cls._invalidate_exports_on_cluster_change(session_dir)
+        cls._invalidate_exports_on_cluster_change(session_dir, document_id)
 
         # Record data-minimized entity action feedback
         try:
@@ -1040,7 +1041,11 @@ class EntityResolver:
         candidates = cls.load_candidates(document_id)
         cands_map = {c.candidate_id: c for c in candidates}
 
-        for cid in candidate_ids:
+        valid_cids = [cid for cid in candidate_ids if cid in cands_map]
+        if not valid_cids:
+            raise ValueError(f"None of the candidate IDs {candidate_ids} found in document session.")
+
+        for cid in valid_cids:
             # Remove from existing entity
             for ent in entities:
                 if cid in ent.candidate_ids:
@@ -1068,7 +1073,7 @@ class EntityResolver:
         for idx, ent in enumerate(entities, start=1):
             ent.entity_id = f"ent_{idx}"
         cls._persist_resolution(document_id, entities, candidates)
-        cls._invalidate_exports_on_cluster_change(get_safe_session_dir(document_id))
+        cls._invalidate_exports_on_cluster_change(get_safe_session_dir(document_id), document_id)
 
         # Record data-minimized entity action feedback
         try:
@@ -1077,8 +1082,8 @@ class EntityResolver:
                 action=FeedbackAction.UNLINK_ENTITIES,
                 entity_id=None,
                 entity_type="PERSON",
-                affected_count=len(candidate_ids),
-                details_meta={"unlinked_candidate_ids_count": len(candidate_ids)},
+                affected_count=len(valid_cids),
+                details_meta={"unlinked_candidate_ids_count": len(valid_cids)},
             )
         except Exception as e:
             logger.warning("Failed to record entity unlink feedback: %s", e)
@@ -1097,8 +1102,8 @@ class EntityResolver:
     # =========================================================================
 
     @classmethod
-    def _invalidate_exports_on_cluster_change(cls, session_dir: Path) -> None:
-        """Invalidate stale export and summary artifacts when entity clusters change."""
+    def _invalidate_exports_on_cluster_change(cls, session_dir: Path, document_id: Optional[str] = None) -> None:
+        """Invalidate stale export and summary artifacts and reset SQLite status when entity clusters change."""
         for filename in ("export_metadata.json", "sanitized.txt", "sanitized.pdf", "summary.json"):
             p = session_dir / filename
             if p.exists():
@@ -1106,6 +1111,13 @@ class EntityResolver:
                     p.unlink()
                 except Exception:
                     pass
+        doc_id = document_id or session_dir.name
+        if doc_id:
+            try:
+                from app.database.session import update_document_status
+                update_document_status(doc_id, "REVIEWING")
+            except Exception:
+                pass
 
     @classmethod
     def _persist_resolution(
