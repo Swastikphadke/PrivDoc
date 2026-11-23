@@ -20,6 +20,7 @@ import {
 import TextViewer from '../components/DocumentViewer/TextViewer';
 import PdfViewer from '../components/DocumentViewer/PdfViewer';
 import CandidateSidebar from '../components/CandidateList/CandidateSidebar';
+import ContextualInspector from '../components/Inspector/ContextualInspector';
 import ManualRedactionModal from '../components/Modals/ManualRedactionModal';
 import RedactSimilarModal from '../components/Modals/RedactSimilarModal';
 import { useKeyboardShortcuts } from '../hooks/useKeyboardShortcuts';
@@ -55,6 +56,7 @@ export default function ReviewWorkspace() {
   // Selected candidate and text selection
   const [selectedCandidateId, setSelectedCandidateId] = useState(null);
   const [textSelection, setTextSelection] = useState(null);
+  const [showInspector, setShowInspector] = useState(true);
 
   // Modals
   const [isManualModalOpen, setIsManualModalOpen] = useState(false);
@@ -344,10 +346,10 @@ export default function ReviewWorkspace() {
         {/* Right: Mode Switcher & Export / Summary Actions */}
         <div className="flex items-center gap-2">
           {document.file_type === 'pdf' && (
-            <div className="flex rounded-lg bg-slate-950 p-0.5 border border-slate-800 text-xs">
+            <div className="flex rounded-lg bg-slate-950 p-0.5 border border-slate-800 text-xs shrink-0">
               <button
                 onClick={() => setViewMode('text')}
-                className={`px-2.5 py-1 rounded-md transition ${
+                className={`px-2.5 py-1 rounded-md transition whitespace-nowrap ${
                   viewMode === 'text' ? 'bg-sky-600 text-white font-semibold' : 'text-slate-400 hover:text-slate-200'
                 }`}
               >
@@ -355,7 +357,7 @@ export default function ReviewWorkspace() {
               </button>
               <button
                 onClick={() => setViewMode('pdf')}
-                className={`px-2.5 py-1 rounded-md transition ${
+                className={`px-2.5 py-1 rounded-md transition whitespace-nowrap ${
                   viewMode === 'pdf' ? 'bg-sky-600 text-white font-semibold' : 'text-slate-400 hover:text-slate-200'
                 }`}
               >
@@ -363,6 +365,21 @@ export default function ReviewWorkspace() {
               </button>
             </div>
           )}
+
+          {/* Inspector Panel Toggle */}
+          <button
+            onClick={() => setShowInspector((prev) => !prev)}
+            className={`hidden xl:inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-semibold border transition ${
+              showInspector
+                ? 'bg-sky-950/70 text-sky-300 border-sky-800/80'
+                : 'bg-slate-900 text-slate-400 border-slate-800 hover:text-slate-200'
+            }`}
+            title="Toggle Contextual Evidence & Coreference Inspector"
+            data-testid="toggle-inspector-btn"
+          >
+            <Shield className="w-3.5 h-3.5" />
+            <span>Inspector</span>
+          </button>
 
           <Link
             to={`/summary/${documentId}`}
@@ -390,10 +407,14 @@ export default function ReviewWorkspace() {
         </div>
       </div>
 
-      {/* Main Review Grid */}
+      {/* Main 3-Panel Workstation Grid */}
       <div className="flex-1 grid grid-cols-1 lg:grid-cols-12 overflow-hidden">
-        {/* Left Column: Document Viewer (Text or PDF) */}
-        <div className="lg:col-span-8 flex flex-col h-full overflow-hidden border-r border-slate-800 bg-slate-900/40">
+        {/* Panel 1: Authoritative Document Viewer (Text or PDF) */}
+        <div
+          className={`${
+            showInspector ? 'lg:col-span-7 xl:col-span-6' : 'lg:col-span-8'
+          } flex flex-col h-full overflow-hidden border-r border-slate-800 bg-slate-900/40`}
+        >
           {viewMode === 'text' || document.file_type === 'txt' ? (
             <TextViewer
               text={document.extracted_text}
@@ -437,8 +458,12 @@ export default function ReviewWorkspace() {
           )}
         </div>
 
-        {/* Right Column: Candidate Sidebar (Cards & Entities) */}
-        <div className="lg:col-span-4 flex flex-col h-full overflow-hidden bg-slate-900/70">
+        {/* Panel 2: Detected Candidates & Entity Clusters */}
+        <div
+          className={`${
+            showInspector ? 'lg:col-span-5 xl:col-span-3' : 'lg:col-span-4'
+          } flex flex-col h-full overflow-hidden bg-slate-900/70`}
+        >
           <CandidateSidebar
             candidates={candidates}
             entities={entities}
@@ -487,6 +512,42 @@ export default function ReviewWorkspace() {
             }}
           />
         </div>
+
+        {/* Panel 3: Contextual Evidence & Entity Coreference Inspector */}
+        {showInspector && (
+          <div className="hidden xl:flex xl:col-span-3 flex-col h-full overflow-hidden">
+            <ContextualInspector
+              selectedCandidate={selectedCandidate}
+              candidates={candidates}
+              entities={entities}
+              onSelectCandidate={(id) => setSelectedCandidateId(id)}
+              onApprove={(id) => handleReviewAction(id, 'APPROVE')}
+              onReject={(id) => handleReviewAction(id, 'REJECT')}
+              onApproveEntity={(entityIdOrCandIds) => {
+                if (Array.isArray(entityIdOrCandIds) && entityIdOrCandIds.length > 0) {
+                  handleReviewAction(entityIdOrCandIds[0], 'APPROVE', { applyToLinked: true });
+                  return;
+                }
+                const entity = entities.find((e) => e.entity_id === entityIdOrCandIds);
+                if (entity && entity.candidate_ids.length > 0) {
+                  handleReviewAction(entity.candidate_ids[0], 'APPROVE', { applyToLinked: true });
+                }
+              }}
+              onRejectEntity={(entityIdOrCandIds) => {
+                if (Array.isArray(entityIdOrCandIds) && entityIdOrCandIds.length > 0) {
+                  handleReviewAction(entityIdOrCandIds[0], 'REJECT', { applyToLinked: true });
+                  return;
+                }
+                const entity = entities.find((e) => e.entity_id === entityIdOrCandIds);
+                if (entity && entity.candidate_ids.length > 0) {
+                  handleReviewAction(entity.candidate_ids[0], 'REJECT', { applyToLinked: true });
+                }
+              }}
+              onUnlinkCandidate={handleUnlinkCandidate}
+              onRedactSimilar={(cand) => setSimilarTargetCandidate(cand)}
+            />
+          </div>
+        )}
       </div>
 
       {/* Manual Redaction Modal */}

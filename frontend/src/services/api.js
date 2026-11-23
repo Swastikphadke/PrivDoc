@@ -17,6 +17,11 @@ export const getHealthStatus = async () => {
 };
 export const checkHealth = getHealthStatus;
 
+export const getDocumentsOverview = async () => {
+  const response = await apiClient.get('/api/documents');
+  return response.data;
+};
+
 // Ingestion & Documents
 export const uploadDocument = async (file) => {
   const formData = new FormData();

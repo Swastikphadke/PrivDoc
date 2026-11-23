@@ -19,6 +19,7 @@ from app.database.session import (
     check_db_health,
     delete_document_record,
     get_document_metadata,
+    list_all_documents,
     save_document_metadata,
 )
 from app.processors.pdf_processor import PDFProcessor
@@ -171,6 +172,115 @@ async def upload_document(file: UploadFile = File(...)) -> DocumentResponse:
         extracted_text=canonical_text,
         warnings=warnings,
     )
+
+
+@router.get(
+    "/documents",
+    tags=["Documents"],
+)
+def get_documents_overview() -> Dict[str, Any]:
+    """Return real, data-minimized operational telemetry and recent session list for the Dashboard.
+
+    Privacy Invariant:
+    Exposes strictly metadata counts, workflow states, and category distributions.
+    Never exposes raw document text or sensitive candidate values.
+    """
+    docs = list_all_documents(limit=25)
+    category_distribution: Dict[str, int] = {
+        "PERSON": 0,
+        "EMAIL": 0,
+        "PHONE": 0,
+        "ADDRESS": 0,
+        "ID_LIKE": 0,
+    }
+    awaiting_review_count = 0
+    verified_exports_count = 0
+    suppressed_summaries_count = 0
+    total_candidates_detected = 0
+    recent_documents: List[Dict[str, Any]] = []
+
+    for d in docs:
+        doc_id = d["id"]
+        status_val = d.get("status", "PROCESSED")
+        cand_total = 0
+        approved_cnt = 0
+        rejected_cnt = 0
+        pending_cnt = 0
+        entity_cnt = 0
+        export_state = None
+        summary_state = None
+
+        try:
+            s_dir = get_safe_session_dir(doc_id)
+            cands_path = s_dir / "candidates.json"
+            if cands_path.exists():
+                raw_cands = json.loads(cands_path.read_text(encoding="utf-8"))
+                cand_total = len(raw_cands)
+                total_candidates_detected += cand_total
+                for c in raw_cands:
+                    ctype = c.get("type", "DEFAULT")
+                    category_distribution[ctype] = category_distribution.get(ctype, 0) + 1
+                    rstat = c.get("review_status", "PENDING")
+                    if rstat == "APPROVED":
+                        approved_cnt += 1
+                    elif rstat == "REJECTED":
+                        rejected_cnt += 1
+                    else:
+                        pending_cnt += 1
+
+            ents_path = s_dir / "entities.json"
+            if ents_path.exists():
+                raw_ents = json.loads(ents_path.read_text(encoding="utf-8"))
+                entity_cnt = len(raw_ents)
+
+            exp_path = s_dir / "export_metadata.json"
+            if exp_path.exists():
+                exp_meta = json.loads(exp_path.read_text(encoding="utf-8"))
+                export_state = exp_meta.get("export_state")
+
+            sum_path = s_dir / "summary.json"
+            if sum_path.exists():
+                sum_meta = json.loads(sum_path.read_text(encoding="utf-8"))
+                summary_state = sum_meta.get("state")
+        except Exception:
+            pass
+
+        if export_state == "VERIFIED" or status_val == "VERIFIED":
+            verified_exports_count += 1
+        if summary_state == "SUPPRESSED":
+            suppressed_summaries_count += 1
+        if pending_cnt > 0 or status_val in ("PROCESSED", "REVIEWING", "EXTRACTED"):
+            if export_state != "VERIFIED":
+                awaiting_review_count += 1
+
+        recent_documents.append(
+            {
+                "document_id": doc_id,
+                "filename": d.get("original_filename", doc_id),
+                "file_type": d.get("file_type", "txt"),
+                "status": status_val,
+                "page_count": d.get("page_count", 1),
+                "text_length": d.get("text_length", 0),
+                "created_at": d.get("created_at"),
+                "candidate_count": cand_total,
+                "approved_count": approved_cnt,
+                "rejected_count": rejected_cnt,
+                "pending_count": pending_cnt,
+                "entity_count": entity_cnt,
+                "export_state": export_state,
+                "summary_state": summary_state,
+            }
+        )
+
+    return {
+        "total_documents": len(docs),
+        "awaiting_review_count": awaiting_review_count,
+        "verified_exports_count": verified_exports_count,
+        "suppressed_summaries_count": suppressed_summaries_count,
+        "total_candidates_detected": total_candidates_detected,
+        "category_distribution": category_distribution,
+        "recent_documents": recent_documents,
+    }
 
 
 @router.get(

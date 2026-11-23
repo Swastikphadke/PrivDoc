@@ -14,6 +14,7 @@ Strict Security Invariants:
 7. If native PDF sanitization fails verification, block export and offer clean-text reconstruction (DEC-004).
 """
 
+import hashlib
 import json
 import logging
 from pathlib import Path
@@ -169,6 +170,7 @@ class RedactionService:
                 )
 
         # 4. Atomic Output Promotion or Invalidation
+        export_sha256: Optional[str] = None
         if verif_result.status == "PASSED":
             export_state = ExportState.VERIFIED
             download_ready = True
@@ -186,6 +188,9 @@ class RedactionService:
                 except PermissionError:
                     sanitized_pdf_final.write_bytes(sanitized_pdf_tmp.read_bytes())
                     sanitized_pdf_tmp.unlink()
+            primary_final = sanitized_pdf_final if (file_type == "pdf" and sanitized_pdf_final.exists()) else sanitized_txt_final
+            if primary_final.exists():
+                export_sha256 = hashlib.sha256(primary_final.read_bytes()).hexdigest()
         else:
             export_state = ExportState.FAILED
             download_ready = False
@@ -219,6 +224,7 @@ class RedactionService:
             reconstructed_pdf_used=reconstructed_pdf_used,
             reconstruction_offered=reconstruction_offered,
             layout_warning=layout_warning,
+            export_sha256=export_sha256,
         )
 
         export_meta_path = session_dir / "export_metadata.json"

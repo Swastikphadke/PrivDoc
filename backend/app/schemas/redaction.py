@@ -78,6 +78,10 @@ class RedactionResponse(BaseModel):
     reconstructed_pdf_used: bool = False
     reconstruction_offered: bool = False
     layout_warning: Optional[str] = None
+    export_sha256: Optional[str] = Field(
+        default=None,
+        description="SHA-256 content digest of the verified exported artifact (file integrity only; does not by itself prove redaction correctness).",
+    )
     pseudonymization_notice: Optional[str] = Field(
         default=(
             "Pseudonymization vs. Anonymization Notice: Placeholder tokens (such as [PERSON_1] or [PERSON]) "

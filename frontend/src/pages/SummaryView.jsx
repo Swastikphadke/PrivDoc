@@ -371,17 +371,28 @@ export default function SummaryView() {
             </div>
 
             {/* Source Evidence */}
-            <div className="p-5 rounded-xl bg-slate-900 border border-slate-800 space-y-3">
-              <h3 className="text-xs font-semibold text-purple-400 uppercase tracking-wider flex items-center gap-1.5">
-                <Search className="w-3.5 h-3.5" />
-                Source Evidence
-              </h3>
+            <div
+              data-testid="evidence-traceability-card"
+              className="p-5 rounded-xl bg-slate-900 border border-slate-800 space-y-3"
+            >
+              <div className="flex items-center justify-between">
+                <h3 className="text-xs font-semibold text-purple-400 uppercase tracking-wider flex items-center gap-1.5">
+                  <Search className="w-3.5 h-3.5" />
+                  Source Evidence
+                </h3>
+                <span className="text-[10px] font-mono text-slate-400 bg-slate-950 px-1.5 py-0.5 rounded border border-slate-800">
+                  Sanitized Source Grounding
+                </span>
+              </div>
               {structured.source_evidence && structured.source_evidence.length > 0 ? (
                 <ul className="space-y-1.5 text-xs text-slate-300">
                   {structured.source_evidence.map((ev, i) => (
-                    <li key={i} className="flex items-start gap-2">
-                      <span className="text-purple-400 mt-0.5">•</span>
-                      <span>{ev}</span>
+                    <li
+                      key={i}
+                      className="p-2 rounded bg-slate-950/70 border border-slate-800/80 flex items-start gap-2 font-mono text-[11px]"
+                    >
+                      <span className="text-purple-400 font-bold shrink-0">[§{i + 1}]</span>
+                      <span className="text-slate-200">{ev}</span>
                     </li>
                   ))}
                 </ul>

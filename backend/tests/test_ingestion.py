@@ -268,3 +268,30 @@ def test_api_nonexistent_document(client):
     """Test GET /api/documents/{id} returns 404 for unknown ID."""
     response = client.get("/api/documents/nonexistent123")
     assert response.status_code == 404
+
+
+def test_api_documents_overview_telemetry(client):
+    """Test GET /api/documents returns operational telemetry without leaking raw PII."""
+    txt_content = "Patient: Rajesh Kulkarni\nEmail: rajesh@example.com\nPhone: +91 9876543210\n"
+    up_resp = client.post(
+        "/api/documents/upload",
+        files={"file": ("telemetry_check.txt", txt_content.encode("utf-8"), "text/plain")},
+    )
+    assert up_resp.status_code == 201
+    doc_id = up_resp.json()["document_id"]
+
+    overview_resp = client.get("/api/documents")
+    assert overview_resp.status_code == 200
+    payload = overview_resp.json()
+    assert payload["total_documents"] >= 1
+    assert "awaiting_review_count" in payload
+    assert "verified_exports_count" in payload
+    assert "suppressed_summaries_count" in payload
+    assert "category_distribution" in payload
+    assert any(d["document_id"] == doc_id for d in payload["recent_documents"])
+    # Ensure raw PII is never leaked in overview payload
+    raw_json_str = overview_resp.text
+    assert "Rajesh Kulkarni" not in raw_json_str
+    assert "rajesh@example.com" not in raw_json_str
+
+    client.delete(f"/api/documents/{doc_id}")

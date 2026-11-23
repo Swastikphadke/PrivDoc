@@ -26,7 +26,12 @@ export default function CandidateSidebar({
   const handleReject = onRejectCandidate || onReject;
   const handleUndo = onUndoCandidate || onUndo;
 
-  const [activeTab, setActiveTab] = useState('candidates'); // 'candidates' | 'entities'
+  const [activeTab, setActiveTab] = useState(() => {
+    if (typeof window !== 'undefined' && window.location?.search?.includes('tab=entities')) {
+      return 'entities';
+    }
+    return 'candidates';
+  }); // 'candidates' | 'entities'
   const [searchQuery, setSearchQuery] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('ALL');
   const [statusFilter, setStatusFilter] = useState('ALL');

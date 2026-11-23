@@ -421,23 +421,53 @@ export default function ExportView() {
       {/* Verification Audit Card & Download Section */}
       {redactionResult && (
         <div className="p-6 rounded-xl bg-slate-900 border border-slate-800 space-y-6">
-          <div className="flex items-center justify-between">
+          <div className="flex flex-wrap items-center justify-between gap-2">
             <h2 className="text-sm font-bold text-white flex items-center gap-2">
               <ShieldCheck className="w-4 h-4 text-emerald-400" />
               Post-Export Verification Report
             </h2>
 
-            {redactionResult.export_state === 'VERIFIED' ? (
-              <span className="px-3 py-1 rounded-full bg-emerald-950 border border-emerald-700 text-emerald-300 text-xs font-bold flex items-center gap-1.5">
-                <CheckCircle2 className="w-4 h-4" />
-                EXPORT VERIFIED SAFE
+            <div className="flex items-center gap-2">
+              {redactionResult.reconstructed_pdf_used && redactionResult.export_state === 'VERIFIED' && (
+                <span className="px-2.5 py-1 rounded-md bg-cyan-950 border border-cyan-700 text-cyan-300 text-[11px] font-mono font-bold">
+                  RECONSTRUCTED PDF
+                </span>
+              )}
+              {redactionResult.export_state === 'VERIFIED' ? (
+                <span className="px-3 py-1 rounded-full bg-emerald-950 border border-emerald-700 text-emerald-300 text-xs font-bold flex items-center gap-1.5">
+                  <CheckCircle2 className="w-4 h-4" />
+                  EXPORT VERIFIED SAFE
+                </span>
+              ) : (
+                <span className="px-3 py-1 rounded-full bg-rose-950 border border-rose-700 text-rose-300 text-xs font-bold flex items-center gap-1.5">
+                  <XCircle className="w-4 h-4" />
+                  VERIFICATION FAILED (EXPORT BLOCKED)
+                </span>
+              )}
+            </div>
+          </div>
+
+          {/* Verification Timestamp & Cryptographic Integrity Digest */}
+          <div className="p-3 rounded-lg bg-slate-950 border border-slate-800/90 space-y-2 text-xs">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <span className="text-slate-400">
+                Verified Timestamp:{' '}
+                <code className="text-slate-200 font-mono">
+                  {redactionResult.verification?.verified_at || 'Pending'}
+                </code>
               </span>
-            ) : (
-              <span className="px-3 py-1 rounded-full bg-rose-950 border border-rose-700 text-rose-300 text-xs font-bold flex items-center gap-1.5">
-                <XCircle className="w-4 h-4" />
-                VERIFICATION FAILED (EXPORT BLOCKED)
-              </span>
-            )}
+              {redactionResult.export_sha256 && (
+                <span className="text-slate-400">
+                  SHA-256 Digest:{' '}
+                  <code className="text-sky-300 font-mono">
+                    {redactionResult.export_sha256.slice(0, 16)}...{redactionResult.export_sha256.slice(-8)}
+                  </code>
+                </span>
+              )}
+            </div>
+            <p className="text-[11px] text-slate-500">
+              Note: Cryptographic digest verifies post-export file byte integrity only; redaction correctness is established by the independent content-stream and metadata checks below.
+            </p>
           </div>
 
           {/* Layout Loss Warning (if clean-text PDF used) */}

@@ -138,28 +138,37 @@ npm test
 
 ---
 
-## Human-in-the-Loop Review Workspace (Phase P4)
+## Privacy Engineering Workstation UI (Phase P4 & Premium Workstation Upgrade)
 
-PrivyDoc features a minimalist, dark charcoal cybersecurity SaaS review interface built with React, Vite, and Tailwind CSS:
+PrivyDoc features a technical document-intelligence and privacy-engineering workstation interface built with React 19, Vite, and Tailwind CSS:
 
-- **Canonical Text Viewer**: Interactive text viewer with exact half-open character offset highlights `[start, end)`. Supports mouse selection for arbitrary manual redactions.
-- **Authoritative PDF Viewer**: Renders crisp PyMuPDF page PNG streams with page navigation, zoom, and visual candidate overlays.
-- **Candidate Inspection Sidebar**:
-  - Detailed metadata cards showing matched text (with mask/reveal toggle), PII category, confidence band (`High`, `Medium`, `Low`—strictly separated from review status), detector sources, and character offsets.
-  - Review controls: **Approve**, **Reject**, **Undo**, and inline category reassignment.
-  - **Redact All Similar**: Modal providing an explicit, transparent preview of all matching candidate occurrences across the document before bulk approval.
-- **Entity Group Resolution**:
-  - Entity cluster view displaying canonical identities, observed surface variants, link confidence, and evidence logs.
-  - Ambiguity warning flags prevent automated merges between distinct individuals sharing surnames or ambiguous initials.
-  - Single-click **Approve Linked Group**, **Reject Linked Group**, and occurrence **Unlink** actions.
+- **Operational Telemetry Dashboard (`Dashboard.jsx`)**:
+  - Backed by real-time, zero-PII backend telemetry (`GET /api/documents`) reporting active documents processed, sessions awaiting review, verified exports, suppressed summaries, and active-session PII category distribution bars.
+  - **Active & Recent Document Sessions Table**: Direct one-click navigation into Review, Export, or Session Purge workflows with live verification badges.
+- **3-Panel Document Review Workspace (`ReviewWorkspace.jsx`)**:
+  - **Panel 1 — Authoritative Document Viewer**: Interactive canonical text viewer with exact half-open character offset highlights `[start, end)` and arbitrary mouse selection for manual redaction, paired with an authoritative PyMuPDF PNG page viewer with synchronized bounding-box overlays.
+  - **Panel 2 — Candidate & Entity Cluster Sidebar (`CandidateSidebar.jsx`)**:
+    - Filterable candidate cards displaying matched text (masked by default with reveal toggle), PII category badge, heuristic evidence weight (`High`, `Medium`, `Low`—strictly separated from review status), detector provenance (`REGEX`, `PRESIDIO`, `NER`, `SLM`), consensus/conflict badges, and character offsets.
+    - Review controls: **Approve**, **Reject**, **Undo**, inline category reassignment, and **Redact All Similar** preview modal.
+  - **Panel 3 — Contextual Evidence & Coreference Inspector (`ContextualInspector.jsx`)**:
+    - Dedicated inspection panel explaining *why* a candidate was selected, detector agreement (`MULTI_DETECTOR_CONSENSUS` vs `TYPE_CONFLICT`), heuristic evidence weight disclaimer, and an interactive **Hub-and-Spoke Entity Coreference Graph** with structured `link_reasons` (`EXACT_CANONICAL_MATCH`, `INITIAL_SURNAME_MATCH`, `HONORIFIC_SURNAME_MATCH`, `OBFUSCATED_EMAIL_MATCH`, `COUNTRY_AWARE_PHONE_MATCH`, `PHONETIC_TRANSLITERATION_MATCH`) and clickable occurrence jump links.
+- **Entity Group Resolution (`EntityGroupList.jsx`)**:
+  - Visualizes canonical anchor identities, surface variants, link confidence, and ambiguity safeguard banners (`AMBIGUITY_SAFEGUARD`) that require explicit human confirmation before bulk actions on ambiguous clusters.
 - **Keyboard Shortcuts**:
   - `A`: Approve selected candidate for redaction.
   - `R`: Reject selected candidate (preserve text).
   - `M`: Open manual redaction dialog for highlighted text span.
   - *Shortcuts are automatically disabled when typing in text fields, inputs, or textareas.*
-- **Export & Summary Previews**:
-  - Export screen (Screen D): Format selection (.txt / .pdf), mask patterns (`[REDACTED]`, `[CATEGORY]`, `[ENTITY_N]`, Unicode black bars), approved vs pending verification status, and clean-text fallback options.
-  - Privacy Summary screen (Screen E): Sanitized-only input guarantee, extractive fallback status, and post-summary zero-leak audit indicators.
+- **Export Verification & Summary Traceability**:
+  - **Export & Verification Screen (`ExportView.jsx`)**: Displays 8-point post-redaction verification report, verification timestamp, `RECONSTRUCTED PDF` layout-loss badge (DEC-004), and exported file **SHA-256 digest** (with explicit notice that a cryptographic hash verifies byte integrity only and does not by itself prove redaction completeness).
+  - **Privacy Summary Screen (`SummaryView.jsx`)**: Displays sanitized-only input contract badge (`P5-VERIFIED`), grounded source evidence quotes with `[§1]` traceability markers, persistent quasi-identifier re-identification risk assessment, and unmistakable fail-closed suppression alerts.
+- **Captured Workstation Screenshots (`Docs/screenshots/`)**:
+  - [`01_dashboard.png`](file:///C:/Users/Admin/Desktop/PrivDoc/Docs/screenshots/01_dashboard.png) — Operational Dashboard, PII Category Distribution, and Recent Sessions
+  - [`02_review_workspace_3panel.png`](file:///C:/Users/Admin/Desktop/PrivDoc/Docs/screenshots/02_review_workspace_3panel.png) — 3-Panel Review Workspace with Contextual Evidence Inspector
+  - [`03_entity_inspector_clusters.png`](file:///C:/Users/Admin/Desktop/PrivDoc/Docs/screenshots/03_entity_inspector_clusters.png) — Entity Coreference Clusters & Structured Link Explanations
+  - [`04_export_verification.png`](file:///C:/Users/Admin/Desktop/PrivDoc/Docs/screenshots/04_export_verification.png) — Irreversible Redaction, 8-Point Audit & SHA-256 Integrity Digest
+  - [`05_summary_verified.png`](file:///C:/Users/Admin/Desktop/PrivDoc/Docs/screenshots/05_summary_verified.png) — Verified Summary with Source Evidence Traceability & Quasi-Identifier Card
+  - [`06_responsive_compact_layout.png`](file:///C:/Users/Admin/Desktop/PrivDoc/Docs/screenshots/06_responsive_compact_layout.png) — Responsive Compact Workstation Viewport
 
 ---
 

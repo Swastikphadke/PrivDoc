@@ -396,6 +396,10 @@ describe('ReviewWorkspace Page', () => {
       expect(screen.getByText('confidential_report.txt')).toBeDefined();
     });
 
+    // Verify 3rd panel Contextual Inspector renders entity graph and ambiguity safeguard
+    expect(screen.getByTestId('contextual-inspector-panel')).toBeDefined();
+    expect(screen.getByTestId('contextual-entity-graph')).toBeDefined();
+
     fireEvent.click(screen.getByText(/Entities \(1\)/i));
 
     expect(await screen.findByTestId('entity-ambiguous-badge')).toBeDefined();

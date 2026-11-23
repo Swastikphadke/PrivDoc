@@ -39,11 +39,11 @@ PrivyDoc adopts a **Modular Monolith** pattern, comprising a high-performance Py
 
 ```mermaid
 flowchart TD
-    subgraph UI ["Client Layer (Local Browser / React 19)"]
-        Dash[Dashboard & Document Ingestion]
-        Workspace[Review Workspace & Visual PDF Overlay]
-        ExportUI[Redaction & Verification View]
-        SummUI[Privacy-Safe Summary View]
+    subgraph UI ["Client Layer (Local Browser / React 19 Workstation)"]
+        Dash["Dashboard & Operational Telemetry\n(GET /api/documents)"]
+        Workspace["3-Panel Review Workspace\n(Viewer + Candidates + Contextual Inspector)"]
+        ExportUI["Redaction & Verification View\n(8-Point Audit + SHA-256 Digest)"]
+        SummUI["Privacy-Safe Summary View\n([§1] Source Grounding + Quasi-Risk)"]
     end
 
     subgraph API ["API & Routing Layer (FastAPI / 127.0.0.1)"]

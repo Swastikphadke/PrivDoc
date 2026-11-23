@@ -10,12 +10,11 @@ model confidence for approval.
 
 ### Screen A --- Dashboard / Upload
 
--   Product identity and local-processing indicator.
--   Drag-and-drop upload.
--   Supported formats and size limit.
--   Recent local sessions, if retention is enabled.
--   Clear privacy note: files are processed locally in the configured
-    mode.
+-   Product identity and local-processing indicator (`127.0.0.1:8000`).
+-   Live operational telemetry strip backed by real SQLite and session metadata (`GET /api/documents`): Documents Processed, Awaiting Review, Verified Exports, and Suppressed Summaries.
+-   Active-session PII category distribution bars and 5-stage fail-closed lifecycle indicator.
+-   Drag-and-drop upload with supported formats (`.TXT`, `.PDF`) and 20MB size limit.
+-   Active & Recent Local Document Sessions table with live verification badges and direct navigation.
 
 ### Screen B --- Processing
 
@@ -24,31 +23,29 @@ model confidence for approval.
 -   Detector status and degraded-mode warnings.
 -   Cancel action.
 
-### Screen C --- Document Review
+### Screen C --- 3-Panel Document Review Workstation
 
-Recommended layout: - Left: page/document navigation. - Center: document
-text or PDF preview with highlights. - Right: candidate list and entity
-groups. - Top: document status, detected count, approved count and
-filters. - Bottom/toolbar: approve, reject, add manually, redact all
-similar.
+Three-panel technical layout:
+-   **Panel 1 (Left):** Authoritative Document Viewer (Canonical Text with `[start, end)` offset highlights or PyMuPDF page PNG preview with synchronized bounding-box overlays).
+-   **Panel 2 (Center):** Detected Candidates & Entity Clusters sidebar with search, category/status filters, and bulk review controls.
+-   **Panel 3 (Right):** Contextual Evidence & Coreference Inspector displaying why the selected candidate was flagged, detector provenance and consensus/conflict status, heuristic evidence weight (with explicit non-calibration notice), interactive hub-and-spoke entity cluster graph, structured `link_reasons`, and clickable occurrence navigation.
+-   **Top Workspace Bar:** Document metadata, review progress counters, keyboard shortcut legend (`A`, `R`, `M`), view mode toggle, and Inspector toggle.
 
-### Screen D --- Export
+### Screen D --- Export & Verification
 
--   Export format.
--   Placeholder configuration.
--   Approved redaction count.
--   Verification status.
--   Download only after verification passes.
--   Clear warning if output is unverified or layout reconstruction was
-    used.
+-   Export format (`.pdf` or `.txt`) and placeholder configuration (`[CATEGORY]`, `[REDACTED]`, or mask characters).
+-   Approved redaction count and pending-candidate review gatekeeper.
+-   Explicit visual distinction between `PENDING`, `PROCESSING`, `VERIFIED`, `FAILED`, `RECONSTRUCTED`, and `UNVERIFIED`.
+-   8-point independent verification audit checklist, verification timestamp, and exported file SHA-256 integrity digest (with explicit notice that a hash verifies file byte integrity only and does not prove redaction completeness).
+-   Download enabled strictly after verification passes; explicit layout-loss warning badge (`RECONSTRUCTED PDF`) when DEC-004 clean-text reconstruction is used.
 
-### Screen E --- Summary
+### Screen E --- Privacy-Safe Summary
 
--   Safe summary.
--   Summary verification status.
--   Direct PII check result.
--   Quasi-identifier warnings.
--   Regenerate/generalize or suppress action.
+-   Explicit visual distinction between `VERIFIED`, `REQUIRES_REVIEW`, `SUPPRESSED`, and `FAILED`.
+-   Sanitized-only input contract badge (`P5-VERIFIED`) and generation engine indicator (`SLM` vs `EXTRACTIVE_FALLBACK`).
+-   Structured summary sections (Executive Narrative, Key Points, Important Findings, Grounded Dates & Figures, and Source Evidence with `[§1]` grounded quote traceability).
+-   Persistent Quasi-Identifier Re-Identification Risk card and non-anonymity disclaimer.
+-   Unmistakable security suppression alert when `SummaryGuard` blocks an unsafe summary.
 
 ## 3. Candidate visual system
 

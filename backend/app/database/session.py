@@ -143,6 +143,17 @@ def get_document_metadata(doc_id: str) -> dict | None:
         return None
 
 
+def list_all_documents(limit: int = 25) -> list[dict]:
+    """List recent document metadata records ordered by creation time descending (zero raw PII)."""
+    with get_db_connection() as conn:
+        cursor = conn.cursor()
+        cursor.execute(
+            "SELECT * FROM documents ORDER BY created_at DESC, rowid DESC LIMIT ?",
+            (limit,),
+        )
+        return [dict(row) for row in cursor.fetchall()]
+
+
 def delete_document_record(doc_id: str) -> bool:
     """Remove document metadata record and associated feedback/decisions from SQLite."""
     with get_db_connection() as conn:
