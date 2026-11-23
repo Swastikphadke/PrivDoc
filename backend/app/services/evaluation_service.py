@@ -130,6 +130,7 @@ class EvaluationReport:
     macro_detection: DetectionScore = field(default_factory=DetectionScore)
     category_metrics: Dict[str, DetectionScore] = field(default_factory=dict)
     entity_metrics: PairwiseEntityScore = field(default_factory=PairwiseEntityScore)
+    unscoped_entity_metrics: PairwiseEntityScore = field(default_factory=PairwiseEntityScore)
     redaction_metrics: RedactionVerificationScore = field(default_factory=RedactionVerificationScore)
     summary_metrics: SummaryVerificationScore = field(default_factory=SummaryVerificationScore)
     performance: PerformanceProfile = field(default_factory=PerformanceProfile)
@@ -312,7 +313,20 @@ class EvaluationService:
             )
 
             # Format predictions
-            pred_items = [
+            # Format predictions: both document-scoped (for proper within-document coreference)
+            # and unscoped (retained for P7 baseline historical comparison)
+            pred_items_scoped = [
+                {
+                    "start": c.start,
+                    "end": c.end,
+                    "type": c.type,
+                    "text": c.text,
+                    "entity_id": f"{doc_id}_{c.entity_id or c.candidate_id}",
+                    "mention_id": f"{doc_id}_{c.start}_{c.end}",
+                }
+                for c in detections
+            ]
+            pred_items_unscoped = [
                 {
                     "start": c.start,
                     "end": c.end,
@@ -325,7 +339,18 @@ class EvaluationService:
             ]
 
             # Format gold annotations
-            gold_items = [
+            gold_items_scoped = [
+                {
+                    "start": g["start"],
+                    "end": g["end"],
+                    "type": g["type"],
+                    "text": g["text"],
+                    "entity_id": f"{doc_id}_{g.get('entity_id', g['start'])}",
+                    "mention_id": f"{doc_id}_{g['start']}_{g['end']}",
+                }
+                for g in gold_data.get("annotations", [])
+            ]
+            gold_items_unscoped = [
                 {
                     "start": g["start"],
                     "end": g["end"],
@@ -337,10 +362,16 @@ class EvaluationService:
                 for g in gold_data.get("annotations", [])
             ]
 
-            all_gold.extend(gold_items)
-            all_pred.extend(pred_items)
-            all_gold_entities.extend(gold_items)
-            all_pred_entities.extend(pred_items)
+            all_gold.extend(gold_items_scoped)
+            all_pred.extend(pred_items_scoped)
+            all_gold_entities.extend(gold_items_scoped)
+            all_pred_entities.extend(pred_items_scoped)
+
+            if not hasattr(report, "_unscoped_gold"):
+                report._unscoped_gold = []
+                report._unscoped_pred = []
+            report._unscoped_gold.extend(gold_items_unscoped)
+            report._unscoped_pred.extend(pred_items_unscoped)
 
         elapsed = time.perf_counter() - start_time
         current_mem, peak_mem = tracemalloc.get_traced_memory()
@@ -363,10 +394,14 @@ class EvaluationService:
                 f1=macro_f1,
             )
 
-        # Compute entity resolution metrics
+        # Compute entity resolution metrics (document-scoped primary, and unscoped baseline)
         report.entity_metrics = cls.evaluate_entity_resolution(
             all_gold_entities,
             all_pred_entities,
+        )
+        report.unscoped_entity_metrics = cls.evaluate_entity_resolution(
+            getattr(report, "_unscoped_gold", []),
+            getattr(report, "_unscoped_pred", []),
         )
 
         # Performance profile

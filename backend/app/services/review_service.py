@@ -14,7 +14,7 @@ import uuid
 from pathlib import Path
 from typing import List, Optional
 from app.core.security import get_safe_session_dir
-from app.database.session import record_review_decision
+from app.database.session import record_review_decision, update_document_status
 from app.detectors.entity_resolver import EntityResolver
 from app.schemas.candidate import Candidate, ConfidenceBand, ReviewStatus
 from app.schemas.review import (
@@ -91,6 +91,9 @@ class ReviewService:
         cands_data = [c.model_dump() for c in candidates]
         cands_path.write_text(json.dumps(cands_data, indent=2), encoding="utf-8")
 
+        # Invalidate any stale export or summary artifacts (TDR-018)
+        cls._invalidate_stale_exports_and_summaries(document_id, session_dir)
+
         return cls._build_summary(document_id, candidates)
 
     @classmethod
@@ -161,7 +164,26 @@ class ReviewService:
             candidate=manual_cand,
         )
 
+        # Invalidate any stale export or summary artifacts (TDR-018)
+        cls._invalidate_stale_exports_and_summaries(document_id, session_dir)
+
         return manual_cand
+
+    @classmethod
+    def _invalidate_stale_exports_and_summaries(cls, document_id: str, session_dir: Path) -> None:
+        """Purge export and summary artifacts when review decisions change (TDR-018).
+        
+        Ensures that stale verified exports or summaries cannot be accessed after
+        candidates or review statuses are mutated.
+        """
+        for filename in ["export_metadata.json", "sanitized.txt", "sanitized.pdf", "summary.json"]:
+            artifact_path = session_dir / filename
+            if artifact_path.exists():
+                try:
+                    artifact_path.unlink()
+                except Exception:
+                    pass
+        update_document_status(document_id, "REVIEWING")
 
     @classmethod
     def get_review_summary(cls, document_id: str) -> ReviewSummaryResponse:

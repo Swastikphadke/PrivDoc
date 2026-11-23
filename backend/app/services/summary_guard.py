@@ -386,6 +386,30 @@ class SummaryGuard:
         return True, None
 
     @classmethod
+    def check_prompt_injection_artifacts(
+        cls,
+        summary_text: str,
+    ) -> Tuple[bool, Optional[str]]:
+        """F. Prompt injection artifact check: Ensure summary does not reflect prompt injection payloads."""
+        if not summary_text:
+            return True, None
+
+        suspicious_patterns = [
+            r"<\/?untrusted_document_content>",
+            r"\bignore\s+(?:all\s+)?previous\s+instructions\b",
+            r"\byou\s+are\s+now\s+a\s+helpful\b",
+            r"\bsystem\s+prompt\b",
+            r"\bpwned\b",
+            r"\bjailbreak(?:ed)?\b",
+        ]
+        norm = summary_text.lower()
+        for pat in suspicious_patterns:
+            if re.search(pat, norm):
+                logger.warning("Prompt injection artifact detected in summary output: pattern '%s'", pat)
+                return False, "Prompt injection directive or artifact detected in generated summary."
+        return True, None
+
+    @classmethod
     def verify_summary(
         cls,
         summary_content: StructuredSummaryContent,
@@ -518,6 +542,26 @@ class SummaryGuard:
                     check_name="SOURCE_CONSISTENCY",
                     status="PASSED",
                     details="All dates, figures, and facts strictly grounded in sanitized source text.",
+                )
+            )
+
+        # Check F: Prompt Injection Artifact Check (TDR-019)
+        inj_ok, inj_err = cls.check_prompt_injection_artifacts(combined_summary)
+        if not inj_ok:
+            mandatory_checks_passed = False
+            checks.append(
+                SummaryVerificationCheck(
+                    check_name="PROMPT_INJECTION_DEFENSE",
+                    status="FAILED",
+                    details=inj_err or "Prompt injection directive or system artifact detected in summary.",
+                )
+            )
+        else:
+            checks.append(
+                SummaryVerificationCheck(
+                    check_name="PROMPT_INJECTION_DEFENSE",
+                    status="PASSED",
+                    details="Zero prompt injection directives or system boundary artifacts detected.",
                 )
             )
 

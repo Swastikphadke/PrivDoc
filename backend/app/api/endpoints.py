@@ -317,8 +317,14 @@ def get_candidates(document_id: str) -> List[Candidate]:
 
     if not cands_path.exists():
         # If detection has not been executed yet, trigger it on-demand
-        det_result = DetectionService.run_detection(document_id)
-        return det_result.candidates
+        try:
+            det_result = DetectionService.run_detection(document_id)
+            return det_result.candidates
+        except FileNotFoundError as fnf:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=str(fnf),
+            ) from fnf
 
     raw_cands = json.loads(cands_path.read_text(encoding="utf-8"))
     return [Candidate(**c) for c in raw_cands]

@@ -315,10 +315,14 @@ def delete_encrypted_aliases(doc_id: str) -> int:
 
 def purge_expired_encrypted_aliases() -> int:
     """Purge expired encrypted alias records based on retention policy."""
+    from datetime import datetime, timezone
+    now_iso = datetime.now(timezone.utc).isoformat()
+    now_sql = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S")
     with get_db_connection() as conn:
         cursor = conn.cursor()
         cursor.execute(
-            "DELETE FROM opt_in_encrypted_aliases WHERE expires_at IS NOT NULL AND expires_at < CURRENT_TIMESTAMP"
+            "DELETE FROM opt_in_encrypted_aliases WHERE expires_at IS NOT NULL AND (expires_at < ? OR expires_at < ?)",
+            (now_iso, now_sql),
         )
         conn.commit()
         return cursor.rowcount

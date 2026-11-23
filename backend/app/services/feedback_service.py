@@ -46,11 +46,21 @@ def _get_or_create_encryption_key() -> bytes:
     """Load or generate a local 256-bit AES-GCM key for opt-in encrypted aliases."""
     key_path = settings.DATA_DIR / KEY_FILE_NAME
     if key_path.exists():
-        return key_path.read_bytes()
-    
+        key = key_path.read_bytes()
+        if len(key) == 32:
+            return key
+        logger.warning(
+            "Corrupted or invalid alias encryption key detected (length %d bytes, expected 32); regenerating.",
+            len(key),
+        )
+
     settings.DATA_DIR.mkdir(parents=True, exist_ok=True)
     new_key = AESGCM.generate_key(bit_length=256)
     key_path.write_bytes(new_key)
+    try:
+        os.chmod(key_path, 0o600)
+    except Exception:
+        pass
     return new_key
 
 

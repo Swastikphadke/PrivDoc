@@ -1,0 +1,29 @@
+{
+  "hardware": {
+    "os": "Windows 11 (10.0.26300)",
+    "cpu": "Intel64 Family 6 Model 142 Stepping 10, GenuineIntel",
+    "physical_cores": 4,
+    "logical_cores": 8,
+    "total_ram_gb": 7.85
+  },
+  "latencies_ms": {
+    "cold_startup_ms": 1094.8,
+    "warm_startup_ms": 0.7,
+    "txt_ingestion_ms": 21.16,
+    "pdf_ingestion_ms": 30.7,
+    "hybrid_detection_ms": 747.84,
+    "entity_resolution_ms": 8.19,
+    "review_decision_action_ms": 110.32,
+    "manual_candidate_addition_ms": 38.97,
+    "txt_redaction_and_verification_ms": 44.28,
+    "native_pdf_redaction_and_verification_ms": 90.07,
+    "clean_text_pdf_reconstruction_ms": 77.26,
+    "summary_generation_fallback_ms": 8.77,
+    "summary_privacy_guard_verification_ms": 28.67,
+    "complete_e2e_txt_pipeline_ms": 969.23,
+    "complete_e2e_pdf_pipeline_ms": 1024.56
+  },
+  "memory_profile": {
+    "peak_ram_mb": 1.55
+  }
+}

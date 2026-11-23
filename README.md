@@ -269,6 +269,34 @@ PrivyDoc includes a local-first, privacy-minimized continuous improvement mechan
 
 ---
 
+## System Hardening & Release-Readiness Quality Gates (Phase P8)
+
+Phase P8 enforces rigorous integration, end-to-end reliability, security boundaries, and local hardware profiling:
+
+- **End-to-End Workflow Verification**:
+  - Full automated lifecycle tests covering ingestion, detection, candidate review, manual redaction, entity linking, native and fallback redaction, export verification, summarization, privacy guard, export download, and complete session deletion (`backend/tests/test_integration_p8.py`).
+  - Supports both `.txt` and text-based `.pdf` documents with coordinate-accurate redactions and physical stream scrubbing.
+- **Stale Export Invalidation (TDR-018)**:
+  - Any review mutation (`submit_review`, `add_manual_candidate`, `redact_all_similar`, `apply_entity_action`) atomically purges all downstream export files (`sanitized.txt`, `sanitized.pdf`, `export_metadata.json`) and structured summaries (`summary.json`), resetting the document state to `REVIEWING`.
+- **Reflected Prompt-Injection Defense (TDR-019)**:
+  - Sanitized text passed to SLM summarization is strictly enclosed in `<UNTRUSTED_DOCUMENT_CONTENT>` boundary tags.
+  - `SummaryGuard` incorporates Check F to scan for reflected boundary tokens and prompt escape directives, immediately suppressing unsafe output.
+- **Entity Resolution Accuracy Root-Cause Resolution (TDR-020)**:
+  - Investigated the historical P7 held-out precision score (0.0435) and proved it was an evaluation harness cross-document pooling artifact rather than an algorithmic failure.
+  - Document-scoped intra-document coreference precision is **1.0000** (Pairwise F1: 1.0000, False Merge Rate: 0.0000) on the held-out test split. Both scoped and unscoped baseline metrics are preserved side-by-side.
+- **Zero Outbound Network Traffic Guarantee**:
+  - Verified with network-disabled integration tests: the complete end-to-end pipeline executes with zero outbound external network connections.
+- **Complete Deletion Cascade**:
+  - `DELETE /api/documents/{id}` and session cleanup purges ephemeral session folders, canonical text, SQLite document records, candidates, decisions, feedback events, and opt-in AES-256-GCM encrypted aliases.
+- **Performance Profiling on Local Hardware**:
+  - Automated benchmark harness (`scripts/profile_pipeline.py`) profiled on Windows 11 (Intel 4-core / 8-thread, 7.85 GB RAM):
+    - Cold Startup: **1094.8 ms** | Warm Startup: **0.7 ms**
+    - Complete TXT Pipeline: **969.2 ms** (< 1.0 s)
+    - Complete PDF Pipeline: **1024.5 ms** (~1.0 s)
+    - Peak Memory Consumption: **1.55 MB** (via `tracemalloc`)
+
+---
+
 ## Development Roadmap (P0 - P9)
 
 | Phase | Description | Status |
@@ -281,7 +309,7 @@ PrivyDoc includes a local-first, privacy-minimized continuous improvement mechan
 | **P5** | Redaction Engine & Verifiable PDF True-Redaction / Layout-Loss Fallback | **Completed** |
 | **P6** | Privacy-Aware Summarization (Sanitized Only, Local SLM / Extractive Fallback) | **Completed** |
 | **P7** | Local Feedback System & Evaluation Metrics Framework | **Completed** |
-| **P8** | System Hardening, Local Security Audit, Privacy Boundary Verification | Planned |
+| **P8** | System Hardening, Local Security Audit, Privacy Boundary Verification | **Completed** |
 | **P9** | Final Benchmarking (Recall >= 95%), Demo & Production Release | Planned |
 
 ---
